@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="تعدية - منصة إدارة تعديات حفظ القرآن">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ta3dia">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>Ta3dia</title>
+  <link rel="manifest" href="manifest.json">
+
+  <link rel="dns-prefetch" href="//firestore.googleapis.com">
+  <link rel="dns-prefetch" href="//identitytoolkit.googleapis.com">
+  <link rel="dns-prefetch" href="//securetoken.googleapis.com">
+  <link rel="dns-prefetch" href="//www.googletagmanager.com">
+  <link rel="dns-prefetch" href="//www.gstatic.com">
+  <link rel="dns-prefetch" href="//fonts.gstatic.com">
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="flutter.js" as="script">
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="main.dart.js" as="script">
+
+  <style>
+    html,body{background:#F5F0EB;margin:0;min-height:100%}
+    flutter-view{background:#F5F0EB!important}
+    loading,#loading,[class*=loading],flutter-loading{display:none!important}
+  </style>
+</head>
+<body style="margin:0;background:#F5F0EB">
+  <script>
+    (function(){var d=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();d=e});
+    function i(){return /iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream}
+    function s(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
+    window.triggerPwaInstall=async function(){if(s())return'already_installed';if(i())return'ios_instructions';if(d){d.prompt();var r=await d.userChoice;d=null;return r.outcome==='accepted'?'installed':'dismissed'}return'not_available'}
+    if('serviceWorker'in navigator){try{navigator.serviceWorker.register('sw.js',{scope:'/'})}catch(e){console.warn('SW failed:',e)}}})();
+  </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H9ZGMEK9YN"></script>
+  <script>
+    window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}
+    gtag('js',new Date());gtag('config','G-H9ZGMEK9YN');
+  </script>
+  <script src="flutter_bootstrap.js" defer></script>
+</body>
+</html>

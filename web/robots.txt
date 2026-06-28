@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ta3dia.web.app/sitemap.xml

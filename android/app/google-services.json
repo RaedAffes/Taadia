@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "308482841964",
+    "project_id": "ta3dia",
+    "storage_bucket": "ta3dia.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:308482841964:android:0b662f4ca36121506b6749",
+        "android_client_info": {
+          "package_name": "com.example.ta3dia"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "308482841964-lc4gs73gb1d3671l489n5k9u6dru88eh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2zzvmEP77k3xQkojNozHFayYoYijtBCQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "308482841964-lc4gs73gb1d3671l489n5k9u6dru88eh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "308482841964-j6svl9c4tdan53noh65eahvg9fodhmvs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ta3dia"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
