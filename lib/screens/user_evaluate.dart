@@ -442,6 +442,18 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     if (_taadiaCategories.isNotEmpty && _category.isEmpty) {
       errors.add(l.selectCategory);
     }
+    if (_rangeCriteria.every((c) => !c.isValid())) {
+      errors.add(l.enterAhzabRange);
+    }
+    if (widget.classifications.isNotEmpty) {
+      for (final cfg in widget.classifications) {
+        if (!_classificationValues.containsKey(cfg.name) ||
+            _classificationValues[cfg.name] == null ||
+            _classificationValues[cfg.name]!.isEmpty) {
+          errors.add('${l.select}: ${cfg.name}');
+        }
+      }
+    }
     for (final q in _questions) {
       q.syncFromCubes();
       if (q.isOverWeight) {

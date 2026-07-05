@@ -215,17 +215,28 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
     return AppScaffold(
       title: widget.taadia.title,
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EvaluateScreen(
-              taadiaId: widget.taadia.id,
-              taadiaTitle: widget.taadia.title,
-              taadiaDescription: widget.taadia.description,
-              classifications: widget.taadia.classifications,
+        onPressed: () {
+          if (widget.taadia.status != 'active') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.taadiaClosed),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => EvaluateScreen(
+                taadiaId: widget.taadia.id,
+                taadiaTitle: widget.taadia.title,
+                taadiaDescription: widget.taadia.description,
+                classifications: widget.taadia.classifications,
+              ),
             ),
-          ),
-        ),
+          );
+        },
         child: Icon(Icons.add),
         tooltip: l.evaluate,
       ),
@@ -821,6 +832,17 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () async {
+          if (widget.taadia.status != 'active') {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.taadiaClosed),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
           await Navigator.push(
             context,
             MaterialPageRoute(
@@ -1203,6 +1225,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
         evals,
         l,
         formula: _showClassement ? _currentFormula : null,
+        classificationFilter: _classificationFilters.isNotEmpty ? _classificationFilters : null,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

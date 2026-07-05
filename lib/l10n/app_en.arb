@@ -342,5 +342,7 @@
   "deletePendingTaadia": "Delete pending taadia",
   "codeAlreadyUsed": "This code is already in use",
   "autoGenerate": "Auto-generate",
-  "enterManually": "Enter manually"
+  "enterManually": "Enter manually",
+  "taadiaNotFound": "Taadia not found",
+  "enterAhzabRange": "Enter ahzab range"
 }

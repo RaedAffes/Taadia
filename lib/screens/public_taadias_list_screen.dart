@@ -317,16 +317,6 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                               _pendingCodeCard(entry.key, entry.value, l, cs, isRtl)),
                         ],
                         if (resolvedEntries.isNotEmpty) ...[
-                          SizedBox(height: 8),
-                          Text(
-                            l.resolvedCodes,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                          SizedBox(height: 4),
                           ...resolvedEntries.map((entry) =>
                               _resolvedCodeCard(entry.key, entry.value, l, cs, isRtl)),
                         ],
@@ -350,6 +340,15 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                                       ),
                                     );
                                   } else {
+                                    if (t.status != 'active') {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(l.taadiaClosed),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -365,78 +364,116 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                                 },
                                 child: Padding(
                                   padding: EdgeInsets.all(12),
-                                  child: Row(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Container(
-                                        padding: EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: cs.primaryContainer,
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(
-                                          Icons.public,
-                                          color: cs.onPrimaryContainer,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              t.title,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                color: cs.onSurface,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                              textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: cs.primaryContainer,
+                                              borderRadius: BorderRadius.circular(8),
                                             ),
-                                            if (t.description.isNotEmpty) ...[
-                                              SizedBox(height: 3),
-                                              Text(
-                                                t.description,
-                                                style: TextStyle(color: cs.onSurfaceVariant),
-                                                textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                                            child: Image.asset(
+                                              'assets/images/quran image.png',
+                                              height: 24,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (_, __, ___) => Icon(
+                                                Icons.assignment,
+                                                color: cs.onPrimaryContainer,
+                                                size: 24,
                                               ),
-                                            ],
-                                            if (t.accessCode.isNotEmpty) ...[
-                                              SizedBox(height: 6),
-                                              Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: cs.primary.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                  border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                                            ),
+                                          ),
+                                          SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  t.title,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 16,
+                                                    color: cs.onSurface,
+                                                  ),
+                                                  textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
                                                 ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
+                                                SizedBox(height: 4),
+                                                Row(
                                                   children: [
-                                                    Icon(Icons.vpn_key, size: 12, color: cs.primary),
-                                                    SizedBox(width: 4),
-                                                    Text(
-                                                      t.accessCode,
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: cs.primary,
-                                                        letterSpacing: 1,
+                                                    Container(
+                                                      padding: EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 2,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: t.status == 'active'
+                                                            ? cs.tertiaryContainer
+                                                            : cs.surfaceContainerHighest,
+                                                        borderRadius: BorderRadius.circular(10),
+                                                      ),
+                                                      child: Text(
+                                                        t.status == 'active'
+                                                            ? l.open
+                                                            : l.close,
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: t.status == 'active'
+                                                              ? cs.onTertiaryContainer
+                                                              : cs.onSurfaceVariant,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        t.description.isNotEmpty
+                                                            ? t.description
+                                                            : '',
+                                                        style: TextStyle(
+                                                          fontSize: 13,
+                                                          color: cs.onSurfaceVariant,
+                                                        ),
+                                                        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
                                                       ),
                                                     ),
                                                   ],
                                                 ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (t.accessCode.isNotEmpty) ...[
+                                        SizedBox(height: 8),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: cs.primary.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.vpn_key, size: 12, color: cs.primary),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                t.accessCode,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: cs.primary,
+                                                  letterSpacing: 1,
+                                                ),
                                               ),
                                             ],
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                      SizedBox(width: 4),
-                                      Icon(
-                                        Icons.arrow_forward_ios,
-                                        size: 14,
-                                        color: cs.onSurfaceVariant,
-                                      ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -573,6 +610,9 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
   }
 
   Widget _resolvedCodeCard(String code, CachedTaadia taadia, AppLocalizations l, ColorScheme cs, bool isRtl) {
+    final taadiaService = context.read<TaadiaService>();
+    final live = taadiaService.taadias.where((t) => t.id == taadia.id);
+    final isActive = live.isNotEmpty ? live.first.status == 'active' : taadia.active;
     return Card(
       elevation: 1,
       margin: EdgeInsets.only(bottom: 12),
@@ -582,6 +622,15 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
+          if (!isActive) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l.taadiaClosed),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -590,81 +639,118 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                 taadiaTitle: taadia.title,
                 taadiaDescription: taadia.description,
                 classifications: taadia.classifications.map((m) => ClassificationConfig.fromMap(m)).toList(),
-                active: taadia.active,
+                active: isActive,
               ),
             ),
           );
         },
         child: Padding(
           padding: EdgeInsets.all(12),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.public,
-                  color: cs.onPrimaryContainer,
-                  size: 24,
-                ),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      taadia.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                      textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    if (taadia.description.isNotEmpty) ...[
-                      SizedBox(height: 3),
-                      Text(
-                        taadia.description,
-                        style: TextStyle(color: cs.onSurfaceVariant),
-                        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                    child: Image.asset(
+                      'assets/images/quran image.png',
+                      height: 24,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.assignment,
+                        color: cs.onPrimaryContainer,
+                        size: 24,
                       ),
-                    ],
-                    SizedBox(height: 4),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: cs.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.vpn_key, size: 12, color: cs.primary),
-                          SizedBox(width: 4),
-                          Text(
-                            code,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: cs.primary,
-                              letterSpacing: 1,
-                            ),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          taadia.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: cs.onSurface,
                           ),
-                        ],
+                          textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? cs.tertiaryContainer
+                                    : cs.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                isActive ? l.open : l.close,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isActive
+                                      ? cs.onTertiaryContainer
+                                      : cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                taadia.description.isNotEmpty
+                                    ? taadia.description
+                                    : '',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                                textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.vpn_key, size: 12, color: cs.primary),
+                    SizedBox(width: 4),
+                    Text(
+                      code,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: cs.primary,
+                        letterSpacing: 1,
                       ),
                     ),
                   ],
                 ),
-              ),
-              SizedBox(width: 4),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 14,
-                color: cs.onSurfaceVariant,
               ),
             ],
           ),

@@ -276,6 +276,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                         Icons.rate_review,
                                         l.evaluate,
                                         () {
+                                          if (t.status != 'active') {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(AppLocalizations.of(context)!.taadiaClosed),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                            return;
+                                          }
                                           widget.analytics.logEvent(
                                             name: 'admin_evaluate_taadia',
                                             parameters: {

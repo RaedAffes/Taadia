@@ -1,0 +1,29 @@
+name: Firestore Backup Sync
+
+on:
+  schedule:
+    # Every 2 hours
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install firebase-admin
+        working-directory: scripts
+
+      - name: Run periodic backup
+        run: node backup-periodic.js
+        working-directory: scripts
+        env:
+          TA3DIA_SERVICE_ACCOUNT: ${{ secrets.TA3DIA_SERVICE_ACCOUNT }}
+          TA3DIA_BACKUP_SERVICE_ACCOUNT: ${{ secrets.TA3DIA_BACKUP_SERVICE_ACCOUNT }}

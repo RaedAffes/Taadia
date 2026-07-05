@@ -870,4 +870,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get enterManually => 'إدخال يدوي';
+
+  @override
+  String get taadiaNotFound => 'التعدية غير موجودة';
+
+  @override
+  String get enterAhzabRange => 'أدخل نطاق الأحزاب';
 }

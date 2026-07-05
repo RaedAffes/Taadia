@@ -46,21 +46,21 @@ pw.Widget _tx(String t, double s, PdfColor c, bool b, bool r) => pw.Text(
 );
 
 pw.Widget _bl(String t, PdfColor c, bool r) => pw.Container(
-  padding: pw.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  padding: pw.EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+  decoration: pw.BoxDecoration(
+    color: c,
+    borderRadius: pw.BorderRadius.circular(8),
+  ),
+  child: pw.Text(t, style: _ts(21, _wht, b: true), textDirection: _dir(t)),
+);
+
+pw.Widget _tag(String t, PdfColor c, bool r) => pw.Container(
+  padding: pw.EdgeInsets.symmetric(horizontal: 17, vertical: 8),
   decoration: pw.BoxDecoration(
     color: c,
     borderRadius: pw.BorderRadius.circular(6),
   ),
-  child: pw.Text(t, style: _ts(15, _wht, b: true), textDirection: _dir(t)),
-);
-
-pw.Widget _tag(String t, PdfColor c, bool r) => pw.Container(
-  padding: pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-  decoration: pw.BoxDecoration(
-    color: c,
-    borderRadius: pw.BorderRadius.circular(4),
-  ),
-  child: pw.Text(t, style: _ts(13, _wht, b: true), textDirection: _dir(t)),
+  child: pw.Text(t, style: _ts(18, _wht, b: true), textDirection: _dir(t)),
 );
 
 double _score(Evaluation e, String f) {
@@ -78,6 +78,7 @@ class PdfService {
     List<Evaluation> evals,
     AppLocalizations l, {
     String? formula,
+    Map<String, String>? classificationFilter,
   }) async {
     final f = await _font();
     final r = l.localeName == 'ar';
@@ -87,82 +88,116 @@ class PdfService {
     final sorted = List<Evaluation>.from(evals)
       ..sort((a, b) => scores[b.id]!.compareTo(scores[a.id]!));
 
-    const tableFont = 16.0;
+    List<int> _calcRanks(List<Evaluation> items) {
+      if (items.isEmpty) return [];
+      final rs = <int>[1];
+      for (var i = 1; i < items.length; i++) {
+        rs.add(scores[items[i].id]! != scores[items[i - 1].id]! ? rs.last + 1 : rs.last);
+      }
+      return rs;
+    }
+
+    const rowPf = 14.5;
     const headerColor = _pri;
     const evenColor = PdfColor.fromInt(0xFFF8F6F3);
     const oddColor = PdfColors.white;
-    const padV = 4.0;
-    const padVHead = 6.0;
-    const cwR = 60.0, cwM = 60.0, cGap = 8.0;
-    const pageW = 547.0;
-    final cwN = pageW - cwR - cwM - 2 * cGap;
-    final rowW = pageW;
+    const margin = 17.0;
+    final pageW = PdfPageFormat.a4.width - 2 * margin;
+    final hasFilter = classificationFilter != null && classificationFilter.isNotEmpty;
 
-    pw.Widget _tc(String t, PdfColor c, double pv, {bool center = false}) => pw.Container(
-      padding: pw.EdgeInsets.symmetric(vertical: pv),
-      alignment: center ? pw.Alignment.center : pw.Alignment.centerLeft,
-      child: pw.Text(
-        t,
-        style: pw.TextStyle(fontSize: tableFont, color: c, fontWeight: pw.FontWeight.bold),
-        textDirection: _dir(t),
-      ),
-    );
+    final overallRanks = _calcRanks(sorted);
+    final rankMap = <String, int>{};
+    for (var i = 0; i < sorted.length; i++) rankMap[sorted[i].id] = overallRanks[i];
+
+    pw.Widget _buildGroup(List<Evaluation> items, List<int> rs, double availW) {
+      const rowPf = 14.5;
+      final cwR = 25.0, cwM = 39.0;
+      final cwN = availW - cwR - cwM;
+      return pw.Column(mainAxisAlignment: pw.MainAxisAlignment.start, crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        pw.Container(
+          height: 25, width: availW,
+          decoration: pw.BoxDecoration(color: headerColor),
+          child: pw.Row(children: [
+            pw.Container(width: cwR, alignment: pw.Alignment.center, child: pw.Text(r ? '#' : 'Rank', style: pw.TextStyle(fontSize: rowPf, color: _wht, fontWeight: pw.FontWeight.bold), textDirection: _dir('#'))),
+            pw.Container(width: cwN, alignment: pw.Alignment.centerLeft, child: pw.Text(l.name, style: pw.TextStyle(fontSize: rowPf, color: _wht, fontWeight: pw.FontWeight.bold), textDirection: _dir(l.name))),
+            pw.Container(width: cwM, alignment: pw.Alignment.center, child: pw.Text(formulaStr == 'jihawiya' ? 'جهوية' : 'محلية', style: pw.TextStyle(fontSize: rowPf, color: _wht, fontWeight: pw.FontWeight.bold), textDirection: _dir('جهوية'))),
+          ]),
+        ),
+          ...List.generate(items.length, (i) {
+          final e = items[i];
+          final sc = scores[e.id]!;
+          final mark = sc % 1 == 0 ? '${sc.toInt()}' : sc.toStringAsFixed(1);
+          final rangeText = e.specialAhzab.isNotEmpty
+              ? e.specialAhzab
+              : '${l.ahzab} ${e.numAhzab}';
+          return pw.Container(
+            width: availW,
+            decoration: pw.BoxDecoration(color: i.isEven ? evenColor : oddColor, border: pw.Border(bottom: pw.BorderSide(color: _bdr, width: 0.4))),
+            child: pw.Row(children: [
+              pw.Container(width: cwR, child: pw.Text('${rs[i]}', style: pw.TextStyle(fontSize: rowPf, color: _txtC, fontWeight: pw.FontWeight.bold), textDirection: pw.TextDirection.ltr, textAlign: pw.TextAlign.center)),
+              pw.Container(width: cwN, padding: pw.EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+                child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                  pw.Row(children: [
+                    pw.Text(e.studentName, style: pw.TextStyle(fontSize: rowPf, color: _txtC, fontWeight: pw.FontWeight.bold), textDirection: _dir(e.studentName)),
+                    pw.SizedBox(width: 4),
+                    pw.Expanded(child: pw.Text('($rangeText)', style: pw.TextStyle(fontSize: 14, color: _muted, fontWeight: pw.FontWeight.bold), textDirection: _dir(rangeText))),
+                  ]),
+                  pw.SizedBox(height: 2),
+                  pw.Row(children: [
+                    pw.Text(e.totalIchaarat.toString(), style: pw.TextStyle(fontSize: rowPf, color: _pri, fontWeight: pw.FontWeight.bold), textDirection: pw.TextDirection.ltr),
+                    pw.Text('${l.ichaarat} :', style: pw.TextStyle(fontSize: 14, color: _txtC, fontWeight: pw.FontWeight.bold), textDirection: _dir(l.ichaarat)),
+                    pw.SizedBox(width: 14),
+                    pw.Text(e.totalTaalakin.toString(), style: pw.TextStyle(fontSize: rowPf, color: _sec, fontWeight: pw.FontWeight.bold), textDirection: pw.TextDirection.ltr),
+                    pw.Text('${l.taalakin} :', style: pw.TextStyle(fontSize: 14, color: _txtC, fontWeight: pw.FontWeight.bold), textDirection: _dir(l.taalakin)),
+                  ]),
+                ]),
+              ),
+              pw.Container(width: cwM, child: pw.Text(mark, style: pw.TextStyle(fontSize: rowPf, color: _pri, fontWeight: pw.FontWeight.bold), textDirection: pw.TextDirection.ltr, textAlign: pw.TextAlign.center)),
+            ]),
+          );
+          }),
+      ]);
+    }
 
     final doc = pw.Document();
-    final rows = <pw.Widget>[
-      pw.Container(
-        width: rowW,
-        decoration: pw.BoxDecoration(color: headerColor),
-        child: pw.Row(
-          children: [
-            pw.Container(width: cwR, child: _tc(r ? '#' : 'Rank', _wht, padVHead, center: true)),
-            pw.Container(width: cwN, child: _tc(l.name, _wht, padVHead)),
-            pw.Container(width: cwM, child: _tc(r ? 'الدرجة' : 'Mark', _wht, padVHead, center: true)),
-          ],
+    final ranks = sorted.map((e) => rankMap[e.id]!).toList();
+    const pageSize = 10;
+    final totalPages = (sorted.length + pageSize - 1) ~/ pageSize;
+
+    pw.Widget _pageHeader() => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+      pw.Center(child: _tx(taadia.title, 43, _pri, true, r)),
+      if (hasFilter) ...[
+        pw.SizedBox(height: 4),
+        pw.Center(
+          child: _tx(
+            classificationFilter.values.join(' - '),
+            20, _muted, false, r,
+          ),
         ),
-      ),
-    ];
-    for (var i = 0; i < sorted.length; i++) {
-      final e = sorted[i];
-      final sc = scores[e.id]!;
-      final mark = sc % 1 == 0 ? '${sc.toInt()}' : sc.toStringAsFixed(1);
-      rows.add(
-        pw.Container(
-          width: rowW,
-          decoration: pw.BoxDecoration(
-            color: i.isEven ? evenColor : oddColor,
-            border: pw.Border(bottom: pw.BorderSide(color: _bdr, width: 0.5)),
-          ),
-          child: pw.Row(
-            children: [
-              pw.Container(width: cwR, child: _tc('${i + 1}', _txtC, padV, center: true)),
-              pw.Container(width: cwN, child: _tc(e.studentName, _txtC, padV)),
-              pw.Container(width: cwM, child: _tc(mark, _pri, padV, center: true)),
-            ],
-          ),
+      ],
+      pw.SizedBox(height: 4),
+    ]);
+
+    for (var p = 0; p < totalPages; p++) {
+      final start = p * pageSize;
+      final end = (start + pageSize) > sorted.length ? sorted.length : start + pageSize;
+      final pageItems = sorted.sublist(start, end);
+      final pageRanks = ranks.sublist(start, end);
+      doc.addPage(
+        pw.Page(
+          theme: pw.ThemeData.withFont(base: f, bold: f),
+          pageFormat: PdfPageFormat.a4,
+          margin: pw.EdgeInsets.all(margin),
+          build: (_) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+            _pageHeader(),
+            pw.Expanded(child: _buildGroup(pageItems, pageRanks, pageW)),
+          ]),
         ),
       );
     }
-    doc.addPage(
-      pw.Page(
-        theme: pw.ThemeData.withFont(base: f, bold: f),
-        pageFormat: PdfPageFormat.a4,
-        margin: pw.EdgeInsets.all(24),
-        build: (_) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-          children: [
-            pw.Center(
-              child: _tx(taadia.title, 30, _pri, true, r),
-            ),
-            pw.SizedBox(height: 14),
-            pw.Divider(thickness: 0.5, color: _bdr),
-            pw.SizedBox(height: 10),
-            ...rows,
-          ],
-        ),
-      ),
-    );
-    final n = r ? 'تقرير_${taadia.title}.pdf' : '${taadia.title}_Report.pdf';
+
+    final classSuffix = hasFilter ? '_${classificationFilter.values.join('_')}' : '';
+    final n = r ? '${taadia.title}$classSuffix.pdf' : '${taadia.title}_Report$classSuffix.pdf';
     await downloadPdf(await doc.save(), n);
   }
 
@@ -182,14 +217,14 @@ class PdfService {
       pw.Page(
         theme: pw.ThemeData.withFont(base: f, bold: f),
         pageFormat: PdfPageFormat.a4,
-        margin: pw.EdgeInsets.all(32),
+        margin: pw.EdgeInsets.all(45),
         build: (_) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             _header(eval, sc, ahz, r, l),
-            pw.SizedBox(height: 16),
-            pw.Divider(thickness: 0.5, color: _bdr),
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 22),
+            pw.Divider(thickness: 0.7, color: _bdr),
+            pw.SizedBox(height: 14),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.center,
               children: [
@@ -200,7 +235,7 @@ class PdfService {
                 ),
               ],
             ),
-            pw.SizedBox(height: 14),
+            pw.SizedBox(height: 20),
             ...eval.questions.map((q) => _qcard(q, r, l)),
           ],
         ),
@@ -218,7 +253,7 @@ class PdfService {
     AppLocalizations l,
   ) {
     return pw.Container(
-      padding: pw.EdgeInsets.all(20),
+      padding: pw.EdgeInsets.all(28),
       decoration: pw.BoxDecoration(
         color: _wht,
         border: pw.Border.all(color: _bdr),
@@ -228,7 +263,7 @@ class PdfService {
         children: [
           pw.Row(
             children: [
-              _tx(e.studentName, 30, _pri, true, r),
+              _tx(e.studentName, 42, _pri, true, r),
               pw.Spacer(),
               if (sc != null)
                 _bl(
@@ -238,22 +273,22 @@ class PdfService {
                 ),
             ],
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 14),
             pw.Wrap(
-              spacing: 20,
-              runSpacing: 8,
+              spacing: 28,
+              runSpacing: 11,
               children: [
                 if (e.evaluatorName.isNotEmpty)
-                  _tx('${l.evaluator}: ${e.evaluatorName}', 14, _txtC, true, r),
+                  _tx('${l.evaluator}: ${e.evaluatorName}', 20, _txtC, true, r),
                 if (e.categories.isNotEmpty)
-                  _tx('${l.selectCategory}: ${e.categories.join(', ')}', 14, _txtC, true, r),
-                _tx('${l.questions}: ${e.numQuestions}', 14, _txtC, true, r),
-                if (ahz.isNotEmpty) _tx('${l.ahzab}: $ahz', 14, _txtC, true, r),
+                  _tx('${l.selectCategory}: ${e.categories.join(', ')}', 20, _txtC, true, r),
+                _tx('${l.questions}: ${e.numQuestions}', 20, _txtC, true, r),
+                if (ahz.isNotEmpty) _tx('${l.ahzab}: $ahz', 20, _txtC, true, r),
               ],
             ),
           if (e.note.isNotEmpty) ...[
-            pw.SizedBox(height: 10),
-            _tx(e.note, 14, _muted, true, r),
+            pw.SizedBox(height: 14),
+            _tx(e.note, 20, _muted, true, r),
           ],
         ],
       ),
@@ -275,8 +310,8 @@ class PdfService {
       }
     }
     return pw.Container(
-      margin: pw.EdgeInsets.only(bottom: 12),
-      padding: pw.EdgeInsets.all(14),
+      margin: pw.EdgeInsets.only(bottom: 17),
+      padding: pw.EdgeInsets.all(20),
       decoration: pw.BoxDecoration(
         color: _wht,
         border: pw.Border.all(color: _bdr),
@@ -286,23 +321,23 @@ class PdfService {
         children: [
           pw.Row(
             children: [
-              _tx('${l.qPrefix}${q.number}', 18, _pri, true, r),
+              _tx('${l.qPrefix}${q.number}', 25, _pri, true, r),
               pw.Spacer(),
-              if (q.note.isNotEmpty) _tx(q.note, 13, _muted, true, r),
+              if (q.note.isNotEmpty) _tx(q.note, 18, _muted, true, r),
             ],
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 14),
           pw.Row(
             children: [
               _tag('${l.ichaarat}: $ic', _pri, r),
-              pw.SizedBox(width: 12),
+              pw.SizedBox(width: 17),
               _tag('${l.taalakin}: $tc', _sec, r),
             ],
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 14),
           pw.Wrap(
-            spacing: 12,
-            runSpacing: 10,
+            spacing: 17,
+            runSpacing: 14,
             children: List.generate(
               q.tSetCount,
               (i) => _tset(
@@ -324,9 +359,9 @@ class PdfService {
       children: [
         pw.Row(
           mainAxisSize: pw.MainAxisSize.min,
-          children: [_cube(t1, _pri), pw.SizedBox(width: 4), _cube(t2, _pri)],
+          children: [_cube(t1, _pri), pw.SizedBox(width: 6), _cube(t2, _pri)],
         ),
-        pw.SizedBox(height: 4),
+        pw.SizedBox(height: 6),
         _cube(b, _sec),
       ],
     );
@@ -335,19 +370,19 @@ class PdfService {
   static pw.Widget _cube(bool filled, PdfColor ac) {
     final bg = filled ? PdfColor.fromInt(0xFFF5F0EB) : _wht;
     return pw.Container(
-      width: 30,
-      height: 30,
+      width: 42,
+      height: 42,
       decoration: pw.BoxDecoration(
         color: bg,
-        borderRadius: pw.BorderRadius.circular(8),
-        border: pw.Border.all(color: filled ? ac : _bdr, width: filled ? 3 : 1.5),
+        borderRadius: pw.BorderRadius.circular(11),
+        border: pw.Border.all(color: filled ? ac : _bdr, width: filled ? 4 : 2),
       ),
       child: filled
           ? pw.Center(
               child: pw.Text(
                 '✕',
                 style: pw.TextStyle(
-                  fontSize: 18,
+                  fontSize: 25,
                   color: ac,
                   fontWeight: pw.FontWeight.bold,
                 ),

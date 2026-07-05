@@ -286,5 +286,7 @@
   "deletePendingTaadia": "حذف التعدية المعلقة",
   "codeAlreadyUsed": "هذا الرمز مستخدم بالفعل",
   "autoGenerate": "توليد تلقائي",
-  "enterManually": "إدخال يدوي"
+  "enterManually": "إدخال يدوي",
+  "taadiaNotFound": "التعدية غير موجودة",
+  "enterAhzabRange": "أدخل نطاق الأحزاب"
 }

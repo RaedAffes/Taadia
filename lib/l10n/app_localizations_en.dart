@@ -876,4 +876,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enterManually => 'Enter manually';
+
+  @override
+  String get taadiaNotFound => 'Taadia not found';
+
+  @override
+  String get enterAhzabRange => 'Enter ahzab range';
 }

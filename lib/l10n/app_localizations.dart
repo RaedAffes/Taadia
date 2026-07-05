@@ -1735,6 +1735,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter manually'**
   String get enterManually;
+
+  /// No description provided for @taadiaNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Taadia not found'**
+  String get taadiaNotFound;
+
+  /// No description provided for @enterAhzabRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter ahzab range'**
+  String get enterAhzabRange;
 }
 
 class _AppLocalizationsDelegate
