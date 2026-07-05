@@ -36,6 +36,9 @@ migrate_working_dir/
 # Firebase Functions
 functions/node_modules/
 
+# Service account keys (secrets — used locally, NOT committed)
+scripts/*service-account*.json
+
 # Symbolication related
 app.*.symbols
 
