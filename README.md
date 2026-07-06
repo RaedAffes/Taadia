@@ -2,6 +2,8 @@
 
 A Quran memorization tracking app for teachers and students. Built with Flutter + Firebase.
 
+**Web app:** https://ta3dia.web.app
+
 ## Features
 
 - Teachers create assessments (called "Taadia") and grade students on recitation
