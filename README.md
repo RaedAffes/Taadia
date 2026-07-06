@@ -1,4 +1,4 @@
-# Ta3dia (تuـدية)
+# Ta3dia (تعدية)
 
 A Quran memorization tracking app for teachers and students. Built with Flutter + Firebase.
 
