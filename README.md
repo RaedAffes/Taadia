@@ -1,137 +1,81 @@
-# Ta3dia (تعـدية)
+# Ta3dia (تقـدية)
 
-A bilingual (Arabic/English) Flutter application for **Quran memorization (Hifdh) evaluation and assessment**. Teachers create assessment sessions, evaluate students on Quran recitation using a visual scoring system, and generate PDF reports.
-
-## Tech Stack
-
-- **Framework:** Flutter (Dart)
-- **Backend:** Firebase (Auth, Firestore, Storage, Analytics, Messaging)
-- **State Management:** Provider + ChangeNotifier
-- **Localization:** flutter_localizations (ARB files)
-- **PDF Generation:** pdf Dart package
-- **Offline:** SharedPreferences queue + Firestore persistence cache
+A Quran memorization tracking app for teachers and students. Built with Flutter + Firebase.
 
 ## Features
 
-- Role-based access (admin/user) with email/password, Google, or anonymous auth
-- Create public/private assessment sessions (Taadia) with access codes
-- Visual cube-based scoring: Ichaarat (minor errors, ×0.25) and Taalakin (major errors, ×1.0)
-- AI verse generator — picks Quranic verses from bundled dataset by hizb/surah/ayah range
-- PDF reports with ranked student tables and individual evaluation cards
-- Offline-first: all operations queued and synced when connectivity returns
-- Group management for access control
-- Admin dashboard: manage Taadias, users, feedback, evaluations
-- Dark/light theme, Arabic RTL support, PWA-ready
-
-## Firebase Projects
-
-| Project | Usage |
-|---------|-------|
-| `ta3dia` | Main app (Auth, Firestore, Storage) |
-| `ta3dia-backup` | Periodic Firestore backup destination |
+- Teachers create assessments (called "Taadia") and grade students on recitation
+- Visual cube-based scoring for errors
+- AI picks random Quran verses for each assessment
+- Generate PDF reports
+- Works offline — data syncs when you're back online
+- Arabic + English support
 
 ## Project Structure
 
 ```
-lib/
-  ai/              AI verse generator
-  l10n/            Localization (Arabic/English)
-  models/          Data models (Taadia, Evaluation, User, Group, Feedback)
-  providers/       State providers
-  screens/         20 screens (login, home, evaluation, admin, etc.)
-  services/        Firebase services (auth, firestore, offline queue, etc.)
-  widgets/         Reusable UI components
-scripts/
-  backup-initial.js      One-time bulk copy ta3dia → ta3dia-backup
-  backup-periodic.js     Periodic sync script (runs in GitHub Actions)
-  backup-watch.js        Real-time sync watcher (unused — needs persistent host)
-  migrate_visiblity.js   Legacy migration script
-functions/
-  Cloud Functions (optional — requires Blaze plan)
+📁 lib/                → The app code
+   ├── screens/        → App pages (login, home, evaluation, admin, etc.)
+   ├── services/       → Talks to Firebase
+   ├── models/         → Data types (user, assessment, evaluation, etc.)
+   ├── widgets/        → Reusable buttons, headers, etc.
+   ├── providers/      → App state management
+   ├── l10n/           → Arabic & English translations
+   └── ai/             → Quran verse picker
+📁 scripts/            → Backup & migration tools
+📁 functions/          → Cloud Functions (optional — needs Blaze plan)
+📁 android/ ios/ web/  → Platform-specific files (ignore these)
 ```
 
-## Setup
+## Getting Started
 
-### Prerequisites
+### 1. Clone & Install
 
-- Flutter SDK ^3.8
-- Firebase CLI
-- Node.js (for scripts)
+```bash
+git clone https://github.com/RaedAffes/Taadia.git
+cd ta3dia
+flutter pub get
+```
 
-### Environment
+### 2. Run the App
 
-1. Clone the repo
-2. Run `flutter pub get`
-3. Run `npm install` in `scripts/`
+```bash
+flutter run
+```
 
-### Firebase Service Accounts (Local)
+That's it — the app connects to the existing Firebase project (`ta3dia`).
 
-For running backup scripts locally:
+## Backup (GitHub Actions)
 
-1. Go to **Firebase Console → Project Settings → Service Accounts**
-2. Click **Generate new private key** for each project
-3. Save as:
-   - `scripts/ta3dia-service-account.json`
-   - `scripts/ta3dia-backup-service-account.json`
+The app automatically backs up Firestore data every hour to a second Firebase project (`ta3dia-backup`).
 
-These files are gitignored — never commit them.
+- The backup script lives in `scripts/backup-periodic.js`
+- It runs via GitHub Actions (see `.github/workflows/backup-sync.yml`)
 
-## Backup System
+**To set up backups, add two GitHub Secrets:**
 
-The project has a **periodic backup** mechanism that syncs Firestore data from `ta3dia` → `ta3dia-backup` via GitHub Actions.
+1. Go to your repo → **Settings → Secrets and variables → Actions**
+2. Click **New repository secret**
+3. Add:
 
-### How it Works
-
-1. A GitHub Action runs every hour (or on push to `main`)
-2. It executes `scripts/backup-periodic.js`
-3. The script authenticates to both projects using service account keys
-4. It recursively copies all documents (including subcollections)
-5. Deletions are NOT propagated (add-only backup)
-
-### GitHub Secrets
-
-For the Action to authenticate, two secrets must be set in the repo:
-
-| Secret | Value |
-|--------|-------|
+| Secret name | What it is |
+|-------------|-----------|
 | `TA3DIA_SERVICE_ACCOUNT` | Base64 of `scripts/ta3dia-service-account.json` |
 | `TA3DIA_BACKUP_SERVICE_ACCOUNT` | Base64 of `scripts/ta3dia-backup-service-account.json` |
 
-To generate the base64 value:
+You get these files from Firebase Console → Project Settings → Service Accounts → "Generate new private key".
 
-```bash
-# PowerShell
-[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content "scripts/ta3dia-service-account.json" -Raw)))
-
-# Linux/macOS
-base64 -w0 scripts/ta3dia-service-account.json
-```
-
-### Run Backup Locally
+## Run Backup Locally
 
 ```bash
 cd scripts
-node backup-initial.js    # one-time full copy
-node backup-periodic.js   # incremental sync
+npm install
+node backup-initial.js
 ```
 
-## Firestore Security
+## ⚠️ Important
 
-- `users/{userId}` — owner read/write, all authenticated can read
-- `taadia/{document}` — all authenticated can read; admins can update/delete
-- `evaluations/{document}` — all authenticated read/write
-- `groups/{groupId}` — all authenticated read/write
-- `feedback/{document}` — all authenticated read/write; no updates
-- `feedback/{doc}/replies/{reply}` — all authenticated read/write; no updates
+Never commit these files:
 
-Admin is determined by `auth.token.admin == true` or `users/{uid}.role == 'admin'`.
-
-## Contributing
-
-1. Fork the repo
-2. Create a feature branch
-3. Make your changes
-4. Run `flutter analyze` to check for issues
-5. Submit a pull request
-
-**Do not commit service account keys, `.env` files, or any Firebase credentials.**
+- `scripts/*service-account*.json` (Firebase secret keys)
+- `.env` or `functions/.env` (environment variables)
