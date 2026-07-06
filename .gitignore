@@ -35,6 +35,7 @@ migrate_working_dir/
 
 # Firebase Functions
 functions/node_modules/
+functions/lib/
 
 # Service account keys (secrets — used locally, NOT committed)
 scripts/*service-account*.json
@@ -53,3 +54,9 @@ app.*.map.json
 # Environment files
 .env
 functions/.env
+
+# Firebase hosting cache
+.firebase/
+
+# Data files
+*.csv
