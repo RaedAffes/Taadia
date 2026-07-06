@@ -65,17 +65,3 @@ The app automatically backs up Firestore data every hour to a second Firebase pr
 
 You get these files from Firebase Console → Project Settings → Service Accounts → "Generate new private key".
 
-## Run Backup Locally
-
-```bash
-cd scripts
-npm install
-node backup-initial.js
-```
-
-## ⚠️ Important
-
-Never commit these files:
-
-- `scripts/*service-account*.json` (Firebase secret keys)
-- `.env` or `functions/.env` (environment variables)
