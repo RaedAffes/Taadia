@@ -527,6 +527,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get installApp => 'تثبيت التطبيق';
 
   @override
+  String get visitWebsite => 'قم بزيارة موقعنا';
+
+  @override
   String get authErrorUserNotFound => 'لم يتم العثور على مستخدم بهذا البريد';
 
   @override

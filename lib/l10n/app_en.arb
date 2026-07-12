@@ -219,6 +219,7 @@
   "descending": "Descending",
   "enterStudentName": "Enter student name",
   "installApp": "Install App",
+  "visitWebsite": "Visit Our Website",
   "authErrorUserNotFound": "No user found with this email",
   "authErrorWrongPassword": "Wrong password",
   "authErrorEmailAlreadyInUse": "Email already in use",

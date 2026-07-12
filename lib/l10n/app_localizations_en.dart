@@ -527,6 +527,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get installApp => 'Install App';
 
   @override
+  String get visitWebsite => 'Visit Our Website';
+
+  @override
   String get authErrorUserNotFound => 'No user found with this email';
 
   @override

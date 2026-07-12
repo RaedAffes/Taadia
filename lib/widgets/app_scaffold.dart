@@ -6,7 +6,6 @@ import 'package:ta3dia/screens/register_screen.dart';
 import 'package:ta3dia/screens/settings_screen.dart';
 import 'package:ta3dia/screens/admin_manage_users.dart';
 import 'package:ta3dia/screens/user_dashboard.dart';
-import 'package:ta3dia/services/pwa_install.dart';
 import 'package:ta3dia/widgets/taadia_background.dart';
 import 'package:ta3dia/widgets/islamic_header.dart';
 import 'package:ta3dia/services/feedback_service.dart';
@@ -17,6 +16,7 @@ import 'package:ta3dia/screens/home_screen.dart';
 import 'package:ta3dia/screens/admin_manage_taadia_screen.dart';
 import 'package:ta3dia/screens/manage_groups_screen.dart';
 import 'package:ta3dia/widgets/offline_banner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppScaffold extends StatelessWidget {
   final Widget body;
@@ -193,117 +193,15 @@ class AppScaffold extends StatelessWidget {
             Spacer(),
             ListTile(
               leading: Icon(
-                Icons.task_alt,
+                Icons.open_in_new,
                 color: cs.primary,
               ),
-              title: Text(l.installApp, style: TextStyle(color: cs.onSurface)),
+              title: Text(l.visitWebsite, style: TextStyle(color: cs.onSurface)),
               onTap: () async {
                 Navigator.pop(context);
-                final result = await triggerPwaInstall();
-                if (result == 'already_installed' && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l.installAppAlready),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                } else if (result == 'ios_instructions' && context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => Dialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                color: cs.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Icon(
-                                Icons.ios_share,
-                                size: 32,
-                                color: cs.primary,
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              l.installApp,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: cs.onSurface,
-                              ),
-                            ),
-                            SizedBox(height: 12),
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: cs.surfaceContainerHighest.withValues(
-                                  alpha: 0.5,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                l.installAppIOS,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: cs.onSurface,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 24),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                style: ElevatedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  l.close,
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                } else if ((result == 'not_available' ||
-                        result == 'dismissed') &&
-                    context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Row(
-                        children: [
-                          Icon(Icons.download_rounded, size: 24),
-                          SizedBox(width: 10),
-                          Text(l.installApp),
-                        ],
-                      ),
-                      content: Text(l.installAppGeneric),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: Text(l.close),
-                        ),
-                      ],
-                    ),
-                  );
+                final uri = Uri.parse('https://ta3dia.web.app');
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }
               },
             ),

@@ -1082,6 +1082,12 @@ abstract class AppLocalizations {
   /// **'Install App'**
   String get installApp;
 
+  /// No description provided for @visitWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit Our Website'**
+  String get visitWebsite;
+
   /// No description provided for @authErrorUserNotFound.
   ///
   /// In en, this message translates to:

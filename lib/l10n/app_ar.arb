@@ -164,6 +164,7 @@
   "descending": "تنازلي",
   "enterStudentName": "أدخل اسم الطالب",
   "installApp": "تثبيت التطبيق",
+  "visitWebsite": "قم بزيارة موقعنا",
   "authErrorUserNotFound": "لم يتم العثور على مستخدم بهذا البريد",
   "authErrorWrongPassword": "كلمة المرور خاطئة",
   "authErrorEmailAlreadyInUse": "البريد الإلكتروني مستخدم بالفعل",

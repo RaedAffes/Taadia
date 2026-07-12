@@ -994,17 +994,21 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.9,
-          child: QuranReaderScreen(
-            initialSurah: suraNo,
-            initialAyah: ayaNo,
-            pageKey: 'gen-$suraNo-$ayaNo',
+      builder: (_) {
+        final mq = MediaQuery.of(context);
+        final maxH = mq.size.height - mq.padding.top - mq.viewInsets.bottom - 24;
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          child: SizedBox(
+            height: maxH.clamp(200.0, mq.size.height),
+            child: QuranReaderScreen(
+              initialSurah: suraNo,
+              initialAyah: ayaNo,
+              pageKey: 'gen-$suraNo-$ayaNo',
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -2603,27 +2607,9 @@ class _QuestionPager extends StatefulWidget {
 }
 
 class _QuestionPagerState extends State<_QuestionPager> {
-  int _index = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _index = widget.controller.initialPage;
-  }
-
-  @override
-  void didUpdateWidget(covariant _QuestionPager old) {
-    super.didUpdateWidget(old);
-    if (old.controller != widget.controller) {
-      _index = widget.controller.initialPage;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final canPrev = _index > 0;
-    final canNext = _index < widget.itemCount - 1;
     return Column(
       children: [
         SizedBox(
@@ -2632,106 +2618,192 @@ class _QuestionPagerState extends State<_QuestionPager> {
             textDirection: TextDirection.ltr,
             child: PageView.builder(
               controller: widget.controller,
-              onPageChanged: (i) => setState(() => _index = i),
               itemCount: widget.itemCount,
-              itemBuilder: (_, i) => widget.itemBuilder(i),
+              itemBuilder: (_, i) => RepaintBoundary(
+                child: widget.itemBuilder(i),
+              ),
             ),
           ),
         ),
         if (widget.itemCount > 1) ...[
           SizedBox(height: 12),
-          Center(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.chevron_left, size: 18),
-                    tooltip: 'Next',
-                    visualDensity: VisualDensity.compact,
-                    constraints: BoxConstraints(minWidth: 28, minHeight: 28),
-                    padding: EdgeInsets.zero,
-                    style: IconButton.styleFrom(
-                      backgroundColor: canNext
-                          ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
-                          : Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: canNext
-                        ? () => widget.controller.nextPage(
-                            duration: Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          )
-                        : null,
-                  ),
-                  SizedBox(
-                    width: widget.itemCount * 14.0 + 10,
-                    height: 8,
-                    child: Stack(
-                      clipBehavior: Clip.hardEdge,
-                      children: [
-                        ...List.generate(widget.itemCount, (i) {
-                          return Positioned(
-                            left: i * 14.0 + 8,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: i == _index
-                                    ? cs.primary.withValues(alpha: 0.3)
-                                    : cs.outlineVariant,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          );
-                        }),
-                        AnimatedPositioned(
-                          duration: Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          left: _index * 14.0,
-                          child: Container(
-                            width: 24,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: cs.primary,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.chevron_right, size: 18),
-                    tooltip: 'Previous',
-                    visualDensity: VisualDensity.compact,
-                    constraints: BoxConstraints(minWidth: 28, minHeight: 28),
-                    padding: EdgeInsets.zero,
-                    style: IconButton.styleFrom(
-                      backgroundColor: canPrev
-                          ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
-                          : Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: canPrev
-                        ? () => widget.controller.previousPage(
-                            duration: Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          )
-                        : null,
-                  ),
-                ],
-              ),
-            ),
+          _DotsNav(
+            controller: widget.controller,
+            count: widget.itemCount,
+            cs: cs,
           ),
         ],
       ],
+    );
+  }
+}
+
+class _DotsNav extends StatefulWidget {
+  final PageController controller;
+  final int count;
+  final ColorScheme cs;
+
+  const _DotsNav({
+    required this.controller,
+    required this.count,
+    required this.cs,
+  });
+
+  @override
+  State<_DotsNav> createState() => _DotsNavState();
+}
+
+class _DotsNavState extends State<_DotsNav> {
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.controller.initialPage;
+    widget.controller.addListener(_onScroll);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DotsNav old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_onScroll);
+      widget.controller.addListener(_onScroll);
+      _index = widget.controller.initialPage;
+    }
+    if (_index >= widget.count) {
+      _index = widget.count - 1;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final page = widget.controller.page;
+    if (page == null) return;
+    final nearest = page.round();
+    if (nearest != _index) {
+      setState(() => _index = nearest);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.cs;
+    final spacing = 14.0;
+    final canPrev = _index > 0;
+    final canNext = _index < widget.count - 1;
+    final totalW = widget.count * spacing;
+    return Center(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.chevron_left, size: 18),
+              tooltip: 'Next',
+              visualDensity: VisualDensity.compact,
+              constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                backgroundColor: canNext
+                    ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
+                    : Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: canNext
+                  ? () => widget.controller.nextPage(
+                      duration: Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    )
+                  : null,
+            ),
+            SizedBox(
+              width: 200,
+              height: 8,
+              child: LayoutBuilder(
+                builder: (ctx, constraints) {
+                  final viewW = constraints.maxWidth;
+                  final maxOff = (totalW - viewW + 14).clamp(0.0, double.infinity);
+                  final targetOff = (_index * spacing - viewW / 2 + 7).clamp(0.0, maxOff);
+                  return Stack(
+                    clipBehavior: Clip.hardEdge,
+                    children: [
+                      AnimatedPositioned(
+                        duration: Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        left: -targetOff,
+                        child: SizedBox(
+                          width: totalW + 10,
+                          height: 8,
+                          child: Stack(
+                            clipBehavior: Clip.hardEdge,
+                            children: [
+                              ...List.generate(widget.count, (i) {
+                                return Positioned(
+                                  left: i * spacing + 8,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: cs.outlineVariant,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                );
+                              }),
+                              Positioned(
+                                left: _index * spacing,
+                                child: Container(
+                                  width: 24,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: cs.primary,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.chevron_right, size: 18),
+              tooltip: 'Previous',
+              visualDensity: VisualDensity.compact,
+              constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                backgroundColor: canPrev
+                    ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
+                    : Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: canPrev
+                  ? () => widget.controller.previousPage(
+                      duration: Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    )
+                  : null,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
