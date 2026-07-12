@@ -2585,6 +2585,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       ),
     );
   }
+}
 
 class _QuestionPager extends StatefulWidget {
   final PageController controller;
@@ -2733,6 +2734,4 @@ class _QuestionPagerState extends State<_QuestionPager> {
       ],
     );
   }
-}
-
 }
