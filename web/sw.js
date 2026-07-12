@@ -1,6 +1,6 @@
-const CACHE_NAME = 'ta3dia-v4';
-const CACHE_ASSETS = 'ta3dia-assets-v4';
-const CACHE_CROSS = 'ta3dia-cross-v4';
+const CACHE_NAME = 'ta3dia-v6';
+const CACHE_ASSETS = 'ta3dia-assets-v6';
+const CACHE_CROSS = 'ta3dia-cross-v6';
 
 const PRECACHE_URLS = [
   './',
@@ -38,6 +38,12 @@ self.addEventListener('activate', (event) => {
       await self.clients.claim();
     })()
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -79,9 +85,50 @@ self.addEventListener('fetch', (event) => {
   const pathname = url.pathname;
   const isAsset = pathname.startsWith('/assets/');
   const isCanvaskit = pathname.startsWith('/canvaskit/');
-  const isMainJs = false;
+  const isMainJs = pathname.endsWith('main.dart.js') || pathname == './main.dart.js';
   const isFlutterJs = pathname === '/flutter.js' || pathname === '/flutter_bootstrap.js';
+  const isFlutterJsNetwork = pathname === '/flutter_bootstrap.js';
   const isStatic = pathname.endsWith('.png') || pathname.endsWith('.ico') || pathname.endsWith('.json') || pathname.endsWith('.svg') || pathname.endsWith('.woff') || pathname.endsWith('.woff2') || pathname.endsWith('.ttf') || pathname.endsWith('.wasm');
+
+  // Network-first for flutter_bootstrap.js (app init)
+  if (isFlutterJsNetwork) {
+    event.respondWith(
+      (async () => {
+        try {
+          const response = await fetch(request);
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, clone);
+          }
+          return response;
+        } catch () {
+          return caches.match(request);
+        }
+      })()
+    );
+    return;
+  }
+
+  // Network-first for main.dart.js (always get latest)
+  if (isMainJs) {
+    event.respondWith(
+      (async () => {
+        try {
+          const response = await fetch(request);
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, clone);
+          }
+          return response;
+        } catch () {
+          return caches.match(request);
+        }
+      })()
+    );
+    return;
+  }
 
   // Cache-first for immutable Flutter assets
   if (isAsset || isCanvaskit || isMainJs || isFlutterJs || isStatic) {

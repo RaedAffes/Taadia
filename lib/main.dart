@@ -242,8 +242,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = context.watch<AuthService>();
-
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
@@ -286,7 +284,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return LoginScreen();
         }
 
-        if (authService.appUser != null && authService.isAdmin) {
+        final authService = context.read<AuthService>();
+        if (authService.isAdmin) {
           analytics.setUserId(id: user.uid);
           analytics.logEvent(name: 'admin_access', parameters: {
             'user_id': user.uid,
@@ -294,12 +293,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return AdminManageTaadiaScreen();
         }
 
-        if (authService.appUser != null) {
-          analytics.setUserId(id: user.uid);
-          analytics.logEvent(name: 'user_access', parameters: {
-            'user_id': user.uid,
-          });
-        }
+        analytics.setUserId(id: user.uid);
+        analytics.logEvent(name: 'user_access', parameters: {
+          'user_id': user.uid,
+        });
         return HomeScreen();
       },
     );

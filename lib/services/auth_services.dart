@@ -53,12 +53,13 @@ class AuthService extends ChangeNotifier {
         await _ensureUserDoc(user);
       } else {
         _appUser = null;
+        notifyListeners();
       }
       if (!_authReady) {
         _isLoading = false;
         _authReady = true;
+        notifyListeners();
       }
-      notifyListeners();
     });
   }
 

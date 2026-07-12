@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 const _duas = [
   'رَبِّ زِدْنِي عِلْمًا – طه 114',
@@ -65,17 +66,31 @@ class _VersePopup {
 }
 
 class _DotInfo {
-  final double baseX, baseY, radius, speed, phase, driftX, driftY;
+  double x, y;
+  final double radius;
+  double vx, vy;
+  double maxX, maxY;
 
   _DotInfo({
-    required this.baseX,
-    required this.baseY,
+    required this.x,
+    required this.y,
     required this.radius,
-    required this.speed,
-    required this.phase,
-    required this.driftX,
-    required this.driftY,
+    required this.vx,
+    required this.vy,
+    required this.maxX,
+    required this.maxY,
   });
+
+  void update(math.Random rng) {
+    vx += (rng.nextDouble() - 0.5) * 0.007;
+    vy += (rng.nextDouble() - 0.5) * 0.006;
+    vx = vx.clamp(-0.018, 0.018);
+    vy = vy.clamp(-0.014, 0.014);
+    x += vx;
+    y += vy;
+    if (x < 0 || x > maxX) { vx = -vx; x = x.clamp(0.0, maxX); }
+    if (y < 0 || y > maxY) { vy = -vy; y = y.clamp(0.0, maxY); }
+  }
 }
 
 class IslamicHeader extends StatefulWidget implements PreferredSizeWidget {
@@ -103,51 +118,51 @@ class IslamicHeader extends StatefulWidget implements PreferredSizeWidget {
 
 class _IslamicHeaderState extends State<IslamicHeader>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
+  late Ticker _ticker;
   final List<_VersePopup> _popups = [];
   int _nextId = 0;
   Size _headerSize = Size.zero;
 
   static const int _dotCount = 35;
   static const double _hitRadius = 30;
-  late final List<_DotInfo> _dots;
+  final math.Random _rng = math.Random(42);
+  List<_DotInfo>? _dots;
 
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
-
-    final rng = math.Random(42);
+  void _initDots(Size size) {
     _dots = List.generate(_dotCount, (_) {
       return _DotInfo(
-        baseX: rng.nextDouble(),
-        baseY: rng.nextDouble(),
-        radius: rng.nextDouble() * 2.5 + 0.8,
-        speed: rng.nextDouble() * 0.4 + 0.15,
-        phase: rng.nextDouble() * math.pi * 2,
-        driftX: rng.nextDouble() * 30 + 10,
-        driftY: rng.nextDouble() * 20 + 8,
+        x: _rng.nextDouble() * size.width,
+        y: _rng.nextDouble() * size.height,
+        radius: _rng.nextDouble() * 2.5 + 0.8,
+        vx: (_rng.nextDouble() - 0.5) * 0.05,
+        vy: (_rng.nextDouble() - 0.5) * 0.04,
+        maxX: size.width,
+        maxY: size.height,
       );
     });
   }
 
   @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker((_) {
+      if (_dots == null) return;
+      setState(() {
+        for (final dot in _dots!) {
+          dot.update(_rng);
+        }
+      });
+    })..start();
+  }
+
+  @override
   void dispose() {
-    _animController.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
   Offset _getDotPosition(_DotInfo dot, Size size) {
-    final baseX = dot.baseX * size.width;
-    final baseY = dot.baseY * size.height;
-    final t = _animController.value * math.pi * 2 * dot.speed + dot.phase;
-    return Offset(
-      baseX + math.sin(t) * dot.driftX,
-      baseY + math.cos(t * 0.7) * dot.driftY,
-    );
+    return Offset(dot.x, dot.y);
   }
 
   void _onTapDown(TapDownDetails details, Size size) {
@@ -155,7 +170,7 @@ class _IslamicHeaderState extends State<IslamicHeader>
     _DotInfo? closest;
     double closestDist = _hitRadius;
 
-    for (final dot in _dots) {
+    for (final dot in _dots!) {
       final dist = (tapPos - _getDotPosition(dot, size)).distance;
       if (dist < closestDist) {
         closestDist = dist;
@@ -194,6 +209,14 @@ class _IslamicHeaderState extends State<IslamicHeader>
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, height);
         _headerSize = size;
+        _dots ??= () {
+          _initDots(size);
+          return _dots;
+        }();
+        for (final dot in _dots!) {
+          dot.maxX = size.width;
+          dot.maxY = size.height;
+        }
 
         return Container(
           height: height,
@@ -223,8 +246,7 @@ class _IslamicHeaderState extends State<IslamicHeader>
                 Positioned.fill(
                   child: CustomPaint(
                     painter: _DotsPainter(
-                      animation: _animController,
-                      dots: _dots,
+                      dots: _dots!,
                     ),
                   ),
                 ),
@@ -356,35 +378,23 @@ class _IslamicHeaderState extends State<IslamicHeader>
 }
 
 class _DotsPainter extends CustomPainter {
-  final Animation<double> animation;
   final List<_DotInfo> dots;
 
-  _DotsPainter({required this.animation, required this.dots})
-      : super(repaint: animation);
+  _DotsPainter({required this.dots});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
-    final progress = animation.value;
 
     for (final dot in dots) {
-      final baseX = dot.baseX * size.width;
-      final baseY = dot.baseY * size.height;
-      final t = progress * math.pi * 2 * dot.speed + dot.phase;
-      final x = baseX + math.sin(t) * dot.driftX;
-      final y = baseY + math.cos(t * 0.7) * dot.driftY;
-      final opacity = (math.sin(t) + 1) / 2;
+      final speed = math.sqrt(dot.vx * dot.vx + dot.vy * dot.vy);
+      final opacity = speed / 2.0;
 
       paint.color = Colors.white.withValues(alpha: 0.08 + opacity * 0.22);
-      canvas.drawCircle(Offset(x, y), dot.radius, paint);
-
-      if (dot.radius > 2.0) {
-        paint.color = Colors.white.withValues(alpha: 0.03 + opacity * 0.06);
-        canvas.drawCircle(Offset(x, y), dot.radius * 2.0, paint);
-      }
+      canvas.drawCircle(Offset(dot.x, dot.y), dot.radius, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _DotsPainter old) => false;
+  bool shouldRepaint(covariant _DotsPainter old) => true;
 }
