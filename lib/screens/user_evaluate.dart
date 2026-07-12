@@ -10,7 +10,10 @@ import 'package:ta3dia/services/evaluation_service.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/pdf_service.dart';
+import 'package:ta3dia/services/csv_service.dart';
 import 'package:ta3dia/ai/ai_service.dart';
+import 'package:ta3dia/widgets/download_choice_dialog.dart';
+import 'package:ta3dia/screens/quran_reader_screen.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 import 'package:ta3dia/widgets/offline_utils.dart';
 
@@ -117,19 +120,21 @@ class _RangeCriterion {
 class _QuestionCube extends StatelessWidget {
   final bool filled;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool enabled;
 
   const _QuestionCube({
     required this.filled,
     required this.color,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return GestureDetector(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: AnimatedContainer(
         duration: Duration(milliseconds: 150),
         width: 32,
@@ -196,6 +201,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   bool _generateEnabled = true;
   int _shortcutIndex = 0;
   final List<int> _questionVerseIndices = [];
+  late final PageController _pageController;
+  int _currentQuestionIndex = 0;
 
   final List<_RangeCriterion> _rangeCriteria = [_RangeCriterion()];
   String _oldAhzabText = '';
@@ -228,6 +235,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     } else {
       _taadiaActive = true;
     }
+    _pageController = PageController();
     AiService.loadVerses().then((_) {
       if (mounted) setState(() => _versesLoaded = true);
     });
@@ -400,6 +408,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _evaluatorNameController.dispose();
     _studentNameController.dispose();
     _noteController.dispose();
@@ -507,6 +516,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       rangeCriteria: _rangeCriteria.map((c) => c.toMap()).toList(),
       questions: List.from(_questions),
       note: _noteController.text.trim(),
+      formula: widget.editingEvaluation?.formula ?? 'mahalia',
       createdAt: DateTime.now(),
     );
 
@@ -670,7 +680,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       icon: Icon(icon, size: 18),
       tooltip: tooltip,
       visualDensity: VisualDensity.compact,
-      constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+      constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+      padding: EdgeInsets.zero,
       style: IconButton.styleFrom(
         backgroundColor: enabled
             ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
@@ -728,6 +739,17 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(AppLocalizations.of(context)!.maxTwoTalakin),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showUncheckMessage(BuildContext context) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.uncheckQuestionFirst),
         backgroundColor: Theme.of(context).colorScheme.error,
         duration: Duration(seconds: 2),
       ),
@@ -960,11 +982,38 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     );
   }
 
+  void _showQuranOverlay(int verseIndex) {
+    if (verseIndex < 0 || verseIndex >= AiService.allVerses.length) return;
+    final verse = AiService.allVerses[verseIndex];
+    final suraNo = verse['sura_no'] as int;
+    final ayaNo = verse['aya_no'] as int;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black38,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.9,
+          child: QuranReaderScreen(
+            initialSurah: suraNo,
+            initialAyah: ayaNo,
+            pageKey: 'gen-$suraNo-$ayaNo',
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _questionWidget(int index, AppLocalizations l, ColorScheme cs) {
     final q = _questions[index];
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
       decoration: BoxDecoration(
         color: q.isComplete ? cs.primary.withValues(alpha: 0.04) : cs.surface,
         borderRadius: BorderRadius.circular(14),
@@ -977,277 +1026,316 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      cs.primary.withValues(alpha: 0.8),
-                      cs.primary.withValues(alpha: 0.4),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    '${q.number}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: cs.onPrimary,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  '${l.question} ${q.number}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: cs.onSurface,
-                  ),
-                ),
-              ),
-              Checkbox(
-                value: q.isComplete,
-                onChanged: (v) => setState(() => q.isComplete = v ?? false),
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ],
-          ),
-          if (q.questionText.isNotEmpty) ...[
-                SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _ayaNavButton(
-                              icon: Icons.skip_previous,
-                              tooltip: 'Next Aya',
-                              enabled: !_isGenerating && _versesLoaded && _questionVerseIndices[index] < AiService.allVerses.length - 1,
-                              onPressed: () => _nextAya(index),
-                              cs: cs,
-                            ),
-                            SizedBox(width: 2),
-                            _ayaNavButton(
-                              icon: Icons.refresh,
-                              tooltip: 'Regenerate',
-                              enabled: _versesLoaded && !_isGenerating && _generateEnabled && _hasValidRange(),
-                              onPressed: () => _generateQuestions(singleIndex: index),
-                              cs: cs,
-                            ),
-                            SizedBox(width: 2),
-                            _ayaNavButton(
-                              icon: Icons.skip_next,
-                              tooltip: 'Previous Aya',
-                              enabled: !_isGenerating && _versesLoaded && _questionVerseIndices[index] > 0,
-                              onPressed: () => _previousAya(index),
-                              cs: cs,
-                            ),
-                          ],
-                        ),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        cs.primary.withValues(alpha: 0.8),
+                        cs.primary.withValues(alpha: 0.4),
                       ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              cs.primary.withValues(alpha: 0.08),
-                              cs.secondary.withValues(alpha: 0.08),
-                            ],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: cs.primary.withValues(alpha: 0.15)),
-                        ),
-                        child: Text(
-                          q.questionText,
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: cs.onSurface,
-                          ),
-                          textDirection: TextDirection.rtl,
-                          textAlign: TextAlign.right,
-                        ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${q.number}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: cs.onPrimary,
                       ),
                     ),
-                  ],
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${l.question} ${q.number}',
+                    textAlign: TextAlign.start,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+                Checkbox(
+                  value: q.isComplete,
+                  onChanged: (v) => setState(() => q.isComplete = v ?? false),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ],
-              SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: List.generate(q.tSetCount, (tSetIndex) {
-                    final top1 = q.topCubes[tSetIndex * 2];
-                    final top2 = q.topCubes[tSetIndex * 2 + 1];
-                    final bottom = q.bottomCubes[tSetIndex];
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
+            ),
+          ),
+          if (q.questionText.isNotEmpty) ...[
+                SizedBox(height: 8),
+                Container(
+                  constraints: BoxConstraints(maxHeight: 122),
+                  padding: EdgeInsets.all(12),
+                  clipBehavior: Clip.hardEdge,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        cs.primary.withValues(alpha: 0.08),
+                        cs.secondary.withValues(alpha: 0.08),
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: cs.primary.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _ayaNavButton(
+                            icon: Icons.skip_previous,
+                            tooltip: 'Next Aya',
+                            enabled: !_isGenerating && _versesLoaded && _questionVerseIndices[index] < AiService.allVerses.length - 1,
+                            onPressed: q.isComplete
+                                ? () => _showUncheckMessage(context)
+                                : () => _nextAya(index),
+                            cs: cs,
+                          ),
+                          SizedBox(width: 2),
+                          _ayaNavButton(
+                            icon: Icons.refresh,
+                            tooltip: 'Regenerate',
+                            enabled: _versesLoaded && !_isGenerating && _generateEnabled && _hasValidRange(),
+                            onPressed: q.isComplete
+                                ? () => _showUncheckMessage(context)
+                                : () => _generateQuestions(singleIndex: index),
+                            cs: cs,
+                          ),
+                          SizedBox(width: 2),
+                          _ayaNavButton(
+                            icon: Icons.skip_next,
+                            tooltip: 'Previous Aya',
+                            enabled: !_isGenerating && _versesLoaded && _questionVerseIndices[index] > 0,
+                            onPressed: q.isComplete
+                                ? () => _showUncheckMessage(context)
+                                : () => _previousAya(index),
+                            cs: cs,
+                          ),
+                          SizedBox(width: 2),
+                          _ayaNavButton(
+                            icon: Icons.menu_book,
+                            tooltip: 'Open in Quran',
+                            enabled: _versesLoaded && _questionVerseIndices[index] >= 0 && _questionVerseIndices[index] < AiService.allVerses.length,
+                            onPressed: q.isComplete
+                                ? () => _showUncheckMessage(context)
+                                : () => _showQuranOverlay(_questionVerseIndices[index]),
+                            cs: cs,
+                          ),
+                        ],
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Text(
+                            q.questionText,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.6,
+                              color: cs.onSurface,
+                            ),
+                            textDirection: TextDirection.rtl,
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              SizedBox(height: 12),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          ...List.generate(q.tSetCount, (tSetIndex) {
+                      final top1 = q.topCubes[tSetIndex * 2];
+                      final top2 = q.topCubes[tSetIndex * 2 + 1];
+                      final bottom = q.bottomCubes[tSetIndex];
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                             _QuestionCube(
                               filled: top1,
                               color: cs.primary,
-                              onTap: () {
-                                setState(() {
-                                  final old = q.topCubes.toList();
-                                  q.topCubes[tSetIndex * 2] = !q.topCubes[tSetIndex * 2];
-                                  q.syncFromCubes();
-                                  if (q.isOverWeight) {
-                                    q.topCubes = old;
-                                    q.syncFromCubes();
-                                    _showWeightError();
-                                  }
-                                });
-                              },
+                              onTap: q.isComplete
+                                  ? () => _showUncheckMessage(context)
+                                  : () {
+                                      setState(() {
+                                        final old = q.topCubes.toList();
+                                        q.topCubes[tSetIndex * 2] = !q.topCubes[tSetIndex * 2];
+                                        q.syncFromCubes();
+                                        if (q.isOverWeight) {
+                                          q.topCubes = old;
+                                          q.syncFromCubes();
+                                          _showWeightError();
+                                        }
+                                      });
+                                    },
                             ),
                             SizedBox(width: 4),
                             _QuestionCube(
                               filled: top2,
                               color: cs.primary,
-                              onTap: () {
-                                setState(() {
-                                  final old = q.topCubes.toList();
-                                  q.topCubes[tSetIndex * 2 + 1] =
-                                      !q.topCubes[tSetIndex * 2 + 1];
-                                  q.syncFromCubes();
-                                  if (q.isOverWeight) {
-                                    q.topCubes = old;
-                                    q.syncFromCubes();
-                                    _showWeightError();
-                                  }
-                                });
-                              },
+                              onTap: q.isComplete
+                                  ? () => _showUncheckMessage(context)
+                                  : () {
+                                      setState(() {
+                                        final old = q.topCubes.toList();
+                                        q.topCubes[tSetIndex * 2 + 1] =
+                                            !q.topCubes[tSetIndex * 2 + 1];
+                                        q.syncFromCubes();
+                                        if (q.isOverWeight) {
+                                          q.topCubes = old;
+                                          q.syncFromCubes();
+                                          _showWeightError();
+                                        }
+                                      });
+                                    },
                             ),
-                          ],
-                        ),
-                        SizedBox(height: 4),
+                            ],
+                          ),
+                          SizedBox(height: 4),
                         _QuestionCube(
                           filled: bottom,
                           color: cs.secondary,
-                          onTap: () {
-                            setState(() {
-                              final newVal = !q.bottomCubes[tSetIndex];
-                              q.bottomCubes[tSetIndex] = newVal;
-                              if (newVal) {
-                                q.topCubes[tSetIndex * 2] = true;
-                                q.topCubes[tSetIndex * 2 + 1] = true;
-                              }
-                              q.syncFromCubes();
-                              if (q.isOverWeight) {
-                                final excess = q.weightedScore - 2.0;
-                                final needRemove = (excess / 0.25).ceil();
-                                final available = q.countRemovableIchaarat(skipTSet: tSetIndex);
-                                if (available >= needRemove) {
-                                  q.deselectIchaarat(needRemove, skipTSet: tSetIndex);
-                                  q.syncFromCubes();
-                                } else {
-                                  q.bottomCubes[tSetIndex] = !newVal;
-                                  if (newVal) {
-                                    q.topCubes[tSetIndex * 2] = false;
-                                    q.topCubes[tSetIndex * 2 + 1] = false;
-                                  }
-                                  q.syncFromCubes();
-                                }
-                                _showWeightError();
-                              }
-                            });
-                          },
+                          onTap: q.isComplete
+                              ? () => _showUncheckMessage(context)
+                              : () {
+                                  setState(() {
+                                    final newVal = !q.bottomCubes[tSetIndex];
+                                    q.bottomCubes[tSetIndex] = newVal;
+                                    if (newVal) {
+                                      q.topCubes[tSetIndex * 2] = true;
+                                      q.topCubes[tSetIndex * 2 + 1] = true;
+                                    }
+                                    q.syncFromCubes();
+                                    if (q.isOverWeight) {
+                                      final excess = q.weightedScore - 2.0;
+                                      final needRemove = (excess / 0.25).ceil();
+                                      final available = q.countRemovableIchaarat(skipTSet: tSetIndex);
+                                      if (available >= needRemove) {
+                                        q.deselectIchaarat(needRemove, skipTSet: tSetIndex);
+                                        q.syncFromCubes();
+                                      } else {
+                                        q.bottomCubes[tSetIndex] = !newVal;
+                                        if (newVal) {
+                                          q.topCubes[tSetIndex * 2] = false;
+                                          q.topCubes[tSetIndex * 2 + 1] = false;
+                                        }
+                                        q.syncFromCubes();
+                                      }
+                                      _showWeightError();
+                                    }
+                                  });
+                                },
                         ),
-                      ],
-                    );
-                  }),
-                ),
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.add, size: 18, color: cs.primary),
-                    tooltip: 'Add T-set',
-                    onPressed: () {
-                      setState(() {
-                        q.addTSet();
-                        q.syncFromCubes();
-                        if (q.isOverWeight) {
-                          q.removeTSet();
-                          q.syncFromCubes();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(AppLocalizations.of(context)!.maxTwoTalakin),
-                              backgroundColor: cs.error,
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      });
-                    },
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.remove, size: 18, color: cs.error),
-                    tooltip: 'Remove T-set',
-                    onPressed: q.tSetCount > 1
-                        ? () {
-                            setState(() {
-                              q.removeTSet();
-                              q.syncFromCubes();
-                            });
-                          }
-                        : null,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Container(
-            padding: EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  cs.primary.withValues(alpha: 0.06),
-                  cs.secondary.withValues(alpha: 0.06),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
+                        ],
+                      );
+                    }),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.add, size: 18, color: cs.primary),
+                                tooltip: 'Add T-set',
+                                onPressed: q.isComplete
+                                    ? () => _showUncheckMessage(context)
+                                    : () {
+                                        setState(() {
+                                          q.addTSet();
+                                          q.syncFromCubes();
+                                          if (q.isOverWeight) {
+                                            q.removeTSet();
+                                            q.syncFromCubes();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(AppLocalizations.of(context)!.maxTwoTalakin),
+                                                backgroundColor: cs.error,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        });
+                                      },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.remove, size: 18, color: cs.error),
+                                tooltip: 'Remove T-set',
+                                onPressed: q.isComplete && q.tSetCount <= 1
+                                    ? null
+                                    : q.isComplete
+                                        ? () => _showUncheckMessage(context)
+                                        : q.tSetCount <= 1
+                                            ? null
+                                            : () {
+                                                setState(() {
+                                                  q.removeTSet();
+                                                  q.syncFromCubes();
+                                                });
+                                              },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _scoreBox(
-                    Icons.notifications,
-                    '${q.ichaarat}',
-                    l.totalIchaarat,
-                    cs.primary,
-                  ),
+          ),
+          SizedBox(height: 32),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Container(
+              padding: EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    cs.primary.withValues(alpha: 0.06),
+                    cs.secondary.withValues(alpha: 0.06),
+                  ],
                 ),
-                Container(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _scoreBox(
+                      Icons.notifications,
+                      '${q.ichaarat}',
+                      l.totalIchaarat,
+                      cs.primary,
+                    ),
+                  ),
+                  Container(
                   width: 1,
                   height: 36,
                   color: cs.outlineVariant.withValues(alpha: 0.3),
@@ -1263,11 +1351,12 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               ],
             ),
           ),
+          ),
+          SizedBox(height: 28),
           if (q.note.isNotEmpty) ...[
-            SizedBox(height: 8),
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(8),
+              padding: EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
@@ -1282,8 +1371,11 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               ),
             ),
           ],
-          SizedBox(height: 8),
           TextField(
+            textAlign: TextAlign.right,
+            textDirection: TextDirection.rtl,
+            minLines: 2,
+            maxLines: 3,
             decoration: InputDecoration(
               hintText: l.enterNoteHint,
               isDense: true,
@@ -1293,26 +1385,9 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             style: TextStyle(fontSize: 13),
-            onChanged: (v) => q.note = v,
-          ),
-          SizedBox(height: 12),
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${index + 1} / ${_questions.length}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ),
+            readOnly: q.isComplete,
+            onTap: q.isComplete ? () => _showUncheckMessage(context) : null,
+            onChanged: q.isComplete ? null : (v) => q.note = v,
           ),
         ],
       ),
@@ -1429,29 +1504,40 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     final c = _rangeCriteria[index];
     switch (c.type) {
       case QuestionRangeType.hizbRange:
-        return Row(
-          children: [
-            Expanded(child: _hizbDropdown(cs, c.hizbTo, (v) {
-              setState(() => c.hizbTo = v);
-            }, label: l.to)),
-            SizedBox(width: 8),
-            Expanded(child: _hizbDropdown(cs, c.hizbFrom, (v) {
-              setState(() => c.hizbFrom = v);
-            }, label: l.from)),
-          ],
+        return Directionality(
+          textDirection: TextDirection.ltr,
+          child: Row(
+            children: [
+              Expanded(child: _hizbDropdown(cs, c.hizbTo, (v) {
+                setState(() => c.hizbTo = v);
+              }, label: l.to)),
+              SizedBox(width: 8),
+              Expanded(child: _hizbDropdown(cs, c.hizbFrom, (v) {
+                setState(() {
+                  c.hizbFrom = v;
+                  if (c.hizbTo == null || c.hizbTo == c.hizbFrom) {
+                    c.hizbTo = v;
+                  }
+                });
+              }, label: l.from)),
+            ],
+          ),
         );
 
       case QuestionRangeType.surahs:
-        return Row(
-          children: [
-            Expanded(child: _surahDropdown(cs, c.surahTo ?? c.surahFrom, (v) {
-              setState(() => c.surahTo = v);
-            }, hintText: l.to)),
-            SizedBox(width: 8),
-            Expanded(child: _surahDropdown(cs, c.surahFrom, (v) {
-              setState(() => c.surahFrom = v);
-            }, hintText: l.from)),
-          ],
+        return Directionality(
+          textDirection: TextDirection.ltr,
+          child: Row(
+            children: [
+              Expanded(child: _surahDropdown(cs, c.surahTo ?? c.surahFrom, (v) {
+                setState(() => c.surahTo = v);
+              }, hintText: l.to)),
+              SizedBox(width: 8),
+              Expanded(child: _surahDropdown(cs, c.surahFrom, (v) {
+                setState(() => c.surahFrom = v);
+              }, hintText: l.from)),
+            ],
+          ),
         );
 
       case QuestionRangeType.surahAyahRange:
@@ -1468,20 +1554,23 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             }, hintText: c.surahNumbers.isNotEmpty ? l.addSurah : l.selectSurah),
             if (suraNo != null) ...[
               SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _ayahField(cs, c.ayaTo, (v) {
-                      setState(() => c.ayaTo = v);
-                    }, label: l.toAyah, max: AiService.surahAyaCount(suraNo) ?? 0),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: _ayahField(cs, c.ayaFrom, (v) {
-                      setState(() => c.ayaFrom = v);
-                    }, label: l.fromAyah, max: AiService.surahAyaCount(suraNo) ?? 0),
-                  ),
-                ],
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ayahField(cs, c.ayaTo, (v) {
+                        setState(() => c.ayaTo = v);
+                      }, label: l.toAyah, max: AiService.surahAyaCount(suraNo) ?? 0),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: _ayahField(cs, c.ayaFrom, (v) {
+                        setState(() => c.ayaFrom = v);
+                      }, label: l.fromAyah, max: AiService.surahAyaCount(suraNo) ?? 0),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -1605,12 +1694,22 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       title: widget.taadiaTitle,
       actions: [
         IconButton(
+          icon: Icon(Icons.menu_book),
+          tooltip: 'القرآن',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => QuranReaderScreen(pageKey: 'eval-appbar')),
+          ),
+        ),
+        IconButton(
           icon: Icon(Icons.list),
           tooltip: l.myEvaluations,
           onPressed: _showEvaluationsList,
         ),
       ],
-      body: _taadiaActive
+      body: Directionality(
+        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: _taadiaActive
           ? SingleChildScrollView(
               padding: EdgeInsets.all(20),
               child: Form(
@@ -1748,8 +1847,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         );
                       }),
                     ],
-                    SizedBox(height: 16),
-                    if (_taadiaCategories.isNotEmpty)
+                    if (_taadiaCategories.isNotEmpty) ...[
+                      SizedBox(height: 16),
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
@@ -1795,8 +1894,9 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                           ],
                         ),
                       ),
+                    ],
 
-                    SizedBox(height: 20),
+                    SizedBox(height: 16),
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
@@ -1840,7 +1940,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 20),
+                    SizedBox(height: 16),
 
                     // Old range info banner
                     if (_oldAhzabText.isNotEmpty)
@@ -1879,57 +1979,62 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         _buildCriterionCard(i, cs)),
 
                     // Add criterion button
-                    OutlinedButton.icon(
-                      icon: Icon(Icons.add, size: 18),
-                      label: Text(l.addRange),
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
+                    Center(
+                      child: OutlinedButton.icon(
+                        icon: Icon(Icons.add, size: 18),
+                        label: Text(l.addRange),
+                        style: OutlinedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () {
+                          setState(() => _rangeCriteria.add(_RangeCriterion()));
+                        },
                       ),
-                      onPressed: () {
-                        setState(() => _rangeCriteria.add(_RangeCriterion()));
-                      },
                     ),
                     SizedBox(height: 16),
 
                     // Generate button
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              icon: _isGenerating
-                                  ? SizedBox(
-                                      width: 18, height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
-                                    )
-                                  : Icon(Icons.auto_awesome, size: 18),
-                              label: Text(_isGenerating ? l.generating : l.generateQuestions),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: cs.primary,
-                                foregroundColor: cs.onPrimary,
-                                padding: EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: _isGenerating
+                                    ? SizedBox(
+                                        width: 18, height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
+                                      )
+                                    : Icon(Icons.auto_awesome, size: 18),
+                                label: Text(_isGenerating ? l.generating : l.generateQuestions),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: cs.primary,
+                                  foregroundColor: cs.onPrimary,
+                                  padding: EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
+                                onPressed: (!_versesLoaded || _isGenerating || !_generateEnabled) ? null : () => _generateQuestions(),
                               ),
-                              onPressed: (!_versesLoaded || _isGenerating || !_generateEnabled) ? null : () => _generateQuestions(),
                             ),
                           ),
-                        ),
-                        SizedBox(width: 12),
-                        Switch(
-                          value: _generateEnabled,
-                          onChanged: (v) => setState(() {
-                            _generateEnabled = v;
-                            if (!v) {
-                              for (final q in _questions) {
-                                q.questionText = '';
+                          SizedBox(width: 12),
+                          Switch(
+                            value: _generateEnabled,
+                            onChanged: (v) => setState(() {
+                              _generateEnabled = v;
+                              if (!v) {
+                                for (final q in _questions) {
+                                  q.questionText = '';
+                                }
                               }
-                            }
-                          }),
-                        ),
-                      ],
+                            }),
+                          ),
+                        ],
+                      ),
                     ),
                     if (!_versesLoaded)
                       Padding(
@@ -1958,51 +2063,123 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                           color: cs.onSurface,
                         ),
                       ),
+                      SizedBox(height: 16),
+                      SizedBox(
+                        height: 420,
+                        child: Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: PageView.builder(
+                            controller: _pageController,
+                            onPageChanged: (i) {
+                              setState(() => _currentQuestionIndex = i);
+                            },
+                            itemCount: _questions.length,
+                            itemBuilder: (_, i) =>
+                                _questionWidget(i, l, cs),
+                          ),
+                        ),
+                      ),
                       SizedBox(height: 12),
-                      ...List.generate(_questions.length, (i) =>
-                          _questionWidget(i, l, cs)),
+                      if (_questions.length > 1)
+                        Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.chevron_left),
+                                onPressed: _currentQuestionIndex <
+                                        _questions.length - 1
+                                    ? () => _pageController.nextPage(
+                                          duration: Duration(milliseconds: 300),
+                                          curve: Curves.easeInOut,
+                                        )
+                                    : null,
+                              ),
+                              ...List.generate(_questions.length, (i) {
+                                final reversedIdx = _questions.length - 1 - i;
+                                final isActive = reversedIdx == _currentQuestionIndex;
+                                return AnimatedContainer(
+                                  duration: Duration(milliseconds: 250),
+                                  margin:
+                                      EdgeInsets.symmetric(horizontal: 3),
+                                  width: isActive ? 24 : 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: isActive
+                                        ? cs.primary
+                                        : cs.outlineVariant,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                );
+                              }),
+                              IconButton(
+                                icon: Icon(Icons.chevron_right),
+                                onPressed: _currentQuestionIndex > 0
+                                    ? () => _pageController.previousPage(
+                                          duration: Duration(milliseconds: 300),
+                                          curve: Curves.easeInOut,
+                                        )
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ),
                       SizedBox(height: 12),
-                      Row(
-                        children: [
-                          OutlinedButton.icon(
-                            icon: Icon(Icons.add, size: 18),
-                            label: Text(l.add),
-                            style: OutlinedButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            onPressed: _questions.length < 60
-                                ? () {
-                                    final idx = _questions.length;
-                                    setState(() {
-                                      _questions.add(QuestionItem(
-                                          number: idx + 1));
-                                      _numQuestions = _questions.length;
-                                    });
-                                    _resetVerseIndices();
-                                    if (!_isGenerating && _generateEnabled && _hasValidRange()) {
-                                      _generateQuestions(singleIndex: idx);
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OutlinedButton.icon(
+                              icon: Icon(Icons.add, size: 18),
+                              label: Text(l.add),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onPressed: _questions.length < 60
+                                  ? () {
+                                      final idx = _questions.length;
+                                      setState(() {
+                                        _questions.add(QuestionItem(
+                                            number: idx + 1));
+                                        _numQuestions = _questions.length;
+                                      });
+                                      _resetVerseIndices();
+                                      _pageController.animateToPage(
+                                        idx,
+                                        duration: Duration(milliseconds: 350),
+                                        curve: Curves.easeInOut,
+                                      );
+                                      if (!_isGenerating && _generateEnabled && _hasValidRange()) {
+                                        _generateQuestions(singleIndex: idx);
+                                      }
                                     }
-                                  }
-                                : null,
-                          ),
-                          SizedBox(width: 8),
-                          OutlinedButton.icon(
-                            icon: Icon(Icons.remove, size: 18),
-                            label: Text(l.remove),
-                            style: OutlinedButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
+                                  : null,
                             ),
-                            onPressed: _questions.length > 1
-                                ? () {
-                                    setState(() {
-                                      _questions.removeLast();
-                                      _numQuestions = _questions.length;
-                                    });
-                                    _resetVerseIndices();
-                                  }
-                                : null,
-                          ),
-                        ],
+                            SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              icon: Icon(Icons.remove, size: 18),
+                              label: Text(l.remove),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onPressed: _questions.length > 1
+                                  ? () {
+                                      setState(() {
+                                        _questions.removeLast();
+                                        _numQuestions = _questions.length;
+                                      });
+                                      _resetVerseIndices();
+                                      final newIndex = _currentQuestionIndex.clamp(
+                                          0, _questions.length - 1);
+                                      if (newIndex != _currentQuestionIndex) {
+                                        setState(() =>
+                                            _currentQuestionIndex = newIndex);
+                                      }
+                                    }
+                                  : null,
+                            ),
+                          ],
+                        ),
                       ),
                       SizedBox(height: 16),
                     ],
@@ -2124,6 +2301,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                 ],
               ),
             ),
+      ),
       ),
     );
   }

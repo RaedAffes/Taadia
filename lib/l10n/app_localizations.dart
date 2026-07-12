@@ -1747,6 +1747,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter ahzab range'**
   String get enterAhzabRange;
+
+  /// No description provided for @uncheckQuestionFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to uncheck the question first'**
+  String get uncheckQuestionFirst;
 }
 
 class _AppLocalizationsDelegate

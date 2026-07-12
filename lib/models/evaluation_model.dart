@@ -164,6 +164,7 @@ class Evaluation {
   final List<Map<String, dynamic>> rangeCriteria;
   final List<QuestionItem> questions;
   final String note;
+  final String formula;
   final DateTime createdAt;
 
   Evaluation({
@@ -180,6 +181,7 @@ class Evaluation {
     this.rangeCriteria = const [],
     this.questions = const [],
     this.note = '',
+    this.formula = 'mahalia',
     required this.createdAt,
   });
 
@@ -217,6 +219,7 @@ class Evaluation {
           .map((q) => QuestionItem.fromMap(Map<String, dynamic>.from(q as Map)))
           .toList(),
       note: data['note'] ?? '',
+      formula: data['formula'] ?? 'mahalia',
       createdAt: data['createdAt'] is DateTime
           ? data['createdAt'] as DateTime
           : data['createdAt'] is String
@@ -237,6 +240,7 @@ class Evaluation {
       'numAhzab': numAhzab,
       'specialAhzab': specialAhzab,
       'rangeCriteria': rangeCriteria,
+      'formula': formula,
       'questions': questions.map((q) => q.toMap()).toList(),
       'note': note,
       'createdAt': DateTime.now(),

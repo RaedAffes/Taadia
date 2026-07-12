@@ -1,36 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:ta3dia/services/pexels_background_service.dart';
 
 class TaadiaBackground extends StatelessWidget {
   final Widget child;
   final bool showWatermark;
-  final String? backgroundImage;
 
   const TaadiaBackground({
     super.key,
     required this.child,
     this.showWatermark = true,
-    this.backgroundImage,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = cs.brightness == Brightness.dark;
+    final pexelsUrl = PexelsBackgroundService.instance.imageUrl;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
+    if (pexelsUrl != null) {
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.network(
+                pexelsUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(color: cs.surface),
+              ),
+            ),
+            Positioned.fill(
+              child: Container(
+                color: isDark
+                    ? const Color(0xFF3E3A36).withValues(alpha: 0.75)
+                    : const Color(0xFFF5F0EB).withValues(alpha: 0.80),
+              ),
+            ),
+            Positioned.fill(child: child),
+          ],
+        ),
+      );
+    }
+
+    return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(
-            backgroundImage ?? 'assets/images/taadia image.png',
-          ),
-          fit: BoxFit.cover,
-          opacity: isDark ? 0.08 : 0.12,
-        ),
-      ),
+      color: isDark ? const Color(0xFF3E3A36) : const Color(0xFFF5F0EB),
       child: child,
     );
   }
@@ -39,15 +55,11 @@ class TaadiaBackground extends StatelessWidget {
 class TaadiaHeader extends StatelessWidget {
   final String? title;
   final String? subtitle;
-  final double imageHeight;
-  final String? imagePath;
 
   const TaadiaHeader({
     super.key,
     this.title,
     this.subtitle,
-    this.imageHeight = 120,
-    this.imagePath,
   });
 
   @override
@@ -57,21 +69,7 @@ class TaadiaHeader extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Image.asset(
-            imagePath ?? 'assets/images/taadia image.png',
-            height: imageHeight,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Icon(
-              Icons.task_alt,
-              size: imageHeight * 0.6,
-              color: cs.primary,
-            ),
-          ),
-        ),
         if (title != null) ...[
-          const SizedBox(height: 12),
           Text(
             title!,
             textAlign: TextAlign.center,

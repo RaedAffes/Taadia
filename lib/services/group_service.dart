@@ -39,12 +39,16 @@ class GroupService extends ChangeNotifier {
     try {
       final cacheSnapshot = await _firestore
           .collection('groups')
-          .orderBy('createdAt', descending: true)
           .get(const GetOptions(source: Source.cache));
       _groups = cacheSnapshot.docs
-          .map((doc) => GroupModel.fromFirestore(
-              doc.id, Map<String, dynamic>.from(doc.data() as Map)))
+          .map(
+            (doc) => GroupModel.fromFirestore(
+              doc.id,
+              Map<String, dynamic>.from(doc.data() as Map),
+            ),
+          )
           .toList();
+      _sortGroups();
     } catch (_) {}
 
     _mergePendingLocalGroups();
@@ -53,14 +57,18 @@ class GroupService extends ChangeNotifier {
 
     _groupsSub = _firestore
         .collection('groups')
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .listen(
           (snapshot) {
             _groups = snapshot.docs
-                .map((doc) => GroupModel.fromFirestore(
-                    doc.id, Map<String, dynamic>.from(doc.data() as Map)))
+                .map(
+                  (doc) => GroupModel.fromFirestore(
+                    doc.id,
+                    Map<String, dynamic>.from(doc.data() as Map),
+                  ),
+                )
                 .toList();
+            _sortGroups();
             _mergePendingLocalGroups();
             _isLoading = false;
             _errorMessage = null;
@@ -79,7 +87,7 @@ class GroupService extends ChangeNotifier {
     final data = <String, dynamic>{
       'name': name,
       'createdBy': user.uid,
-      'createdAt': DateTime.now().toIso8601String(),
+      'createdAt': DateTime.now(),
       'members': {},
     };
 
@@ -104,7 +112,18 @@ class GroupService extends ChangeNotifier {
     try {
       _errorMessage = null;
       final docRef = await _firestore.collection('groups').add(data);
-      _groups.removeWhere((g) => g.id == localId);
+      _groups = _groups.map((g) {
+        if (g.id == localId) {
+          return GroupModel(
+            id: docRef.id,
+            name: name,
+            createdBy: user.uid,
+            createdAt: data['createdAt'] as DateTime,
+            members: {},
+          );
+        }
+        return g;
+      }).toList();
       notifyListeners();
       return docRef.id;
     } catch (e) {
@@ -193,10 +212,9 @@ class GroupService extends ChangeNotifier {
     }
 
     try {
-      await _firestore
-          .collection('groups')
-          .doc(groupId)
-          .update({'members.$userId': true});
+      await _firestore.collection('groups').doc(groupId).update({
+        'members.$userId': true,
+      });
       return true;
     } catch (e) {
       await _offlineQueue.enqueue('addGroupMember', {
@@ -233,10 +251,9 @@ class GroupService extends ChangeNotifier {
     }
 
     try {
-      await _firestore
-          .collection('groups')
-          .doc(groupId)
-          .update({'members.$userId': FieldValue.delete()});
+      await _firestore.collection('groups').doc(groupId).update({
+        'members.$userId': FieldValue.delete(),
+      });
       return true;
     } catch (e) {
       await _offlineQueue.enqueue('removeGroupMember', {
@@ -249,26 +266,40 @@ class GroupService extends ChangeNotifier {
 
   List<String> getUserGroupIds(String userId) {
     return _groups
-        .where((g) => g.members.containsKey(userId) && g.members[userId] == true)
+        .where(
+          (g) => g.members.containsKey(userId) && g.members[userId] == true,
+        )
         .map((g) => g.id)
         .toList();
+  }
+
+  void _sortGroups() {
+    _groups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   void _mergePendingLocalGroups() {
     final pendingCreates = _offlineQueue.getPendingByType('createGroup');
     for (final op in pendingCreates) {
       final data = op.data;
-      final localId = data['_offlineId'] as String? ?? 'offline_group_${op.timestamp.millisecondsSinceEpoch}';
+      final localId =
+          data['_offlineId'] as String? ??
+          'offline_group_${op.timestamp.millisecondsSinceEpoch}';
       final alreadyExists = _groups.any((g) => g.id == localId);
       if (alreadyExists) continue;
-      _groups.add(GroupModel(
-        id: localId,
-        name: data['name'] ?? '',
-        createdBy: data['createdBy'] ?? '',
-        createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? op.timestamp,
-        members: Map<String, bool>.from(
-            (data['members'] as Map?)?.map((k, v) => MapEntry(k as String, v == true)) ?? {}),
-      ));
+      _groups.add(
+        GroupModel(
+          id: localId,
+          name: data['name'] ?? '',
+          createdBy: data['createdBy'] ?? '',
+          createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? op.timestamp,
+          members: Map<String, bool>.from(
+            (data['members'] as Map?)?.map(
+                  (k, v) => MapEntry(k as String, v == true),
+                ) ??
+                {},
+          ),
+        ),
+      );
     }
   }
 

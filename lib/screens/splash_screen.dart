@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ta3dia/main.dart' show AuthWrapper;
+import 'package:ta3dia/services/pexels_background_service.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -67,6 +68,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final pexelsUrl = PexelsBackgroundService.instance.imageUrl;
     if (_animationController == null) {
       return Scaffold(
         body: Container(color: Color(0xFFF5F0EB)),
@@ -79,6 +81,14 @@ class _SplashScreenState extends State<SplashScreen>
         color: Color(0xFFF5F0EB),
         child: Stack(
           children: [
+            if (pexelsUrl != null)
+              Positioned.fill(
+                child: Image.network(pexelsUrl, fit: BoxFit.cover),
+              ),
+            if (pexelsUrl != null)
+              Positioned.fill(
+                child: Container(color: Color(0xFFF5F0EB).withValues(alpha: 0.75)),
+              ),
             CustomPaint(
               size: Size.infinite,
               painter: _IslamicGeometricPainter(),

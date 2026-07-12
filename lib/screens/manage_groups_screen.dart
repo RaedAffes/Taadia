@@ -5,6 +5,7 @@ import 'package:ta3dia/models/group_model.dart';
 import 'package:ta3dia/services/group_service.dart';
 import 'package:ta3dia/models/user_model.dart';
 import 'package:ta3dia/services/auth_services.dart';
+import 'package:ta3dia/services/string_utils.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
 class ManageGroupsScreen extends StatefulWidget {
@@ -68,94 +69,92 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
               title: Text(l.createGroup),
               content: SizedBox(
                 width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(
-                        labelText: l.groupName,
-                        hintText: l.groupNameHint,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          labelText: l.groupName,
+                          hintText: l.groupNameHint,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
-                    ),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: searchController,
-                      decoration: InputDecoration(
-                        labelText: l.searchByName,
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      SizedBox(height: 12),
+                      TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          labelText: l.searchByName,
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
+                        onChanged: (q) {
+                          setDialogState(() {
+                            if (q.isEmpty) {
+                              filteredUsers = List.from(allUsers);
+                            } else {
+                              final query = normalizeArabic(q.toLowerCase());
+                              filteredUsers = allUsers
+                                  .where((e) =>
+                                      normalizeArabic(e.value.displayName.toLowerCase()).contains(query) ||
+                                      e.value.email.toLowerCase().contains(query))
+                                  .toList();
+                            }
+                          });
+                        },
                       ),
-                      onChanged: (q) {
-                        setDialogState(() {
-                          if (q.isEmpty) {
-                            filteredUsers = List.from(allUsers);
-                          } else {
-                            final query = q.toLowerCase();
-                            filteredUsers = allUsers
-                                .where((e) =>
-                                    e.value.displayName.toLowerCase().contains(query) ||
-                                    e.value.email.toLowerCase().contains(query))
-                                .toList();
-                          }
-                        });
-                      },
-                    ),
-                    SizedBox(height: 8),
-                    isLoadingUsers
-                        ? Padding(
-                            padding: EdgeInsets.all(24),
-                            child: CircularProgressIndicator(),
-                          )
-                        : filteredUsers.isEmpty
-                            ? Padding(
-                                padding: EdgeInsets.all(24),
-                                child: Text(l.noUsersFound),
-                              )
-                            : SizedBox(
-                                height: 300,
-                                child: ListView(
-                                  children: filteredUsers.map((entry) {
-                                    final isSelected =
-                                        selectedUserIds.contains(entry.key);
-                                    return CheckboxListTile(
-                                      value: isSelected,
-                                      title: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(entry.value.displayName.isNotEmpty
-                                              ? entry.value.displayName
-                                              : entry.value.email),
-                                          Text(
-                                            entry.value.email,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      SizedBox(height: 8),
+                      Expanded(
+                        child: isLoadingUsers
+                            ? Center(child: CircularProgressIndicator())
+                            : filteredUsers.isEmpty
+                                ? Center(child: Text(l.noUsersFound))
+                                : ListView(
+                                    children: filteredUsers.map((entry) {
+                                      final isSelected =
+                                          selectedUserIds.contains(entry.key);
+                                      return CheckboxListTile(
+                                        value: isSelected,
+                                        title: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(entry.value.displayName.isNotEmpty
+                                                ? entry.value.displayName
+                                                : entry.value.email),
+                                            Text(
+                                              entry.value.email,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      dense: true,
-                                      onChanged: (checked) {
-                                        setDialogState(() {
-                                          if (checked == true) {
-                                            selectedUserIds.add(entry.key);
-                                          } else {
-                                            selectedUserIds.remove(entry.key);
-                                          }
-                                        });
-                                      },
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                  ],
+                                          ],
+                                        ),
+                                        dense: true,
+                                        onChanged: (checked) {
+                                          setDialogState(() {
+                                            if (checked == true) {
+                                              selectedUserIds.add(entry.key);
+                                            } else {
+                                              selectedUserIds.remove(entry.key);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -179,7 +178,6 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                             for (final uid in selectedUserIds) {
                               await groupService.addMember(id, uid);
                             }
-                            await groupService.loadGroups();
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -445,10 +443,10 @@ class __ManageGroupMembersScreenState
       if (query.isEmpty) {
         _filteredUsers = List.from(_allUsers);
       } else {
-        final q = query.toLowerCase();
+        final q = normalizeArabic(query.toLowerCase());
         _filteredUsers = _allUsers
             .where((e) =>
-                e.value.displayName.toLowerCase().contains(q) ||
+                normalizeArabic(e.value.displayName.toLowerCase()).contains(q) ||
                 e.value.email.toLowerCase().contains(q))
             .toList();
       }
@@ -496,23 +494,38 @@ class __ManageGroupMembersScreenState
     final allFilteredSelected = _filteredUsers.isNotEmpty &&
         _filteredUsers.every((e) => _selectedIds.contains(e.key));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l.manageMembersFor(widget.group.name)),
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _save,
-            child: _isSaving
-                ? SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(l.save),
-          ),
-        ],
-      ),
+    return AppScaffold(
+      title: l.manageMembersFor(widget.group.name),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : _save,
+          child: _isSaving
+              ? SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l.save),
+        ),
+      ],
       body: Column(
         children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Row(
+              children: [
+                Icon(Icons.group, size: 18, color: Theme.of(context).colorScheme.primary),
+                SizedBox(width: 8),
+                Text(
+                  widget.group.name,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: EdgeInsets.all(16),
             child: TextField(

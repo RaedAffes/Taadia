@@ -9,6 +9,7 @@ import 'package:ta3dia/services/group_service.dart';
 import 'package:ta3dia/models/user_model.dart';
 import 'package:ta3dia/models/group_model.dart';
 import 'package:ta3dia/services/auth_services.dart';
+import 'package:ta3dia/services/string_utils.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
 class CreateTaadiaScreen extends StatefulWidget {
@@ -34,7 +35,6 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
   final List<String> _categories = [];
   final List<ClassificationConfig> _classifications = [];
   final List<TextEditingController> _classificationOptionControllers = [];
-
 
   @override
   void initState() {
@@ -64,9 +64,11 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
     setState(() {
       final idx = _classifications.length;
       final isRtl = AppLocalizations.of(context)!.localeName == 'ar';
-      _classifications.add(ClassificationConfig(
-        name: isRtl ? 'تصنيف ${idx + 1}' : 'Classification ${idx + 1}',
-      ));
+      _classifications.add(
+        ClassificationConfig(
+          name: isRtl ? 'تصنيف ${idx + 1}' : 'Classification ${idx + 1}',
+        ),
+      );
       _classificationOptionControllers.add(TextEditingController());
     });
   }
@@ -81,8 +83,10 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
 
   void _regenerateCode() {
     setState(() {
-      _accessCode =
-          Provider.of<TaadiaService>(context, listen: false).generateAccessCode();
+      _accessCode = Provider.of<TaadiaService>(
+        context,
+        listen: false,
+      ).generateAccessCode();
     });
   }
 
@@ -114,9 +118,7 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
   Future<void> _create() async {
     widget.analytics.logEvent(
       name: 'create_taadia_attempt',
-      parameters: {
-        'title': _titleController.text.trim(),
-      },
+      parameters: {'title': _titleController.text.trim()},
     );
     if (!_formKey.currentState!.validate()) return;
 
@@ -125,7 +127,9 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
       final taadiaService = Provider.of<TaadiaService>(context, listen: false);
       final existing = taadiaService.validateAccessCode(code);
       if (existing != null) {
-        setState(() => _codeError = AppLocalizations.of(context)!.codeAlreadyUsed);
+        setState(
+          () => _codeError = AppLocalizations.of(context)!.codeAlreadyUsed,
+        );
         return;
       }
     }
@@ -141,8 +145,9 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
       selectedUsers[uid] = true;
     }
 
-    final code =
-        _isManualCode ? _accessCodeController.text.trim() : _accessCode;
+    final code = _isManualCode
+        ? _accessCodeController.text.trim()
+        : _accessCode;
     final taadiaId = await Provider.of<TaadiaService>(context, listen: false)
         .createTaadia(
           _titleController.text.trim(),
@@ -193,13 +198,11 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
   }
 
   void _showUserPicker() {
-    final groupService = Provider.of<GroupService>(context, listen: false);
     showDialog(
       context: context,
       builder: (ctx) => _UserPickerDialog(
         selectedGroupIds: _selectedGroupIds,
         selectedUserIds: _selectedUserIds,
-        groups: groupService.groups,
         onDone: (groupIds, userIds) {
           setState(() {
             _selectedGroupIds = groupIds;
@@ -291,12 +294,15 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                               child: TextField(
                                 controller: _classificationOptionControllers[i],
                                 decoration: InputDecoration(
-                                  hintText: isRtl ? ' مثال: نخبة 1 ...' : 'Add a classification...',
+                                  hintText: isRtl
+                                      ? ' مثال: نخبة 1 ...'
+                                      : 'Add a classification...',
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 8,
+                                    horizontal: 12,
+                                    vertical: 8,
                                   ),
                                   isDense: true,
                                 ),
@@ -307,7 +313,8 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                             FilledButton.tonal(
                               style: FilledButton.styleFrom(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 4,
+                                  horizontal: 12,
+                                  vertical: 4,
                                 ),
                               ),
                               onPressed: () => _addClassificationOption(i),
@@ -315,7 +322,9 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                             ),
                             IconButton(
                               icon: Icon(Icons.close, color: Colors.red),
-                              tooltip: isRtl ? 'حذف التصنيف' : 'Remove classification',
+                              tooltip: isRtl
+                                  ? 'حذف التصنيف'
+                                  : 'Remove classification',
                               onPressed: () => _removeClassification(i),
                               visualDensity: VisualDensity.compact,
                             ),
@@ -327,16 +336,30 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                             child: Wrap(
                               spacing: 4,
                               runSpacing: 2,
-                              children: _classifications[i].options.asMap().entries.map((optEntry) {
-                                return Chip(
-                                  label: Text(optEntry.value, style: TextStyle(fontSize: 12)),
-                                  deleteIcon: Icon(Icons.close, size: 14),
-                                  onDeleted: () => _removeClassificationOption(i, optEntry.key),
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: VisualDensity.compact,
-                                  padding: EdgeInsets.symmetric(horizontal: 4),
-                                );
-                              }).toList(),
+                              children: _classifications[i].options
+                                  .asMap()
+                                  .entries
+                                  .map((optEntry) {
+                                    return Chip(
+                                      label: Text(
+                                        optEntry.value,
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                      deleteIcon: Icon(Icons.close, size: 14),
+                                      onDeleted: () =>
+                                          _removeClassificationOption(
+                                            i,
+                                            optEntry.key,
+                                          ),
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                    );
+                                  })
+                                  .toList(),
                             ),
                           ),
                       ],
@@ -383,14 +406,20 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                     ),
                     if (_selectedUserIds.isNotEmpty)
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
                         child: Text(
                           '${_selectedUserIds.length} ${l.usersSelected.toLowerCase()}',
                           style: TextStyle(color: cs.primary),
                         ),
                       ),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
@@ -499,9 +528,9 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                         tooltip: l.copy,
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: _accessCode));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l.copied)),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(l.copied)));
                         },
                       ),
                       IconButton(
@@ -520,13 +549,13 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                   onPressed: _loading ? null : _create,
                   child: _loading
                       ? SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
                       : Text(l.create, style: TextStyle(fontSize: 16)),
                 ),
               ),
@@ -536,19 +565,16 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
       ),
     );
   }
-
 }
 
 class _UserPickerDialog extends StatefulWidget {
   final Set<String> selectedGroupIds;
   final Set<String> selectedUserIds;
-  final List<GroupModel> groups;
   final void Function(Set<String> groupIds, Set<String> userIds) onDone;
 
   const _UserPickerDialog({
     required this.selectedGroupIds,
     required this.selectedUserIds,
-    required this.groups,
     required this.onDone,
   });
 
@@ -560,6 +586,7 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
   late Set<String> _selectedGroups;
   late Set<String> _selectedUsers;
   final _searchController = TextEditingController();
+  String? _currentUid;
 
   List<MapEntry<String, AppUser>> _allUsers = [];
   List<MapEntry<String, AppUser>> _filteredUsers = [];
@@ -570,17 +597,21 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
     super.initState();
     _selectedGroups = Set.from(widget.selectedGroupIds);
     _selectedUsers = Set.from(widget.selectedUserIds);
-    _loadUsers();
+    _loadData();
   }
 
-  Future<void> _loadUsers() async {
+  Future<void> _loadData() async {
     final auth = Provider.of<AuthService>(context, listen: false);
+    _currentUid = auth.currentUser?.uid;
+    Provider.of<GroupService>(context, listen: false).loadGroups();
     final users = await auth.getAllUsers();
     _allUsers = users
         .where((u) => !u.isAdmin)
         .map((u) => MapEntry(u.uid, u))
         .toList();
-    _allUsers.sort((a, b) => a.value.displayName.compareTo(b.value.displayName));
+    _allUsers.sort(
+      (a, b) => a.value.displayName.compareTo(b.value.displayName),
+    );
     _filteredUsers = List.from(_allUsers);
     _loaded = true;
     if (mounted) setState(() {});
@@ -591,11 +622,15 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
       if (query.isEmpty) {
         _filteredUsers = List.from(_allUsers);
       } else {
-        final q = query.toLowerCase();
+        final q = normalizeArabic(query.toLowerCase());
         _filteredUsers = _allUsers
-            .where((e) =>
-                e.value.displayName.toLowerCase().contains(q) ||
-                e.value.email.toLowerCase().contains(q))
+            .where(
+              (e) =>
+                  normalizeArabic(
+                    e.value.displayName.toLowerCase(),
+                  ).contains(q) ||
+                  e.value.email.toLowerCase().contains(q),
+            )
             .toList();
       }
     });
@@ -661,120 +696,136 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
 
   Widget _buildContent(AppLocalizations l) {
     final List<Widget> children = [];
+    final isRtl = l.localeName == 'ar';
 
-    if (widget.groups.isNotEmpty) {
+    final groupService = context.watch<GroupService>();
+    final adminGroups = groupService.groups
+        .where((g) => g.createdBy == _currentUid)
+        .toList();
+
+    if (_filteredUsers.isEmpty) {
       children.add(
-        Padding(
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Text(
-            'المجموعات',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.primary,
+        Padding(padding: EdgeInsets.all(24), child: Text(l.noUsersFound)),
+      );
+    } else {
+      if (adminGroups.isNotEmpty) {
+        children.add(
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              isRtl ? 'المجموعات' : 'Groups',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           ),
-        ),
-      );
-      final allGroupsSelected = widget.groups.every(
-        (g) => _selectedGroups.contains(g.id),
-      );
-      children.add(
-        CheckboxListTile(
-          dense: true,
-          value: allGroupsSelected,
-          title: Text(
-            allGroupsSelected
-                ? 'إلغاء تحديد كل المجموعات'
-                : 'تحديد كل المجموعات',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          onChanged: (checked) {
-            setState(() {
-              if (checked == true) {
-                for (final group in widget.groups) {
-                  _selectedGroups.add(group.id);
-                }
-              } else {
-                for (final group in widget.groups) {
-                  _selectedGroups.remove(group.id);
-                }
-              }
-            });
-          },
-        ),
-      );
+        );
+        final allGroupsSelected = adminGroups.every(
+          (g) => _selectedGroups.contains(g.id),
+        );
 
-      for (final group in widget.groups) {
-        final filtered = _filteredUsers;
-        final memberCount = group.members.keys.where((uid) =>
-            filtered.any((e) => e.key == uid)).length;
         children.add(
           CheckboxListTile(
             dense: true,
-            value: _selectedGroups.contains(group.id),
-            title: Text(group.name, style: TextStyle(fontSize: 14)),
-            subtitle: Text(
-              '${group.memberCount} عضو',
-              style: TextStyle(fontSize: 11),
+            value: allGroupsSelected,
+            title: Text(
+              allGroupsSelected
+                  ? (isRtl ? 'إلغاء تحديد الكل' : 'Deselect all')
+                  : (isRtl ? 'تحديد الكل' : 'Select all'),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             onChanged: (checked) {
               setState(() {
                 if (checked == true) {
-                  _selectedGroups.add(group.id);
+                  for (final group in adminGroups) {
+                    _selectedGroups.add(group.id);
+                    for (final uid in group.members.keys) {
+                      _selectedUsers.add(uid);
+                    }
+                  }
                 } else {
-                  _selectedGroups.remove(group.id);
+                  for (final group in adminGroups) {
+                    _selectedGroups.remove(group.id);
+                    for (final uid in group.members.keys) {
+                      _selectedUsers.remove(uid);
+                    }
+                  }
                 }
               });
             },
           ),
         );
+
+        for (final group in adminGroups) {
+          final anyInFilter = group.members.keys.any(
+            (uid) => _filteredUsers.any((e) => e.key == uid),
+          );
+          if (!anyInFilter) continue;
+
+          final allMembersSelected = group.members.keys.every(
+            (uid) => _selectedUsers.contains(uid),
+          );
+          final groupSelected = _selectedGroups.contains(group.id);
+
+          children.add(
+            CheckboxListTile(
+              dense: true,
+              value: groupSelected || allMembersSelected,
+              title: Text(
+                group.name,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                '${group.members.length} ${isRtl ? 'عضواً' : 'members'}',
+                style: TextStyle(fontSize: 11),
+              ),
+              onChanged: (checked) {
+                setState(() {
+                  if (checked == true) {
+                    _selectedGroups.add(group.id);
+                    for (final uid in group.members.keys) {
+                      _selectedUsers.add(uid);
+                    }
+                  } else {
+                    _selectedGroups.remove(group.id);
+                    for (final uid in group.members.keys) {
+                      _selectedUsers.remove(uid);
+                    }
+                  }
+                });
+              },
+            ),
+          );
+        }
       }
-      children.add(Divider(height: 1));
-    }
 
-    children.add(
-      Padding(
-        padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: Text(
-          l.selectUsers,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-      ),
-    );
-
-    if (_filteredUsers.isEmpty) {
       children.add(
         Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(l.noUsersFound),
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Text(
+            isRtl ? 'المستخدمين' : 'Users',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
         ),
       );
-    } else {
-      final allFilteredSelected = _filteredUsers.every(
+      final allUsersSelected = _filteredUsers.every(
         (e) => _selectedUsers.contains(e.key),
       );
-
       children.add(
         CheckboxListTile(
           dense: true,
-          value: allFilteredSelected,
-          tristate: true,
+          value: allUsersSelected,
           title: Text(
-            allFilteredSelected
-                ? 'إلغاء تحديد الكل'
-                : 'تحديد الكل',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            allUsersSelected
+                ? (isRtl ? 'إلغاء تحديد الكل' : 'Deselect all')
+                : (isRtl ? 'تحديد الكل' : 'Select all'),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           onChanged: (checked) {
             setState(() {
@@ -793,34 +844,33 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
       );
 
       for (final entry in _filteredUsers) {
-        children.add(
-          CheckboxListTile(
-            dense: true,
-            value: _selectedUsers.contains(entry.key),
-            title: Text(
-              entry.value.displayName.isNotEmpty
-                  ? entry.value.displayName
-                  : entry.value.email,
-              style: TextStyle(fontSize: 14),
-            ),
-            subtitle: Text(
-              entry.value.email,
-              style: TextStyle(fontSize: 11),
-            ),
-            onChanged: (checked) {
-              setState(() {
-                if (checked == true) {
-                  _selectedUsers.add(entry.key);
-                } else {
-                  _selectedUsers.remove(entry.key);
-                }
-              });
-            },
-          ),
-        );
+        children.add(_buildUserTile(entry, l));
       }
     }
 
     return ListView(shrinkWrap: true, children: children);
+  }
+
+  Widget _buildUserTile(MapEntry<String, AppUser> entry, AppLocalizations l) {
+    return CheckboxListTile(
+      dense: true,
+      value: _selectedUsers.contains(entry.key),
+      title: Text(
+        entry.value.displayName.isNotEmpty
+            ? entry.value.displayName
+            : entry.value.email,
+        style: TextStyle(fontSize: 14),
+      ),
+      subtitle: Text(entry.value.email, style: TextStyle(fontSize: 11)),
+      onChanged: (checked) {
+        setState(() {
+          if (checked == true) {
+            _selectedUsers.add(entry.key);
+          } else {
+            _selectedUsers.remove(entry.key);
+          }
+        });
+      },
+    );
   }
 }

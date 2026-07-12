@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
-import 'package:ta3dia/providers/app_state.dart';
 import 'package:ta3dia/screens/register_screen.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/widgets/google_logo.dart';
@@ -290,7 +289,6 @@ class _LoginScreenState extends State<LoginScreen> {
       },
       child: Scaffold(
       body: TaadiaBackground(
-        backgroundImage: 'assets/images/app logo.png',
         child: SafeArea(
           child: Stack(
             children: [
@@ -299,11 +297,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     SizedBox(height: 48),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/images/app logo.png',
+                        height: 100,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    SizedBox(height: 12),
                     TaadiaHeader(
                       title: l.appName,
                       subtitle: l.signUpSubtitle,
-                      imageHeight: 100,
-                      imagePath: 'assets/images/app logo.png',
                     ),
                     SizedBox(height: 32),
                     TaadiaFormCard(
@@ -477,77 +482,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Consumer<AppState>(
-                  builder: (context, state, _) => Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Material(
-                        color: cs.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: () {
-                            state.setLanguage(
-                              state.locale.languageCode == 'en' ? 'ar' : 'en',
-                            );
-                          },
-                          child: Padding(
-                            padding: EdgeInsets.all(8),
-                            child: AnimatedSwitcher(
-                              duration: Duration(milliseconds: 400),
-                              transitionBuilder: (child, anim) =>
-                                  ScaleTransition(scale: anim, child: child),
-                              child: Text(
-                                key: ValueKey(state.locale.languageCode),
-                                state.locale.languageCode == 'en' ? 'AR' : 'EN',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: cs.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Material(
-                        color: cs.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: () => state.toggleTheme(),
-                          child: Padding(
-                            padding: EdgeInsets.all(8),
-                            child: AnimatedSwitcher(
-                              duration: Duration(milliseconds: 200),
-                              transitionBuilder: (child, anim) =>
-                                  RotationTransition(
-                                    turns: anim,
-                                    child: FadeTransition(
-                                      opacity: anim,
-                                      child: child,
-                                    ),
-                                  ),
-                              child: Icon(
-                                key: ValueKey(state.isDark),
-                                state.isDark
-                                    ? Icons.light_mode
-                                    : Icons.dark_mode,
-                                size: 16,
-                                color: cs.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Language and theme toggles moved to Settings page
             ],
           ),
         ),

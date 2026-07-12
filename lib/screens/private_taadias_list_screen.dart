@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
+import 'package:ta3dia/models/evaluation_model.dart';
+import 'package:ta3dia/models/taadia_model.dart';
+import 'package:ta3dia/models/formula_config.dart';
 import 'package:ta3dia/services/evaluation_service.dart';
 import 'package:ta3dia/services/taadia_service.dart';
-import 'package:ta3dia/screens/private_taadia_screen.dart';
-import 'package:ta3dia/screens/create_private_taadia_screen.dart';
+import 'package:ta3dia/services/pdf_service.dart';
+import 'package:ta3dia/screens/user_evaluate.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
 class PrivateTaadiasListScreen extends StatefulWidget {
@@ -14,326 +18,691 @@ class PrivateTaadiasListScreen extends StatefulWidget {
 }
 
 class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
-  final Map<String, Map<String, dynamic>> _statsCache = {};
-  bool _loadingStats = false;
+  String? _currentTaadiaId;
+  StreamSubscription? _evalSub;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final taadiaService = Provider.of<TaadiaService>(context, listen: false);
-      taadiaService.loadUserPrivateTaadias();
+      _initCurrentTaadia();
     });
   }
 
-  Future<void> _loadStats(String taadiaId) async {
-    if (_statsCache.containsKey(taadiaId)) return;
-    final evalService = Provider.of<EvaluationService>(context, listen: false);
-    final stats = await evalService.getTaadiaStats(taadiaId);
-    if (mounted) {
-      setState(() => _statsCache[taadiaId] = stats);
+  @override
+  void dispose() {
+    _evalSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initCurrentTaadia() async {
+    final taadiaService = Provider.of<TaadiaService>(context, listen: false);
+    await taadiaService.loadUserPrivateTaadias();
+    final taadias = taadiaService.userPrivateTaadias;
+    if (taadias.isNotEmpty) {
+      _selectTaadia(taadias.first.id);
     }
+  }
+
+  void _selectTaadia(String id) {
+    setState(() {
+      _currentTaadiaId = id;
+    });
+    final evalService = Provider.of<EvaluationService>(context, listen: false);
+    _evalSub?.cancel();
+    evalService.loadEvaluations(id);
+  }
+
+  double _calcResult(Evaluation e) {
+    final x = e.questions.length;
+    if (x == 0) return 0;
+    final formula = e.formula;
+    final y = formula == 'jihawiya' ? 20.0 / x : 10.0 / x;
+    double m = 0;
+    for (final q in e.questions) {
+      m += 0.25 * q.ichaarat + 1.0 * q.taalakin;
+    }
+    return 20 - y * m;
+  }
+
+  String _formulaLabel(String f, AppLocalizations l) {
+    return FormulaConfig.fromJson(
+      f,
+    ).displayLabel(l.totalIchaarat, l.totalTaalakin);
+  }
+
+  Future<void> _showFormulaForEval(Evaluation e) async {
+    final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.functions, color: cs.primary),
+            SizedBox(width: 8),
+            Text(l.formula),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l.formulaDesc,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+            ),
+            SizedBox(height: 16),
+            _formulaOption(
+              ctx,
+              'mahalia',
+              'محلية (Mahalia)',
+              Icons.location_city,
+              cs.primary,
+              e.formula,
+            ),
+            SizedBox(height: 8),
+            _formulaOption(
+              ctx,
+              'jihawiya',
+              'جهوية (Jihawiya)',
+              Icons.public,
+              cs.secondary,
+              e.formula,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.cancel),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result != e.formula && mounted) {
+      final svc = Provider.of<EvaluationService>(context, listen: false);
+      await svc.updateFormula(e.id, result);
+    }
+  }
+
+  Widget _formulaOption(
+    BuildContext ctx,
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+    String currentFormula,
+  ) {
+    final selected = currentFormula == value;
+    return InkWell(
+      onTap: () => Navigator.pop(ctx, value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? color.withValues(alpha: 0.12)
+              : Theme.of(ctx).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? color : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: selected ? color : Colors.grey, size: 24),
+            SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: selected ? color : null,
+              ),
+            ),
+            Spacer(),
+            if (selected) Icon(Icons.check_circle, color: color, size: 22),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isRtl = l.localeName == 'ar';
     final taadiaService = context.watch<TaadiaService>();
+    final evalService = context.watch<EvaluationService>();
 
     final myPrivateTaadias = taadiaService.userPrivateTaadias;
+    final evals = evalService.evaluations;
 
     return AppScaffold(
-      title: l.manageTaadia,
+      title: l.myPrivateTaadias,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final created = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(builder: (_) => CreatePrivateTaadiaScreen()),
-          );
-          if (created == true) taadiaService.loadUserPrivateTaadias();
+          final ts = Provider.of<TaadiaService>(context, listen: false);
+          String taadiaId;
+          if (_currentTaadiaId != null) {
+            taadiaId = _currentTaadiaId!;
+          } else {
+            final id = await ts.createPrivateTaadia(
+              'تقييم ${DateTime.now().toString().substring(0, 16)}',
+            );
+            if (id == null) return;
+            taadiaId = id;
+            _currentTaadiaId = id;
+          }
+          if (context.mounted) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    EvaluateScreen(taadiaId: taadiaId, taadiaTitle: ''),
+              ),
+            );
+            if (mounted) {
+              final es = Provider.of<EvaluationService>(context, listen: false);
+              es.loadEvaluations(taadiaId);
+            }
+          }
         },
         child: Icon(Icons.add),
-        tooltip: l.createOwnTaadia,
+        tooltip: l.evaluate,
       ),
-      body: taadiaService.isLoading
-          ? Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: EdgeInsets.all(16),
-              children: [
-                if (myPrivateTaadias.isNotEmpty) ...[
-                  Text(
-                    l.myPrivateTaadias,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onSurface,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final ts = Provider.of<TaadiaService>(context, listen: false);
+          await ts.loadUserPrivateTaadias();
+          final taadias = ts.userPrivateTaadias;
+          if (taadias.isNotEmpty) {
+            _selectTaadia(taadias.first.id);
+          } else {
+            setState(() => _currentTaadiaId = null);
+          }
+        },
+        child: _currentTaadiaId == null && myPrivateTaadias.isEmpty
+            ? ListView(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.pending_actions,
+                          size: 64,
+                          color: cs.outlineVariant,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          l.noEvaluationsYet,
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          l.tapToCreateFirst,
+                          style: TextStyle(color: cs.outlineVariant),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    l.privateTaadiaNotice,
-                    style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+                ],
+              )
+            : _currentTaadiaId == null || evalService.isLoading
+            ? ListView(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.4),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              )
+            : evals.isEmpty
+            ? ListView(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.pending_actions,
+                          size: 64,
+                          color: cs.outlineVariant,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          l.noEvaluationsYet,
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          l.tapToCreateFirst,
+                          style: TextStyle(color: cs.outlineVariant),
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 12),
-                  ...myPrivateTaadias.map((t) {
-                    _loadStats(t.id);
-                    final stats = _statsCache[t.id];
-                    return Card(
-                      elevation: 1,
-                      margin: EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                ],
+              )
+            : ListView.builder(
+                padding: EdgeInsets.all(16),
+                itemCount: evals.length,
+                itemBuilder: (context, index) {
+                  final e = evals[index];
+                  final result = _calcResult(e);
+                  return Card(
+                    margin: EdgeInsets.only(bottom: 8),
+                    color: cs.surface,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: cs.outlineVariant.withValues(alpha: 0.5),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PrivateTaadiaScreen(
-                                  taadiaId: t.id,
-                                  taadiaTitle: t.title,
-                                  taadiaDescription: t.description,
-                                ),
-                              ),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EvaluateScreen(
+                              taadiaId: _currentTaadiaId!,
+                              taadiaTitle: '',
+                              editingEvaluation: e,
                             ),
-                            child: Padding(
-                              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+                          ),
+                        ).then((_) {
+                          if (_currentTaadiaId != null) {
+                            Provider.of<EvaluationService>(
+                              context,
+                              listen: false,
+                            ).loadEvaluations(_currentTaadiaId!);
+                          }
+                        });
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: cs.surfaceContainerHighest,
+                                  child: Text(
+                                    e.studentName.isNotEmpty
+                                        ? e.studentName[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: cs.primary,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Container(
-                                        padding: EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: cs.tertiaryContainer,
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Icon(
-                                          Icons.lock_outline,
-                                          color: cs.onTertiaryContainer,
-                                          size: 32,
-                                        ),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Expanded(
-                                                child: Text(
-                                                  t.title,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 16,
-                                                    color: cs.onSurface,
-                                                  ),
-                                                  textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-                                                ),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              e.studentName,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 17,
+                                                color: cs.onSurface,
                                               ),
-                                              if (t.accessCode.isNotEmpty)
-                                                Container(
-                                                  margin: EdgeInsets.only(left: 8),
-                                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          SizedBox(width: 4),
+                                          Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              GestureDetector(
+                                                onTap: () =>
+                                                    _showFormulaForEval(e),
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
                                                   decoration: BoxDecoration(
-                                                    color: cs.primary.withValues(alpha: 0.1),
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                                                    color: cs.tertiaryContainer
+                                                        .withValues(
+                                                          alpha: 0.25,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: cs.tertiary
+                                                          .withValues(
+                                                            alpha: 0.5,
+                                                          ),
+                                                    ),
                                                   ),
                                                   child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
-                                                      Icon(Icons.vpn_key, size: 12, color: cs.primary),
+                                                      Icon(
+                                                        Icons.swap_horiz,
+                                                        size: 13,
+                                                        color: cs.tertiary,
+                                                      ),
                                                       SizedBox(width: 4),
                                                       Text(
-                                                        t.accessCode,
+                                                        _formulaLabel(
+                                                          e.formula,
+                                                          l,
+                                                        ),
                                                         style: TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: cs.primary,
-                                                          letterSpacing: 1,
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: cs.tertiary,
                                                         ),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
+                                              ),
                                             ],
                                           ),
-                                          if (t.description.isNotEmpty)
-                                            Padding(
-                                              padding: EdgeInsets.only(top: 2),
-                                              child: Text(
-                                                t.description,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: cs.onSurfaceVariant,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                                          SizedBox(width: 4),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: cs.tertiaryContainer,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              result % 1 == 0
+                                                  ? '${result.toInt()}'
+                                                  : result.toStringAsFixed(1),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: cs.onTertiaryContainer,
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                      Icon(
-                                        Icons.arrow_forward_ios,
-                                        size: 16,
-                                        color: cs.outlineVariant,
+                                      SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.person_outline,
+                                            size: 13,
+                                            color: cs.onSurfaceVariant,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              e.evaluatorName.isNotEmpty
+                                                  ? e.evaluatorName
+                                                  : l.unknown,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: cs.onSurfaceVariant,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  if (stats != null) ...[
-                                    SizedBox(height: 10),
-                                    Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
-                                    SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        _statChip(Icons.people_outline, '${stats['totalStudents']}', cs.primary, cs),
-                                        SizedBox(width: 8),
-                                        _statChip(Icons.quiz_outlined, '${stats['totalQuestions']}', cs.secondary, cs),
-                                        if ((stats['ahzabList'] as List).isNotEmpty) ...[
-                                          SizedBox(width: 8),
-                                          _statChip(
-                                            Icons.menu_book_outlined,
-                                            (stats['ahzabList'] as List).join(', '),
-                                            cs.tertiary, cs,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ] else ...[
-                                    SizedBox(height: 10),
-                                    Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
-                                    SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        SizedBox(
-                                          width: 14,
-                                          height: 14,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        ),
-                                        SizedBox(width: 6),
-                                        Text(
-                                          'Loading...',
-                                          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                                        ),
-                                      ],
-                                    ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 4,
+                              children: [
+                                _miniChip(
+                                  Icons.quiz_outlined,
+                                  '${e.numQuestions}',
+                                  cs.secondary,
+                                  cs,
+                                ),
+                                _miniChip(
+                                  Icons.menu_book_outlined,
+                                  e.specialAhzab.isNotEmpty
+                                      ? e.specialAhzab
+                                      : '${e.numAhzab}',
+                                  cs.tertiary,
+                                  cs,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    cs.primary.withValues(alpha: 0.06),
+                                    cs.secondary.withValues(alpha: 0.06),
                                   ],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: cs.outlineVariant.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _scoreBlock(
+                                      Icons.notifications,
+                                      l.totalIchaarat,
+                                      '${e.totalIchaarat}',
+                                      cs.primary,
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 1,
+                                    height: 40,
+                                    color: cs.outlineVariant.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _scoreBlock(
+                                      Icons.record_voice_over,
+                                      l.totalTaalakin,
+                                      '${e.totalTaalakin}',
+                                      cs.secondary,
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 1,
+                                    height: 40,
+                                    color: cs.outlineVariant.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(
+                                        Icons.download,
+                                        size: 18,
+                                        color: cs.primary,
+                                      ),
+                                      tooltip: 'Download PDF',
+                                      onPressed: () async {
+                                        try {
+                                          await PdfService.downloadSingleEvaluationPdf(
+                                            e,
+                                            l,
+                                          );
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text('PDF downloaded'),
+                                                backgroundColor: cs.primary,
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text('Failed: $e'),
+                                                backgroundColor: cs.error,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    child: Icon(
+                                      Icons.chevron_right,
+                                      color: cs.outlineVariant,
+                                      size: 20,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  size: 20,
-                                  color: cs.error,
-                                ),
-                                tooltip: l.deleteEvaluation,
-                                onPressed: () async {
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: Text(l.deleteEvaluation),
-                                      content: Text(l.areYouSure),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx, false),
-                                          child: Text(l.cancel),
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx, true),
-                                          child: Text(
-                                            l.deleteEvaluation,
-                                            style: TextStyle(color: cs.error),
-                                          ),
-                                        ),
-                                      ],
+                            if (e.note.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(top: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.notes,
+                                      size: 16,
+                                      color: cs.onSurfaceVariant,
                                     ),
-                                  );
-                                  if (confirmed == true) {
-                                    final ok = await taadiaService.deleteTaadia(t.id);
-                                    if (!ok && context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Failed to delete'),
-                                          backgroundColor: Colors.red,
+                                    SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        e.note,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: cs.onSurfaceVariant,
                                         ),
-                                      );
-                                    }
-                                    taadiaService.loadUserPrivateTaadias();
-                                  }
-                                },
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-                if (myPrivateTaadias.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 80),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.dashboard,
-                            size: 64,
-                            color: cs.outlineVariant,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            l.noTaadiasYet,
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            l.tapToCreateFirst,
-                            style: TextStyle(color: cs.onSurfaceVariant),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
+                  );
+                },
+              ),
+      ),
     );
   }
 
-  Widget _statChip(IconData icon, String label, Color color, ColorScheme cs) {
+  Widget _scoreBlock(IconData icon, String label, String value, Color color) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: color),
+              SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: color,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniChip(IconData icon, String label, Color color, ColorScheme cs) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      constraints: BoxConstraints(maxWidth: 260),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
+          Icon(icon, size: 11, color: color),
           SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),

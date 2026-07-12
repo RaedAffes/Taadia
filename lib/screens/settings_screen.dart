@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
+import 'package:ta3dia/providers/app_state.dart';
 import 'package:ta3dia/screens/login_screen.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
@@ -286,6 +287,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             )
                           : Text(l.saveChanges),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: 16),
+          Consumer<AppState>(
+            builder: (context, state, _) => Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    secondary: Icon(
+                      state.isDark ? Icons.dark_mode : Icons.light_mode,
+                      color: cs.primary,
+                    ),
+                    title: Text(
+                      state.isDark ? 'Dark Mode' : 'Light Mode',
+                      style: TextStyle(color: cs.onSurface),
+                    ),
+                    value: state.isDark,
+                    activeColor: cs.primary,
+                    onChanged: (_) => state.toggleTheme(),
+                  ),
+                  Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: Icon(Icons.language, color: cs.primary),
+                    title: Text(
+                      state.locale.languageCode == 'en' ? 'English' : 'العربية',
+                      style: TextStyle(color: cs.onSurface),
+                    ),
+                    trailing: Text(
+                      state.locale.languageCode == 'en' ? 'EN' : 'AR',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: cs.primary,
+                      ),
+                    ),
+                    onTap: () {
+                      state.setLanguage(
+                        state.locale.languageCode == 'en' ? 'ar' : 'en',
+                      );
+                    },
                   ),
                 ],
               ),

@@ -22,7 +22,11 @@ class GroupModel {
       id: id,
       name: data['name'] ?? '',
       createdBy: data['createdBy'] ?? '',
-      createdAt: (data['createdAt'] as dynamic)?.toDate() ?? DateTime.now(),
+      createdAt: data['createdAt'] is DateTime
+          ? data['createdAt'] as DateTime
+          : data['createdAt'] is String
+          ? DateTime.parse(data['createdAt'] as String)
+          : (data['createdAt'] as dynamic)?.toDate() ?? DateTime.now(),
       members: members,
     );
   }

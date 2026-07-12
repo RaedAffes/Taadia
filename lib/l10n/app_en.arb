@@ -344,5 +344,6 @@
   "autoGenerate": "Auto-generate",
   "enterManually": "Enter manually",
   "taadiaNotFound": "Taadia not found",
-  "enterAhzabRange": "Enter ahzab range"
+  "enterAhzabRange": "Enter ahzab range",
+  "uncheckQuestionFirst": "You need to uncheck the question first"
 }

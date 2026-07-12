@@ -9,7 +9,10 @@ import 'package:ta3dia/models/formula_config.dart';
 import 'package:ta3dia/services/evaluation_service.dart';
 import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/pdf_service.dart';
+import 'package:ta3dia/services/csv_service.dart';
+import 'package:ta3dia/services/string_utils.dart';
 import 'package:ta3dia/screens/admin_evaluation_detail.dart';
+import 'package:ta3dia/widgets/download_choice_dialog.dart';
 import 'package:ta3dia/screens/user_evaluate.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
@@ -70,9 +73,9 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
   List<Evaluation> _filter(List<Evaluation> list) {
     var result = list;
     if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
+      final q = normalizeArabic(_searchQuery.toLowerCase());
       result = result
-          .where((e) => e.studentName.toLowerCase().contains(q))
+          .where((e) => normalizeArabic(e.studentName.toLowerCase()).contains(q))
           .toList();
     }
     if (_categoryFilter.isNotEmpty) {
@@ -1190,13 +1193,27 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
   }
 
   Future<void> _downloadPdf() async {
-    widget.analytics.logEvent(
-      name: 'admin_download_taadia_pdf',
-      parameters: {
-        'taadia_id': widget.taadia.id,
-        'taadia_title': widget.taadia.title,
-      },
-    );
+    final format = await showDownloadChoiceDialog(context);
+    if (format == null || !mounted) return;
+
+    if (format == ExportFormat.pdf) {
+      widget.analytics.logEvent(
+        name: 'admin_download_taadia_pdf',
+        parameters: {
+          'taadia_id': widget.taadia.id,
+          'taadia_title': widget.taadia.title,
+        },
+      );
+    } else {
+      widget.analytics.logEvent(
+        name: 'admin_download_taadia_csv',
+        parameters: {
+          'taadia_id': widget.taadia.id,
+          'taadia_title': widget.taadia.title,
+        },
+      );
+    }
+
     final cs = Theme.of(context).colorScheme;
     final evalService = Provider.of<EvaluationService>(context, listen: false);
     final allEvals = await evalService.getEvaluationsOnce(widget.taadia.id);
@@ -1220,17 +1237,26 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
 
     try {
       final l = AppLocalizations.of(context)!;
-      await PdfService.downloadTaadiaPdf(
-        widget.taadia,
-        evals,
-        l,
-        formula: _showClassement ? _currentFormula : null,
-        classificationFilter: _classificationFilters.isNotEmpty ? _classificationFilters : null,
-      );
+      if (format == ExportFormat.pdf) {
+        await PdfService.downloadTaadiaPdf(
+          widget.taadia,
+          evals,
+          l,
+          formula: _showClassement ? _currentFormula : null,
+          classificationFilter: _classificationFilters.isNotEmpty ? _classificationFilters : null,
+        );
+      } else {
+        CsvService.downloadTaadiaCsv(
+          widget.taadia,
+          evals,
+          l,
+          formula: _showClassement ? _currentFormula : null,
+        );
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PDF downloaded'),
+            content: Text(format == ExportFormat.pdf ? 'PDF downloaded' : 'CSV downloaded'),
             backgroundColor: cs.primary,
           ),
         );
@@ -1239,7 +1265,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to generate PDF: $e'),
+            content: Text('Failed: $e'),
             backgroundColor: cs.error,
           ),
         );

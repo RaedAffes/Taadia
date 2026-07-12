@@ -415,6 +415,38 @@ class EvaluationService extends ChangeNotifier {
     }
   }
 
+  Future<void> updateFormula(String evalId, String formula) async {
+    _evaluations = _evaluations.map((e) {
+      if (e.id == evalId) {
+        return Evaluation(
+          id: e.id,
+          taadiaId: e.taadiaId,
+          userId: e.userId,
+          evaluatorName: e.evaluatorName,
+          studentName: e.studentName,
+          categories: e.categories,
+          classificationValues: e.classificationValues,
+          numQuestions: e.numQuestions,
+          numAhzab: e.numAhzab,
+          specialAhzab: e.specialAhzab,
+          rangeCriteria: e.rangeCriteria,
+          questions: e.questions,
+          note: e.note,
+          formula: formula,
+          createdAt: e.createdAt,
+        );
+      }
+      return e;
+    }).toList();
+    notifyListeners();
+    try {
+      await _firestore.collection('evaluations').doc(evalId).set(
+        {'formula': formula},
+        SetOptions(merge: true),
+      );
+    } catch (_) {}
+  }
+
   Future<bool> deleteEvaluation(String evalId) async {
     if (_connectivityService.isOffline) {
       await _offlineQueue.enqueue('deleteEvaluation', {'evalId': evalId});

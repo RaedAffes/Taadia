@@ -222,9 +222,9 @@
   "manageMembers": "إدارة الأعضاء",
   "manageMembersFor": "أعضاء {name}",
   "groupMemberCount": "{count} أعضاء",
-  "accessControl": "اختر المجموعات",
+  "accessControl": "اختر من يمكنه رؤية التعدية ",
   "accessControlDesc": "اختر من يمكنه الوصول إلى هذه التعدية",
-  "selectGroups": "اختيار المجموعات",
+  "selectGroups":"اختيار المجموعات      ",
   "selectGroupsDesc": "فقط أعضاء المجموعات المحددة يمكنهم الوصول",
   "addGroups": "إضافة مجموعات",
   "selectUsers": "اختيار العارضين",
@@ -288,5 +288,6 @@
   "autoGenerate": "توليد تلقائي",
   "enterManually": "إدخال يدوي",
   "taadiaNotFound": "التعدية غير موجودة",
-  "enterAhzabRange": "أدخل نطاق الأحزاب"
+  "enterAhzabRange": "أدخل نطاق الأحزاب",
+  "uncheckQuestionFirst": "قم بإلغاء تحديد السؤال أولاً"
 }

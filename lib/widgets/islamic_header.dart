@@ -1,7 +1,84 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-class IslamicHeader extends StatelessWidget implements PreferredSizeWidget {
+const _duas = [
+  'رَبِّ زِدْنِي عِلْمًا – طه 114',
+  'رَبِّ اشْرَحْ لِي صَدْرِي – طه 25',
+  'وَيَسِّرْ لِي أَمْرِي – طه 26',
+  'وَاحْلُلْ عُقْدَةً مِّن لِّسَانِي – طه 27',
+  'رَبِّ هَبْ لِي حُكْمًا – الشعراء 83',
+  'وَأَلْحِقْنِي بِالصَّالِحِينَ – الشعراء 83',
+  'وَاجْعَل لِّي لِسَانَ صِدْقٍ فِي الْآخِرِينَ – الشعراء 84',
+  'وَاجْعَلْنِي مِن وَرَثَةِ جَنَّةِ النَّعِيمِ – الشعراء 85',
+  'وَلَا تُخْزِنِي يَوْمَ يُبْعَثُونَ – الشعراء 87',
+  'رَبِّ هَبْ لِي مِنَ الصَّالِحِينَ – الصافات 100',
+  'رَبِّ هَبْ لِي مِن لَّدُنكَ ذُرِّيَّةً طَيِّبَةً إِنَّكَ سَمِيعُ الدُّعَاءِ – آل عمران 38',
+  'رَبِّ لَا تَذَرْنِي فَرْدًا وَأَنتَ خَيْرُ الْوَارِثِينَ – الأنبياء 89',
+  'رَبِّ إِنِّي لَمَا أَنزَلْتَ إِلَيَّ مِنْ خَيْرٍ فَقِيرٌ – القصص 24',
+  'رَبِّ مَسَّنِي الضَّرُّ وَأَنتَ أَرْحَمُ الرَّاحِمِينَ – الأنبياء 83',
+  'رَبِّ اغْفِرْ وَارْحَمْ وَأَنتَ خَيْرُ الرَّاحِمِينَ – المؤمنون 118',
+  'رَبِّ اغْفِرْ لِي – الأعراف 151',
+  'رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ – إبراهيم 41',
+  'رَبِّ اغْفِرْ لِي وَلِأَخِي وَأَدْخِلْنَا فِي رَحْمَتِكَ وَأَنتَ أَرْحَمُ الرَّاحِمِينَ – الأعراف 151',
+  'رَبِّ أَنزِلْنِي مَنزِلًا مُّبَارَكًا وَأَنتَ خَيْرُ الْمُنزِلِينَ – المؤمنون 29',
+  'رَبِّ أَعُوذُ بِكَ مِنْ هَمَزَاتِ الشَّيَاطِينِ – المؤمنون 97',
+  'وَأَعُوذُ بِكَ رَبِّ أَن يَحْضُرُونِ – المؤمنون 98',
+  'رَبِّ نَجِّنِي مِنَ الْقَوْمِ الظَّالِمِينَ – القصص 21',
+  'رَبِّ نَجِّنِي وَأَهْلِي مِمَّا يَعْمَلُونَ – الشعراء 169',
+  'رَبِّ انصُرْنِي بِمَا كَذَّبُونِ – المؤمنون 26',
+  'رَبَّنَا تَقَبَّلْ مِنَّا إِنَّكَ أَنتَ السَّمِيعُ العَلِيمُ – البقرة 127',
+  'وَتُبْ عَلَيْنَا إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ – البقرة 128',
+  'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ – البقرة 201',
+  'رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً إِنَّكَ أَنتَ الْوَهَّابُ – آل عمران 8',
+  'رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ – آل عمران 147',
+  'رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَكَفِّرْ عَنَّا سَيِّئَاتِنَا وَتَوَفَّنَا مَعَ الْأَبْرَارِ – آل عمران 193',
+  'رَبَّنَا لَا تُؤَاخِذْنَا إِن نَّسِينَا أَوْ أَخْطَأْنَا – البقرة 286',
+  'رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَا إِصْرًا كَمَا حَمَلْتَهُ عَلَى الَّذِينَ مِن قَبْلِنَا – البقرة 286',
+  'رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِ – البقرة 286',
+  'وَاعْفُ عَنَّا وَاغْفِرْ لَنَا وَارْحَمْنَا أَنتَ مَوْلَانَا فَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ – البقرة 286',
+  'رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ – البقرة 250',
+  'رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ – الأعراف 89',
+  'رَبَّنَا أَفْرِغْ عَلَيْنَا صَبْرًا وَتَوَفَّنَا مُسْلِمِينَ – الأعراف 126',
+  'رَبَّنَا ظَلَمْنَا أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ الْخَاسِرِينَ – الأعراف 23',
+  'لَا إِلَهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ – الأنبياء 87',
+  'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَى وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأَدْخِلْنِي بِرَحْمَتِكَ فِي عِبَادِكَ الصَّالِحِينَ – النمل 19',
+  'رَبِّ أَوْزِعْنِي أَنْ أَشْكُرَ نِعْمَتَكَ الَّتِي أَنْعَمْتَ عَلَيَّ وَعَلَى وَالِدَيَّ وَأَنْ أَعْمَلَ صَالِحًا تَرْضَاهُ وَأُصْلِحْ لِي فِي ذُرِّيَّتِي إِنِّي تُبْتُ إِلَيْكَ وَإِنِّي مِنَ الْمُسْلِمِينَ – الأحقاف 15',
+  'رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي رَبَّنَا وَتَقَبَّلْ دُعَاءِ – إبراهيم 40',
+  'رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ الْحِسَابُ – إبراهيم 41',
+  'رَبِّ اجْعَلْ هَذَا الْبَلَدَ آمِنًا وَاجْنُبْنِي وَبَنِيَّ أَن نَّعْبُدَ الْأَصْنَامَ – إبراهيم 35',
+  'رَبَّنَا عَلَيْكَ تَوَكَّلْنَا وَإِلَيْكَ أَنَبْنَا وَإِلَيْكَ الْمَصِيرُ – الممتحنة 4',
+  'رَبَّنَا لَا تَجْعَلْنَا فِتْنَةً لِّلَّذِينَ كَفَرُوا وَاغْفِرْ لَنَا رَبَّنَا إِنَّكَ أَنتَ الْعَزِيزُ الْحَكِيمُ – الممتحنة 5',
+];
+
+class _VersePopup {
+  final int id;
+  final String text;
+  final Offset position;
+  bool visible;
+
+  _VersePopup({
+    required this.id,
+    required this.text,
+    required this.position,
+    this.visible = true,
+  });
+}
+
+class _DotInfo {
+  final double baseX, baseY, radius, speed, phase, driftX, driftY;
+
+  _DotInfo({
+    required this.baseX,
+    required this.baseY,
+    required this.radius,
+    required this.speed,
+    required this.phase,
+    required this.driftX,
+    required this.driftY,
+  });
+}
+
+class IslamicHeader extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final String? subtitle;
   final double height;
@@ -21,252 +98,293 @@ class IslamicHeader extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(height);
 
   @override
+  State<IslamicHeader> createState() => _IslamicHeaderState();
+}
+
+class _IslamicHeaderState extends State<IslamicHeader>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  final List<_VersePopup> _popups = [];
+  int _nextId = 0;
+  Size _headerSize = Size.zero;
+
+  static const int _dotCount = 35;
+  static const double _hitRadius = 30;
+  late final List<_DotInfo> _dots;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+
+    final rng = math.Random(42);
+    _dots = List.generate(_dotCount, (_) {
+      return _DotInfo(
+        baseX: rng.nextDouble(),
+        baseY: rng.nextDouble(),
+        radius: rng.nextDouble() * 2.5 + 0.8,
+        speed: rng.nextDouble() * 0.4 + 0.15,
+        phase: rng.nextDouble() * math.pi * 2,
+        driftX: rng.nextDouble() * 30 + 10,
+        driftY: rng.nextDouble() * 20 + 8,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  Offset _getDotPosition(_DotInfo dot, Size size) {
+    final baseX = dot.baseX * size.width;
+    final baseY = dot.baseY * size.height;
+    final t = _animController.value * math.pi * 2 * dot.speed + dot.phase;
+    return Offset(
+      baseX + math.sin(t) * dot.driftX,
+      baseY + math.cos(t * 0.7) * dot.driftY,
+    );
+  }
+
+  void _onTapDown(TapDownDetails details, Size size) {
+    final tapPos = details.localPosition;
+    _DotInfo? closest;
+    double closestDist = _hitRadius;
+
+    for (final dot in _dots) {
+      final dist = (tapPos - _getDotPosition(dot, size)).distance;
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = dot;
+      }
+    }
+
+    if (closest == null) return;
+
+    final rng = math.Random();
+    final popup = _VersePopup(
+      id: _nextId++,
+      text: _duas[rng.nextInt(_duas.length)],
+      position: tapPos,
+    );
+
+    setState(() => _popups.add(popup));
+
+    Future.delayed(const Duration(seconds: 4), () {
+      if (!mounted) return;
+      setState(() => popup.visible = false);
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        setState(() => _popups.removeWhere((p) => p.id == popup.id));
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = cs.brightness == Brightness.dark;
+    final height = widget.height;
 
-    return Container(
-      height: height,
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [
-                  cs.surface,
-                  cs.primary.withValues(alpha: 0.3),
-                  cs.primary,
-                ]
-              : [
-                  cs.primary,
-                  Color(0xFF6B5D4F),
-                  Color(0xFF4A3F35),
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          CustomPaint(
-            size: Size.infinite,
-            painter: _GeometricPatternPainter(
-              color: isDark
-                  ? cs.onPrimary.withValues(alpha: 0.12)
-                  : Colors.white.withValues(alpha: 0.1),
-              secondaryColor: isDark
-                  ? cs.onPrimary.withValues(alpha: 0.06)
-                  : Colors.white.withValues(alpha: 0.05),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = Size(constraints.maxWidth, height);
+        _headerSize = size;
+
+        return Container(
+          height: height,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [cs.surface, cs.primary.withValues(alpha: 0.3), cs.primary]
+                  : [cs.primary, const Color(0xFF6B5D4F), const Color(0xFF4A3F35)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ),
-          Positioned(
-            top: -height * 0.5,
-            right: -height * 0.2,
-            child: Container(
-              width: height * 1.1,
-              height: height * 1.1,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark
-                    ? cs.primary.withValues(alpha: 0.12)
-                    : Colors.white.withValues(alpha: 0.04),
+            boxShadow: [
+              BoxShadow(
+                color: cs.shadow.withValues(alpha: 0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            bottom: -height * 0.3,
-            left: -height * 0.2,
-            child: Container(
-              width: height * 0.7,
-              height: height * 0.7,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark
-                    ? cs.secondary.withValues(alpha: 0.08)
-                    : Colors.white.withValues(alpha: 0.03),
-              ),
-            ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 4,
-            left: 0,
-            right: 0,
-            child: IconTheme(
-              data: IconThemeData(color: Colors.white),
-              child: Row(
-                children: [
-                  if (leading != null) leading!,
-                  Spacer(),
-                  if (actions != null) ...[
-                    ...actions!,
-                    SizedBox(width: 8),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: (leading != null || actions != null) ? 52 : 24,
-                bottom: 20,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTapDown: (d) => _onTapDown(d, size),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _DotsPainter(
+                      animation: _animController,
+                      dots: _dots,
                     ),
                   ),
-                  if (subtitle != null && subtitle!.isNotEmpty) ...[
-                    SizedBox(height: 6),
-                    Text(
-                      subtitle!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.85),
-                        letterSpacing: 0.3,
+                ),
+                for (final popup in _popups)
+                  Positioned(
+                    left: popup.position.dx - 70,
+                    top: popup.position.dy - 55,
+                    width: 160,
+                    child: AnimatedOpacity(
+                      opacity: popup.visible ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      child: Transform.scale(
+                        scale: popup.visible ? 1.0 : 0.8,
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withValues(alpha: 0.18),
+                                Colors.white.withValues(alpha: 0.10),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            popup.text,
+                            textAlign: TextAlign.center,
+                            textDirection: TextDirection.rtl,
+                            style: const TextStyle(
+                              fontFamily: 'Amiri',
+                              fontSize: 11,
+                              color: Colors.white,
+                              height: 1.6,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ],
-                  SizedBox(height: 12),
-                  Container(
-                    width: 50,
-                    height: 2.5,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
+                  ),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 4,
+                  left: 0,
+                  right: 0,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: IconTheme(
+                      data: const IconThemeData(color: Colors.white),
+                      child: Row(
+                        children: [
+                          if (widget.leading != null) widget.leading!,
+                          const Spacer(),
+                          if (widget.actions != null) ...[
+                            ...widget.actions!,
+                            const SizedBox(width: 8),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                Positioned.fill(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: 24,
+                      right: 24,
+                      top: (widget.leading != null || widget.actions != null)
+                          ? 52
+                          : 24,
+                      bottom: 20,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.title,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        if (widget.subtitle != null &&
+                            widget.subtitle!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.subtitle!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.85),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Container(
+                          width: 50,
+                          height: 2.5,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _GeometricPatternPainter extends CustomPainter {
-  final Color color;
-  final Color secondaryColor;
+class _DotsPainter extends CustomPainter {
+  final Animation<double> animation;
+  final List<_DotInfo> dots;
 
-  _GeometricPatternPainter({required this.color, required this.secondaryColor});
+  _DotsPainter({required this.animation, required this.dots})
+      : super(repaint: animation);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+    final paint = Paint()..style = PaintingStyle.fill;
+    final progress = animation.value;
 
-    final fillPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
+    for (final dot in dots) {
+      final baseX = dot.baseX * size.width;
+      final baseY = dot.baseY * size.height;
+      final t = progress * math.pi * 2 * dot.speed + dot.phase;
+      final x = baseX + math.sin(t) * dot.driftX;
+      final y = baseY + math.cos(t * 0.7) * dot.driftY;
+      final opacity = (math.sin(t) + 1) / 2;
 
-    final secondaryPaint = Paint()
-      ..color = secondaryColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7;
+      paint.color = Colors.white.withValues(alpha: 0.08 + opacity * 0.22);
+      canvas.drawCircle(Offset(x, y), dot.radius, paint);
 
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final maxDim = math.max(size.width, size.height);
-    final spacing = maxDim * 0.13;
-    final r = spacing * 0.4;
-
-    for (double row = -1; row <= 2; row++) {
-      for (double col = -1; col <= 2; col++) {
-        final ox = cx + (col - 0.5) * spacing;
-        final oy = cy + (row - 0.5) * spacing;
-
-        // 12-pointed star rosette
-        final starPath = Path();
-        for (int i = 0; i < 12; i++) {
-          final a = (math.pi / 6) * i - math.pi / 2;
-          final outer = Offset(
-            ox + r * math.cos(a),
-            oy + r * math.sin(a),
-          );
-          final innerAngle = a + math.pi / 12;
-          final inner = Offset(
-            ox + r * 0.45 * math.cos(innerAngle),
-            oy + r * 0.45 * math.sin(innerAngle),
-          );
-          if (i == 0) {
-            starPath.moveTo(outer.dx, outer.dy);
-          } else {
-            starPath.lineTo(outer.dx, outer.dy);
-          }
-          starPath.lineTo(inner.dx, inner.dy);
-        }
-        starPath.close();
-        canvas.drawPath(starPath, paint);
-
-        // inner 12-petal rosette
-        final petalPath = Path();
-        for (int i = 0; i < 12; i++) {
-          final a = (math.pi / 6) * i - math.pi / 2 + math.pi / 12;
-          final p1 = Offset(
-            ox + r * 0.5 * math.cos(a - math.pi / 12),
-            oy + r * 0.5 * math.sin(a - math.pi / 12),
-          );
-          final p2 = Offset(
-            ox + r * 0.55 * math.cos(a),
-            oy + r * 0.55 * math.sin(a),
-          );
-          final p3 = Offset(
-            ox + r * 0.5 * math.cos(a + math.pi / 12),
-            oy + r * 0.5 * math.sin(a + math.pi / 12),
-          );
-          if (i == 0) {
-            petalPath.moveTo(p1.dx, p1.dy);
-          }
-          petalPath.quadraticBezierTo(p2.dx, p2.dy, p3.dx, p3.dy);
-        }
-        petalPath.close();
-        canvas.drawPath(petalPath, secondaryPaint);
-
-        // central dot
-        canvas.drawCircle(Offset(ox, oy), r * 0.08, fillPaint);
-
-        // hexagon connecting adjacent stars
-        if (col < 1.5) {
-          final nx = cx + (col - 0.5 + 1) * spacing;
-          for (int i = 0; i < 6; i++) {
-            final a = (math.pi / 3) * i - math.pi / 6;
-            final from = Offset(
-              ox + r * 0.65 * math.cos(a),
-              oy + r * 0.65 * math.sin(a),
-            );
-            final to = Offset(
-              nx + r * 0.65 * math.cos(math.pi - a),
-              oy + r * 0.65 * math.sin(math.pi - a),
-            );
-            canvas.drawLine(from, to, secondaryPaint);
-          }
-        }
+      if (dot.radius > 2.0) {
+        paint.color = Colors.white.withValues(alpha: 0.03 + opacity * 0.06);
+        canvas.drawCircle(Offset(x, y), dot.radius * 2.0, paint);
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DotsPainter old) => false;
 }

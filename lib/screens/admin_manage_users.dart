@@ -4,6 +4,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
 import 'package:ta3dia/models/user_model.dart';
 import 'package:ta3dia/services/auth_services.dart';
+import 'package:ta3dia/services/string_utils.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
 class ManageUsersScreen extends StatefulWidget {
@@ -41,14 +42,14 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     if (mounted) {
       final authService = Provider.of<AuthService>(context, listen: false);
       final all = authService.allUsers;
-      final query = _searchController.text.trim().toLowerCase();
+      final query = normalizeArabic(_searchController.text.trim().toLowerCase());
       setState(() {
         _users = query.isEmpty
             ? all
             : all
                   .where(
                     (u) =>
-                        u.displayName.toLowerCase().contains(query) ||
+                        normalizeArabic(u.displayName.toLowerCase()).contains(query) ||
                         u.email.toLowerCase().contains(query),
                   )
                   .toList();
@@ -69,7 +70,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
   }
 
   void _searchUser() {
-    final query = _searchController.text.trim().toLowerCase();
+    final query = normalizeArabic(_searchController.text.trim().toLowerCase());
     final authService = Provider.of<AuthService>(context, listen: false);
     final all = authService.allUsers;
     if (query.isEmpty) {
@@ -79,7 +80,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
         _users = all
             .where(
               (u) =>
-                  u.displayName.toLowerCase().contains(query) ||
+                  normalizeArabic(u.displayName.toLowerCase()).contains(query) ||
                   u.email.toLowerCase().contains(query),
             )
             .toList();

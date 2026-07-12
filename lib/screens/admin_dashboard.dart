@@ -12,7 +12,9 @@ import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/evaluation_service.dart';
 import 'package:ta3dia/services/pdf_service.dart';
+import 'package:ta3dia/services/csv_service.dart';
 import 'package:ta3dia/models/taadia_model.dart';
+import 'package:ta3dia/widgets/download_choice_dialog.dart';
 
 class AdminDashboard extends StatefulWidget {
   final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
@@ -585,12 +587,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Future<void> _downloadTaadiaPdf(Taadia t) async {
+    final format = await showDownloadChoiceDialog(context);
+    if (format == null) return;
+
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final evalService = Provider.of<EvaluationService>(context, listen: false);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Generating PDF...'), backgroundColor: cs.primary),
+      SnackBar(content: Text(format == ExportFormat.pdf ? 'Generating PDF...' : 'Generating CSV...'), backgroundColor: cs.primary),
     );
 
     final evals = await evalService.getEvaluationsOnce(t.id);
@@ -608,11 +613,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     try {
-      await PdfService.downloadTaadiaPdf(t, evals, l);
+      if (format == ExportFormat.pdf) {
+        await PdfService.downloadTaadiaPdf(t, evals, l);
+      } else {
+        CsvService.downloadTaadiaCsv(t, evals, l);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('PDF downloaded'),
+            content: Text(format == ExportFormat.pdf ? 'PDF downloaded' : 'CSV downloaded'),
             backgroundColor: cs.primary,
           ),
         );
@@ -621,7 +630,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to generate PDF: $e'),
+            content: Text('Failed: $e'),
             backgroundColor: cs.error,
           ),
         );

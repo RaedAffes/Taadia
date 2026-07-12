@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
-import 'package:ta3dia/providers/app_state.dart';
-import 'package:ta3dia/screens/register_screen.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/widgets/google_logo.dart';
 import 'package:ta3dia/widgets/taadia_background.dart';
@@ -99,72 +97,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: cs.onSurface,
-        actions: [
-          Consumer<AppState>(
-            builder: (context, state, _) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Material(
-                  color: cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      state.setLanguage(
-                        state.locale.languageCode == 'en' ? 'ar' : 'en',
-                      );
-                    },
-                    child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: AnimatedSwitcher(
-                        duration: Duration(milliseconds: 400),
-                        transitionBuilder: (child, anim) =>
-                            ScaleTransition(scale: anim, child: child),
-                        child: Text(
-                          key: ValueKey(state.locale.languageCode),
-                          state.locale.languageCode == 'en' ? 'AR' : 'EN',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: cs.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Material(
-                  color: cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => state.toggleTheme(),
-                    child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: AnimatedSwitcher(
-                        duration: Duration(milliseconds: 200),
-                        transitionBuilder: (child, anim) => RotationTransition(
-                          turns: anim,
-                          child: FadeTransition(opacity: anim, child: child),
-                        ),
-                        child: Icon(
-                          key: ValueKey(state.isDark),
-                          state.isDark ? Icons.light_mode : Icons.dark_mode,
-                          size: 16,
-                          color: cs.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        actions: const [],
       ),
       body: TaadiaBackground(
-        backgroundImage: 'assets/images/app logo.png',
         child: SafeArea(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 24),
@@ -175,8 +110,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TaadiaHeader(
                   title: l.joinTaadia,
                   subtitle: l.signUpSubtitle,
-                  imageHeight: 80,
-                  imagePath: 'assets/images/app logo.png',
                 ),
                 SizedBox(height: 28),
                 TaadiaFormCard(

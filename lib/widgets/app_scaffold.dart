@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
-import 'package:ta3dia/providers/app_state.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/screens/register_screen.dart';
 import 'package:ta3dia/screens/settings_screen.dart';
@@ -58,7 +57,7 @@ class AppScaffold extends StatelessWidget {
               tooltip: isFirst ? null : l.goBack,
               onPressed: () {
                 if (isFirst) {
-                  Scaffold.of(ctx).openDrawer();
+                  Scaffold.of(ctx).openEndDrawer();
                 } else {
                   Navigator.of(ctx).pop();
                 }
@@ -66,72 +65,9 @@ class AppScaffold extends StatelessWidget {
             );
           },
         ),
-        actions: [
-          Consumer<AppState>(
-            builder: (context, state, _) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Material(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: state.toggleTheme,
-                    child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: AnimatedSwitcher(
-                        duration: Duration(milliseconds: 200),
-                        transitionBuilder: (child, anim) => RotationTransition(
-                          turns: anim,
-                          child: FadeTransition(opacity: anim, child: child),
-                        ),
-                        child: Icon(
-                          key: ValueKey(state.isDark),
-                          state.isDark ? Icons.light_mode : Icons.dark_mode,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Material(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () {
-                      state.setLanguage(
-                        state.locale.languageCode == 'en' ? 'ar' : 'en',
-                      );
-                    },
-                    child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: AnimatedSwitcher(
-                        duration: Duration(milliseconds: 400),
-                        transitionBuilder: (child, anim) =>
-                            ScaleTransition(scale: anim, child: child),
-                        child: Text(
-                          key: ValueKey(state.locale.languageCode),
-                          state.locale.languageCode == 'en' ? 'AR' : 'EN',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (actions != null) ...actions!,
-              ],
-            ),
-          ),
-        ],
+        actions: actions,
       ),
-      drawer: Drawer(
+      endDrawer: Drawer(
         child: Column(
           children: [
             DrawerHeader(
@@ -147,18 +83,18 @@ class AppScaffold extends StatelessWidget {
                 ),
               ),
               child: Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24),
-                  child: Image.asset(
-                    'assets/images/app logo.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.task_alt,
-                      size: 64,
-                      color: cs.onSurfaceVariant,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Image.asset(
+                        'assets/images/app logo.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.task_alt,
+                          size: 64,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
               ),
             ),
             ListTile(
@@ -179,23 +115,6 @@ class AppScaffold extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-              ),
-            if (isAdmin)
-              ListTile(
-                leading: Icon(Icons.dashboard, color: cs.onSurface),
-                title: Text(
-                  l.manageTaadia,
-                  style: TextStyle(color: cs.onSurface),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AdminManageTaadiaScreen(),
-                    ),
-                  );
                 },
               ),
             if (isAdmin) ...[
@@ -273,9 +192,9 @@ class AppScaffold extends StatelessWidget {
               ),
             Spacer(),
             ListTile(
-              leading: CircleAvatar(
-                radius: 16,
-                backgroundImage: AssetImage('assets/images/app logo.png'),
+              leading: Icon(
+                Icons.task_alt,
+                color: cs.primary,
               ),
               title: Text(l.installApp, style: TextStyle(color: cs.onSurface)),
               onTap: () async {

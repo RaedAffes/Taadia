@@ -17,6 +17,8 @@ import 'package:ta3dia/services/feedback_service.dart';
 import 'package:ta3dia/services/group_service.dart';
 import 'package:ta3dia/services/connectivity_service.dart';
 import 'package:ta3dia/services/offline_queue_service.dart';
+import 'package:ta3dia/services/pexels_background_service.dart';
+import 'package:ta3dia/services/quran_download_service.dart';
 import 'package:ta3dia/widgets/offline_observer.dart';
 
 import 'firebase_options.dart';
@@ -29,6 +31,10 @@ void main() async {
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
+  final quranService = QuranDownloadService.instance;
+  await quranService.init();
+  quranService.startBackgroundDownload();
+  PexelsBackgroundService.instance.init();
   runApp(MyApp());
 }
 
@@ -99,7 +105,10 @@ class _AppBody extends StatelessWidget {
           themeAnimationCurve: Curves.easeOut,
           locale: state.locale,
           builder: (context, child) =>
-              OfflineObserver(child: Directionality(textDirection: TextDirection.ltr, child: child!)),
+              OfflineObserver(child: Directionality(
+                textDirection: state.locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                child: child!
+              )),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(
@@ -223,33 +232,72 @@ class _AppBody extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
   final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    final cachedUser = FirebaseAuth.instance.currentUser;
+    final authService = context.watch<AuthService>();
 
-    if (cachedUser == null) {
-      analytics.logLogin();
-      return LoginScreen();
-    }
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          final pexelsUrl = PexelsBackgroundService.instance.imageUrl;
+          return Scaffold(
+            backgroundColor: const Color(0xFFF5F0EB),
+            body: Stack(
+              children: [
+                if (pexelsUrl != null)
+                  Positioned.fill(
+                    child: Image.network(pexelsUrl, fit: BoxFit.cover),
+                  ),
+                if (pexelsUrl != null)
+                  Positioned.fill(
+                    child: Container(color: const Color(0xFFF5F0EB).withValues(alpha: 0.75)),
+                  ),
+                const Center(
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
 
-    if (authService.appUser != null && authService.isAdmin) {
-      analytics.setUserId(id: authService.currentUser?.uid ?? '');
-      analytics.logEvent(name: 'admin_access', parameters: {
-        'user_id': authService.currentUser?.uid ?? '',
-      });
-      return AdminManageTaadiaScreen();
-    }
+        final user = snapshot.data;
+        if (user == null) {
+          analytics.logLogin();
+          return LoginScreen();
+        }
 
-    if (authService.appUser != null) {
-      analytics.setUserId(id: authService.currentUser?.uid ?? '');
-      analytics.logEvent(name: 'user_access', parameters: {
-        'user_id': authService.currentUser?.uid ?? '',
-      });
-    }
-    return HomeScreen();
+        if (authService.appUser != null && authService.isAdmin) {
+          analytics.setUserId(id: user.uid);
+          analytics.logEvent(name: 'admin_access', parameters: {
+            'user_id': user.uid,
+          });
+          return AdminManageTaadiaScreen();
+        }
+
+        if (authService.appUser != null) {
+          analytics.setUserId(id: user.uid);
+          analytics.logEvent(name: 'user_access', parameters: {
+            'user_id': user.uid,
+          });
+        }
+        return HomeScreen();
+      },
+    );
   }
 }

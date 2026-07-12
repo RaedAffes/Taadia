@@ -713,13 +713,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get accessControl => 'اختر المجموعات';
+  String get accessControl => 'اختر من يمكنه رؤية التعدية ';
 
   @override
   String get accessControlDesc => 'اختر من يمكنه الوصول إلى هذه التعدية';
 
   @override
-  String get selectGroups => 'اختيار المجموعات';
+  String get selectGroups => 'اختيار المجموعات      ';
 
   @override
   String get selectGroupsDesc => 'فقط أعضاء المجموعات المحددة يمكنهم الوصول';
@@ -876,4 +876,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get enterAhzabRange => 'أدخل نطاق الأحزاب';
+
+  @override
+  String get uncheckQuestionFirst => 'قم بإلغاء تحديد السؤال أولاً';
 }

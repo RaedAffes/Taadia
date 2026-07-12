@@ -882,4 +882,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get enterAhzabRange => 'Enter ahzab range';
+
+  @override
+  String get uncheckQuestionFirst => 'You need to uncheck the question first';
 }
