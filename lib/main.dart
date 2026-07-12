@@ -248,30 +248,34 @@ class _AuthWrapperState extends State<AuthWrapper> {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          final pexelsUrl = PexelsBackgroundService.instance.imageUrl;
           return Scaffold(
             backgroundColor: const Color(0xFFF5F0EB),
-            body: Stack(
-              children: [
-                if (pexelsUrl != null)
-                  Positioned.fill(
-                    child: Image.network(pexelsUrl, fit: BoxFit.cover),
-                  ),
-                if (pexelsUrl != null)
-                  Positioned.fill(
-                    child: Container(color: const Color(0xFFF5F0EB).withValues(alpha: 0.75)),
-                  ),
-                const Center(
-                  child: SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
+            body: ValueListenableBuilder<String?>(
+              valueListenable: PexelsBackgroundService.instance.imageUrlNotifier,
+              builder: (context, pexelsUrl, _) {
+                return Stack(
+                  children: [
+                    if (pexelsUrl != null)
+                      Positioned.fill(
+                        child: Image.network(pexelsUrl, fit: BoxFit.cover),
+                      ),
+                    if (pexelsUrl != null)
+                      Positioned.fill(
+                        child: Container(color: const Color(0xFFF5F0EB).withValues(alpha: 0.75)),
+                      ),
+                    const Center(
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           );
         }

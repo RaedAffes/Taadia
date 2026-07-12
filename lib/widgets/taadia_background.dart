@@ -15,39 +15,43 @@ class TaadiaBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = cs.brightness == Brightness.dark;
-    final pexelsUrl = PexelsBackgroundService.instance.imageUrl;
 
-    if (pexelsUrl != null) {
-      return Container(
-        width: double.infinity,
-        height: double.infinity,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.network(
-                pexelsUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: cs.surface),
-              ),
+    return ValueListenableBuilder<String?>(
+      valueListenable: PexelsBackgroundService.instance.imageUrlNotifier,
+      builder: (context, pexelsUrl, _) {
+        if (pexelsUrl != null) {
+          return Container(
+            width: double.infinity,
+            height: double.infinity,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.network(
+                    pexelsUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: cs.surface),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Container(
+                    color: isDark
+                        ? const Color(0xFF3E3A36).withValues(alpha: 0.75)
+                        : const Color(0xFFF5F0EB).withValues(alpha: 0.80),
+                  ),
+                ),
+                Positioned.fill(child: child),
+              ],
             ),
-            Positioned.fill(
-              child: Container(
-                color: isDark
-                    ? const Color(0xFF3E3A36).withValues(alpha: 0.75)
-                    : const Color(0xFFF5F0EB).withValues(alpha: 0.80),
-              ),
-            ),
-            Positioned.fill(child: child),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: isDark ? const Color(0xFF3E3A36) : const Color(0xFFF5F0EB),
-      child: child,
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: isDark ? const Color(0xFF3E3A36) : const Color(0xFFF5F0EB),
+          child: child,
+        );
+      },
     );
   }
 }

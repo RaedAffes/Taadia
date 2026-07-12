@@ -1,6 +1,6 @@
-const CACHE_NAME = 'ta3dia-v2';
-const CACHE_ASSETS = 'ta3dia-assets-v2';
-const CACHE_CROSS = 'ta3dia-cross-v2';
+const CACHE_NAME = 'ta3dia-v3';
+const CACHE_ASSETS = 'ta3dia-assets-v3';
+const CACHE_CROSS = 'ta3dia-cross-v3';
 
 const PRECACHE_URLS = [
   './',
@@ -79,7 +79,7 @@ self.addEventListener('fetch', (event) => {
   const pathname = url.pathname;
   const isAsset = pathname.startsWith('/assets/');
   const isCanvaskit = pathname.startsWith('/canvaskit/');
-  const isMainJs = pathname === '/main.dart.js';
+  const isMainJs = false;
   const isFlutterJs = pathname === '/flutter.js' || pathname === '/flutter_bootstrap.js';
   const isStatic = pathname.endsWith('.png') || pathname.endsWith('.ico') || pathname.endsWith('.json') || pathname.endsWith('.svg') || pathname.endsWith('.woff') || pathname.endsWith('.woff2') || pathname.endsWith('.ttf') || pathname.endsWith('.wasm');
 

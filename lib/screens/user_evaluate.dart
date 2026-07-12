@@ -1079,7 +1079,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           if (q.questionText.isNotEmpty) ...[
                 SizedBox(height: 8),
                 Container(
-                  constraints: BoxConstraints(maxHeight: 122),
+                  constraints: BoxConstraints(maxHeight: 120),
                   padding: EdgeInsets.all(12),
                   clipBehavior: Clip.hardEdge,
                   decoration: BoxDecoration(
@@ -1094,19 +1094,18 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: cs.primary.withValues(alpha: 0.15)),
                   ),
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Column(
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _ayaNavButton(
                             icon: Icons.skip_previous,
                             tooltip: 'Next Aya',
-                            enabled: !_isGenerating && _versesLoaded && _questionVerseIndices[index] < AiService.allVerses.length - 1,
-                            onPressed: q.isComplete
-                                ? () => _showUncheckMessage(context)
-                                : () => _nextAya(index),
+                            enabled: true,
+                            onPressed: () => _nextAya(index),
                             cs: cs,
                           ),
                           SizedBox(width: 2),
@@ -1123,25 +1122,21 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                           _ayaNavButton(
                             icon: Icons.skip_next,
                             tooltip: 'Previous Aya',
-                            enabled: !_isGenerating && _versesLoaded && _questionVerseIndices[index] > 0,
-                            onPressed: q.isComplete
-                                ? () => _showUncheckMessage(context)
-                                : () => _previousAya(index),
+                            enabled: true,
+                            onPressed: () => _previousAya(index),
                             cs: cs,
                           ),
                           SizedBox(width: 2),
                           _ayaNavButton(
                             icon: Icons.menu_book,
                             tooltip: 'Open in Quran',
-                            enabled: _versesLoaded && _questionVerseIndices[index] >= 0 && _questionVerseIndices[index] < AiService.allVerses.length,
-                            onPressed: q.isComplete
-                                ? () => _showUncheckMessage(context)
-                                : () => _showQuranOverlay(_questionVerseIndices[index]),
+                            enabled: true,
+                            onPressed: () => _showQuranOverlay(_questionVerseIndices[index]),
                             cs: cs,
                           ),
                         ],
                       ),
-                      SizedBox(width: 8),
+                      SizedBox(height: 8),
                       Expanded(
                         child: SingleChildScrollView(
                           child: Text(
@@ -2082,46 +2077,73 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                       SizedBox(height: 12),
                       if (_questions.length > 1)
                         Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.chevron_left),
-                                onPressed: _currentQuestionIndex <
-                                        _questions.length - 1
-                                    ? () => _pageController.nextPage(
-                                          duration: Duration(milliseconds: 300),
-                                          curve: Curves.easeInOut,
-                                        )
-                                    : null,
-                              ),
-                              ...List.generate(_questions.length, (i) {
-                                final reversedIdx = _questions.length - 1 - i;
-                                final isActive = reversedIdx == _currentQuestionIndex;
-                                return AnimatedContainer(
-                                  duration: Duration(milliseconds: 250),
-                                  margin:
-                                      EdgeInsets.symmetric(horizontal: 3),
-                                  width: isActive ? 24 : 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: isActive
-                                        ? cs.primary
-                                        : cs.outlineVariant,
-                                    borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _ayaNavButton(
+                                  icon: Icons.chevron_left,
+                                  tooltip: 'Next',
+                                  enabled: _currentQuestionIndex < _questions.length - 1,
+                                  onPressed: () => _pageController.nextPage(
+                                    duration: Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
                                   ),
-                                );
-                              }),
-                              IconButton(
-                                icon: Icon(Icons.chevron_right),
-                                onPressed: _currentQuestionIndex > 0
-                                    ? () => _pageController.previousPage(
-                                          duration: Duration(milliseconds: 300),
-                                          curve: Curves.easeInOut,
-                                        )
-                                    : null,
-                              ),
-                            ],
+                                  cs: cs,
+                                ),
+                                SizedBox(
+                                  width: _questions.length * 14.0 + 10,
+                                  height: 8,
+                                  child: Stack(
+                                    clipBehavior: Clip.hardEdge,
+                                    children: [
+                                      ...List.generate(_questions.length, (i) {
+                                        return Positioned(
+                                          left: i * 14.0 + 8,
+                                          child: Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: cs.outlineVariant,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                      AnimatedPositioned(
+                                        duration: Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                        left: _currentQuestionIndex * 14.0,
+                                        child: Container(
+                                          width: 24,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            color: cs.primary,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                _ayaNavButton(
+                                  icon: Icons.chevron_right,
+                                  tooltip: 'Previous',
+                                  enabled: _currentQuestionIndex > 0,
+                                  onPressed: () => _pageController.previousPage(
+                                    duration: Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  ),
+                                  cs: cs,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       SizedBox(height: 12),
