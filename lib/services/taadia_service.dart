@@ -540,6 +540,7 @@ class TaadiaService extends ChangeNotifier {
         return Taadia(
           id: cached.id,
           title: cached.title,
+          description: cached.description,
           createdBy: '',
           createdAt: DateTime.now(),
           status: 'active',
@@ -576,6 +577,7 @@ class TaadiaService extends ChangeNotifier {
         return Taadia(
           id: cached.id,
           title: cached.title,
+          description: cached.description,
           createdBy: '',
           createdAt: DateTime.now(),
           status: 'active',

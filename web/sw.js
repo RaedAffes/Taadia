@@ -1,6 +1,6 @@
-const CACHE_NAME = 'ta3dia-v3';
-const CACHE_ASSETS = 'ta3dia-assets-v3';
-const CACHE_CROSS = 'ta3dia-cross-v3';
+const CACHE_NAME = 'ta3dia-v4';
+const CACHE_ASSETS = 'ta3dia-assets-v4';
+const CACHE_CROSS = 'ta3dia-cross-v4';
 
 const PRECACHE_URLS = [
   './',

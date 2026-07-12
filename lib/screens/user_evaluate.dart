@@ -202,7 +202,6 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   int _shortcutIndex = 0;
   final List<int> _questionVerseIndices = [];
   late final PageController _pageController;
-  int _currentQuestionIndex = 0;
 
   final List<_RangeCriterion> _rangeCriteria = [_RangeCriterion()];
   String _oldAhzabText = '';
@@ -2059,93 +2058,11 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         ),
                       ),
                       SizedBox(height: 16),
-                      SizedBox(
-                        height: 420,
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: PageView.builder(
-                            controller: _pageController,
-                            onPageChanged: (i) {
-                              setState(() => _currentQuestionIndex = i);
-                            },
-                            itemCount: _questions.length,
-                            itemBuilder: (_, i) =>
-                                _questionWidget(i, l, cs),
-                          ),
-                        ),
+                      _QuestionPager(
+                        controller: _pageController,
+                        itemCount: _questions.length,
+                        itemBuilder: (i) => _questionWidget(i, l, cs),
                       ),
-                      SizedBox(height: 12),
-                      if (_questions.length > 1)
-                        Center(
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _ayaNavButton(
-                                  icon: Icons.chevron_left,
-                                  tooltip: 'Next',
-                                  enabled: _currentQuestionIndex < _questions.length - 1,
-                                  onPressed: () => _pageController.nextPage(
-                                    duration: Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  ),
-                                  cs: cs,
-                                ),
-                                SizedBox(
-                                  width: _questions.length * 14.0 + 10,
-                                  height: 8,
-                                  child: Stack(
-                                    clipBehavior: Clip.hardEdge,
-                                    children: [
-                                      ...List.generate(_questions.length, (i) {
-                                        return Positioned(
-                                          left: i * 14.0 + 8,
-                                          child: Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: cs.outlineVariant,
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                      AnimatedPositioned(
-                                        duration: Duration(milliseconds: 300),
-                                        curve: Curves.easeInOut,
-                                        left: _currentQuestionIndex * 14.0,
-                                        child: Container(
-                                          width: 24,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: cs.primary,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                _ayaNavButton(
-                                  icon: Icons.chevron_right,
-                                  tooltip: 'Previous',
-                                  enabled: _currentQuestionIndex > 0,
-                                  onPressed: () => _pageController.previousPage(
-                                    duration: Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  ),
-                                  cs: cs,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       SizedBox(height: 12),
                       Center(
                         child: Row(
@@ -2186,17 +2103,18 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                               ),
                               onPressed: _questions.length > 1
                                   ? () {
+                                      final curIdx = _pageController.page?.round() ?? 0;
                                       setState(() {
                                         _questions.removeLast();
                                         _numQuestions = _questions.length;
                                       });
                                       _resetVerseIndices();
-                                      final newIndex = _currentQuestionIndex.clamp(
-                                          0, _questions.length - 1);
-                                      if (newIndex != _currentQuestionIndex) {
-                                        setState(() =>
-                                            _currentQuestionIndex = newIndex);
-                                      }
+                                      final newIdx = curIdx.clamp(0, _questions.length - 1);
+                                      _pageController.animateToPage(
+                                        newIdx,
+                                        duration: Duration(milliseconds: 200),
+                                        curve: Curves.easeInOut,
+                                      );
                                     }
                                   : null,
                             ),
@@ -2667,5 +2585,154 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       ),
     );
   }
+
+class _QuestionPager extends StatefulWidget {
+  final PageController controller;
+  final int itemCount;
+  final Widget Function(int index) itemBuilder;
+
+  const _QuestionPager({
+    required this.controller,
+    required this.itemCount,
+    required this.itemBuilder,
+  });
+
+  @override
+  State<_QuestionPager> createState() => _QuestionPagerState();
+}
+
+class _QuestionPagerState extends State<_QuestionPager> {
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.controller.initialPage;
+  }
+
+  @override
+  void didUpdateWidget(covariant _QuestionPager old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      _index = widget.controller.initialPage;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final canPrev = _index > 0;
+    final canNext = _index < widget.itemCount - 1;
+    return Column(
+      children: [
+        SizedBox(
+          height: 420,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: PageView.builder(
+              controller: widget.controller,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemCount: widget.itemCount,
+              itemBuilder: (_, i) => widget.itemBuilder(i),
+            ),
+          ),
+        ),
+        if (widget.itemCount > 1) ...[
+          SizedBox(height: 12),
+          Center(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.chevron_left, size: 18),
+                    tooltip: 'Next',
+                    visualDensity: VisualDensity.compact,
+                    constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      backgroundColor: canNext
+                          ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
+                          : Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: canNext
+                        ? () => widget.controller.nextPage(
+                            duration: Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          )
+                        : null,
+                  ),
+                  SizedBox(
+                    width: widget.itemCount * 14.0 + 10,
+                    height: 8,
+                    child: Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: [
+                        ...List.generate(widget.itemCount, (i) {
+                          return Positioned(
+                            left: i * 14.0 + 8,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: i == _index
+                                    ? cs.primary.withValues(alpha: 0.3)
+                                    : cs.outlineVariant,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          );
+                        }),
+                        AnimatedPositioned(
+                          duration: Duration(milliseconds: 250),
+                          curve: Curves.easeInOut,
+                          left: _index * 14.0,
+                          child: Container(
+                            width: 24,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.chevron_right, size: 18),
+                    tooltip: 'Previous',
+                    visualDensity: VisualDensity.compact,
+                    constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+                    padding: EdgeInsets.zero,
+                    style: IconButton.styleFrom(
+                      backgroundColor: canPrev
+                          ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
+                          : Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: canPrev
+                        ? () => widget.controller.previousPage(
+                            duration: Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          )
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
 
 }

@@ -230,6 +230,8 @@ class AiService {
       pool = pool.where((v) {
         final sura = (v['sura_no'] as num).toInt();
         if (sura == 1) return false;
+        final hizb = (v['hizb_no'] as num).toInt();
+        if (hizb == 59 || hizb == 60) return false;
         final aya = (v['aya_no'] as num).toInt();
         final juz = (v['jozz'] as num).toInt();
         final totalAya = surahAyaCount(sura) ?? 0;
@@ -387,6 +389,8 @@ class AiService {
       pool = pool.where((v) {
         final sura = (v['sura_no'] as num).toInt();
         if (sura == 1) return false;
+        final hizb = (v['hizb_no'] as num).toInt();
+        if (hizb == 59 || hizb == 60) return false;
         final aya = (v['aya_no'] as num).toInt();
         final juz = (v['jozz'] as num).toInt();
         final totalAya = surahAyaCount(sura) ?? 0;
@@ -475,8 +479,18 @@ class AiService {
     for (final v in pool) {
       bySurah.putIfAbsent((v['sura_no'] as num).toInt(), () => []).add(v);
     }
+
+    // Max 1 question per surah; only allow 2nd if surah has >100 verses
+    bySurah.removeWhere((sura, verses) {
+      final count = sCounts[sura] ?? 0;
+      final totalAya = surahAyaCount(sura) ?? 0;
+      final limit = totalAya > 100 ? 2 : 1;
+      return count >= limit;
+    });
+
     final surahGroups = bySurah.entries.map((e) => e.value).toList();
-      final actualN = n > surahGroups.length ? surahGroups.length : n;
+    if (surahGroups.isEmpty) return selected;
+    final actualN = n > surahGroups.length ? surahGroups.length : n;
       final offset = rng.nextDouble();
       final step = 1.0 / actualN;
       for (int si = 0; si < actualN; si++) {
@@ -521,7 +535,9 @@ class AiService {
         final aya = (v['aya_no'] as num).toInt();
         final existing = surahAyahs[sura];
         if (existing == null || existing.isEmpty) return true;
-        return existing.every((e) => (aya - e).abs() >= 50);
+        final totalAya = surahAyaCount(sura) ?? 100;
+        final gap = (totalAya * 0.4).ceil().clamp(2, totalAya);
+        return existing.every((e) => (aya - e).abs() >= gap);
       }).toList();
       if (candidates.isEmpty) candidates = verses;
     }

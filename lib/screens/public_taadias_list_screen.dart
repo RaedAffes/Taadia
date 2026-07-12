@@ -613,6 +613,7 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
     final taadiaService = context.read<TaadiaService>();
     final live = taadiaService.taadias.where((t) => t.id == taadia.id);
     final isActive = live.isNotEmpty ? live.first.status == 'active' : taadia.active;
+    final liveDescription = live.isNotEmpty ? live.first.description : taadia.description;
     return Card(
       elevation: 1,
       margin: EdgeInsets.only(bottom: 12),
@@ -710,8 +711,8 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                taadia.description.isNotEmpty
-                                    ? taadia.description
+                                liveDescription.isNotEmpty
+                                    ? liveDescription
                                     : '',
                                 style: TextStyle(
                                   fontSize: 13,
