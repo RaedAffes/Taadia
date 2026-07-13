@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:308482841964:android:0b662f4ca36121506b6749",
         "android_client_info": {
-          "package_name": "com.example.ta3dia"
+          "package_name": "ta3dia.web.app"
         }
       },
       "oauth_client": [

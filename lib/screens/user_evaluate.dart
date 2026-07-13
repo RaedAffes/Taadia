@@ -676,10 +676,10 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     required ColorScheme cs,
   }) {
     return IconButton(
-      icon: Icon(icon, size: 18),
+      icon: Icon(icon, size: 16),
       tooltip: tooltip,
       visualDensity: VisualDensity.compact,
-      constraints: BoxConstraints(minWidth: 28, minHeight: 28),
+      constraints: BoxConstraints(minWidth: 24, minHeight: 24),
       padding: EdgeInsets.zero,
       style: IconButton.styleFrom(
         backgroundColor: enabled
@@ -1081,6 +1081,47 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           ),
           if (q.questionText.isNotEmpty) ...[
                 SizedBox(height: 8),
+                Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _ayaNavButton(
+                        icon: Icons.skip_previous,
+                        tooltip: 'Next Aya',
+                        enabled: true,
+                        onPressed: () => _nextAya(index),
+                        cs: cs,
+                      ),
+                      SizedBox(width: 2),
+                      _ayaNavButton(
+                        icon: Icons.refresh,
+                        tooltip: 'Regenerate',
+                        enabled: _versesLoaded && !_isGenerating && _generateEnabled && _hasValidRange(),
+                        onPressed: q.isComplete
+                            ? () => _showUncheckMessage(context)
+                            : () => _generateQuestions(singleIndex: index),
+                        cs: cs,
+                      ),
+                      SizedBox(width: 2),
+                      _ayaNavButton(
+                        icon: Icons.skip_next,
+                        tooltip: 'Previous Aya',
+                        enabled: true,
+                        onPressed: () => _previousAya(index),
+                        cs: cs,
+                      ),
+                      SizedBox(width: 2),
+                      _ayaNavButton(
+                        icon: Icons.menu_book,
+                        tooltip: 'Open in Quran',
+                        enabled: true,
+                        onPressed: () => _showQuranOverlay(_questionVerseIndices[index]),
+                        cs: cs,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 8),
                 Container(
                   constraints: BoxConstraints(maxHeight: 120),
                   padding: EdgeInsets.all(12),
@@ -1097,64 +1138,17 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: cs.primary.withValues(alpha: 0.15)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _ayaNavButton(
-                            icon: Icons.skip_previous,
-                            tooltip: 'Next Aya',
-                            enabled: true,
-                            onPressed: () => _nextAya(index),
-                            cs: cs,
-                          ),
-                          SizedBox(width: 2),
-                          _ayaNavButton(
-                            icon: Icons.refresh,
-                            tooltip: 'Regenerate',
-                            enabled: _versesLoaded && !_isGenerating && _generateEnabled && _hasValidRange(),
-                            onPressed: q.isComplete
-                                ? () => _showUncheckMessage(context)
-                                : () => _generateQuestions(singleIndex: index),
-                            cs: cs,
-                          ),
-                          SizedBox(width: 2),
-                          _ayaNavButton(
-                            icon: Icons.skip_next,
-                            tooltip: 'Previous Aya',
-                            enabled: true,
-                            onPressed: () => _previousAya(index),
-                            cs: cs,
-                          ),
-                          SizedBox(width: 2),
-                          _ayaNavButton(
-                            icon: Icons.menu_book,
-                            tooltip: 'Open in Quran',
-                            enabled: true,
-                            onPressed: () => _showQuranOverlay(_questionVerseIndices[index]),
-                            cs: cs,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Text(
-                            q.questionText,
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.6,
-                              color: cs.onSurface,
-                            ),
-                            textDirection: TextDirection.rtl,
-                            textAlign: TextAlign.right,
-                          ),
+                  child: SingleChildScrollView(
+                      child: Text(
+                        q.questionText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.6,
+                          color: cs.onSurface,
                         ),
-                      ),
-                    ],
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.right,
+                    ),
                   ),
                 ),
               ],
@@ -1350,11 +1344,11 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             ),
           ),
           ),
-          SizedBox(height: 28),
+          SizedBox(height: 16),
           if (q.note.isNotEmpty) ...[
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(6),
+              padding: EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
@@ -1380,9 +1374,9 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
-            style: TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 12),
             readOnly: q.isComplete,
             onTap: q.isComplete ? () => _showUncheckMessage(context) : null,
             onChanged: q.isComplete ? null : (v) => q.note = v,
@@ -2087,11 +2081,13 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                                         _numQuestions = _questions.length;
                                       });
                                       _resetVerseIndices();
-                                      _pageController.animateToPage(
-                                        idx,
-                                        duration: Duration(milliseconds: 350),
-                                        curve: Curves.easeInOut,
-                                      );
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        _pageController.animateToPage(
+                                          idx,
+                                          duration: Duration(milliseconds: 350),
+                                          curve: Curves.easeInOut,
+                                        );
+                                      });
                                       if (!_isGenerating && _generateEnabled && _hasValidRange()) {
                                         _generateQuestions(singleIndex: idx);
                                       }
@@ -2694,112 +2690,77 @@ class _DotsNavState extends State<_DotsNav> {
   @override
   Widget build(BuildContext context) {
     final cs = widget.cs;
-    final spacing = 14.0;
+    final count = widget.count;
     final canPrev = _index > 0;
-    final canNext = _index < widget.count - 1;
-    final totalW = widget.count * spacing;
+    final canNext = _index < count - 1;
+
+    final dotSize = count <= 10 ? 10.0 : count <= 20 ? 8.0 : 6.0;
+    final activeW = count <= 10 ? 20.0 : count <= 20 ? 16.0 : 12.0;
+    final dotSpacing = dotSize + 3;
+
     return Center(
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 5),
         decoration: BoxDecoration(
           color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: Icon(Icons.chevron_left, size: 18),
-              tooltip: 'Next',
-              visualDensity: VisualDensity.compact,
-              constraints: BoxConstraints(minWidth: 28, minHeight: 28),
-              padding: EdgeInsets.zero,
-              style: IconButton.styleFrom(
-                backgroundColor: canNext
-                    ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
-                    : Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: canNext
+            GestureDetector(
+              onTap: canNext
                   ? () => widget.controller.nextPage(
                       duration: Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
                     )
                   : null,
+              child: Icon(Icons.chevron_left, size: 16, color: canNext ? cs.primary : cs.outlineVariant),
             ),
+            SizedBox(width: 4),
             SizedBox(
-              width: 200,
-              height: 8,
-              child: LayoutBuilder(
-                builder: (ctx, constraints) {
-                  final viewW = constraints.maxWidth;
-                  final maxOff = (totalW - viewW + 14).clamp(0.0, double.infinity);
-                  final targetOff = (_index * spacing - viewW / 2 + 7).clamp(0.0, maxOff);
-                  return Stack(
-                    clipBehavior: Clip.hardEdge,
-                    children: [
-                      AnimatedPositioned(
+              width: count * dotSpacing,
+              height: dotSize + 2,
+              child: Stack(
+                clipBehavior: Clip.hardEdge,
+                children: [
+                  ...List.generate(count, (i) {
+                    final isActive = i == _index;
+                    return AnimatedPositioned(
+                      duration: Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      left: i * dotSpacing,
+                      top: isActive ? 0 : (dotSize + 2 - dotSize) / 2,
+                      child: AnimatedContainer(
                         duration: Duration(milliseconds: 250),
-                        curve: Curves.easeInOut,
-                        left: -targetOff,
-                        child: SizedBox(
-                          width: totalW + 10,
-                          height: 8,
-                          child: Stack(
-                            clipBehavior: Clip.hardEdge,
-                            children: [
-                              ...List.generate(widget.count, (i) {
-                                return Positioned(
-                                  left: i * spacing + 8,
-                                  child: Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: cs.outlineVariant,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                );
-                              }),
-                              Positioned(
-                                left: _index * spacing,
-                                child: Container(
-                                  width: 24,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: cs.primary,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                            ],
+                        width: isActive ? activeW : dotSize,
+                        height: isActive ? dotSize + 2 : dotSize,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? cs.primary
+                              : i < _index
+                                  ? cs.primary.withValues(alpha: 0.3)
+                                  : cs.outline,
+                          borderRadius: BorderRadius.circular(
+                            isActive ? (dotSize + 2) / 2 : dotSize / 2,
                           ),
                         ),
                       ),
-                    ],
-                  );
-                },
+                    );
+                  }),
+                ],
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.chevron_right, size: 18),
-              tooltip: 'Previous',
-              visualDensity: VisualDensity.compact,
-              constraints: BoxConstraints(minWidth: 28, minHeight: 28),
-              padding: EdgeInsets.zero,
-              style: IconButton.styleFrom(
-                backgroundColor: canPrev
-                    ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
-                    : Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: canPrev
+            SizedBox(width: 4),
+            GestureDetector(
+              onTap: canPrev
                   ? () => widget.controller.previousPage(
                       duration: Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
                     )
                   : null,
+              child: Icon(Icons.chevron_right, size: 16, color: canPrev ? cs.primary : cs.outlineVariant),
             ),
           ],
         ),

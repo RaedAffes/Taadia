@@ -17,7 +17,7 @@ import 'package:ta3dia/screens/admin_manage_taadia_screen.dart';
 import 'package:ta3dia/screens/manage_groups_screen.dart';
 import 'package:ta3dia/widgets/offline_banner.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+
 
 class AppScaffold extends StatelessWidget {
   final Widget body;
@@ -192,7 +192,6 @@ class AppScaffold extends StatelessWidget {
                 },
               ),
             Spacer(),
-            if (!kIsWeb)
               ListTile(
               leading: Icon(
                 Icons.open_in_new,

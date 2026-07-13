@@ -65,7 +65,7 @@ class DefaultFirebaseOptions {
     storageBucket: 'ta3dia.firebasestorage.app',
     iosClientId:
         '308482841964-j6svl9c4tdan53noh65eahvg9fodhmvs.apps.googleusercontent.com',
-    iosBundleId: 'com.example.ta3dia',
+    iosBundleId: 'ta3dia.web.app',
   );
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDMFoTQCqgXF5SKdnLcPw4KSkV-eperTXc',
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '308482841964',
     projectId: 'ta3dia',
     storageBucket: 'ta3dia.firebasestorage.app',
-    iosBundleId: 'com.example.ta3dia',
+    iosBundleId: 'ta3dia.web.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
