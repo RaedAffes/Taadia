@@ -1,22 +1,8 @@
-import 'dart:html' as html;
-import 'dart:typed_data';
 import 'package:excel/excel.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
 import 'package:ta3dia/models/taadia_model.dart';
 import 'package:ta3dia/models/evaluation_model.dart';
-
-void _triggerDownload(Uint8List bytes, String filename) {
-  final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  final url = html.Url.createObjectUrl(blob);
-  final anchor = html.document.createElement('a') as html.AnchorElement
-    ..href = url
-    ..download = filename
-    ..style.display = 'none';
-  html.document.body!.append(anchor);
-  anchor.click();
-  anchor.remove();
-  html.Url.revokeObjectUrl(url);
-}
+import 'package:ta3dia/services/file_downloader.dart';
 
 double _score(Evaluation e, String? formula) {
   if (formula == null) return 0;
@@ -29,12 +15,12 @@ double _score(Evaluation e, String? formula) {
 }
 
 class ExcelService {
-  static void downloadTaadiaExcel(
+  static Future<void> downloadTaadiaExcel(
     Taadia taadia,
     List<Evaluation> evals,
     AppLocalizations l, {
     String? formula,
-  }) {
+  }) async {
     final r = l.localeName == 'ar';
     final f = formula ?? taadia.formula;
 
@@ -45,10 +31,10 @@ class ExcelService {
         ? ['الترتيب', 'الاسم', 'نطاق الأحزاب', 'الإشعارات', 'التلقين', 'العلامة']
         : ['Rank', 'Name', 'Ahzab Range', 'Ichaarat', 'Taalakin', 'Score'];
 
-    final headerRow = sheet.appendRow(headers.map((h) => TextCellValue(h)).toList());
-    headerRow.forEach((cell) {
-      cell.cellStyle = CellStyle(bold: true);
-    });
+    sheet.appendRow(headers.map((h) => TextCellValue(h)).toList());
+    for (var c = 0; c < headers.length; c++) {
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 0)).cellStyle = CellStyle(bold: true);
+    }
 
     final scores = <String, double>{};
     for (final e in evals) scores[e.id] = _score(e, f);
@@ -82,14 +68,14 @@ class ExcelService {
     final filename = r
         ? '${taadia.title}_تقرير.xlsx'
         : '${taadia.title}_Report.xlsx';
-    _triggerDownload(excel.save()!, filename);
+    await downloadFile(excel.save()!, filename);
   }
 
-  static void downloadSingleEvaluationExcel(
+  static Future<void> downloadSingleEvaluationExcel(
     Evaluation eval,
     AppLocalizations l, {
     String? formula,
-  }) {
+  }) async {
     final r = l.localeName == 'ar';
     final sc = formula != null ? _score(eval, formula) : null;
     final ahz = eval.specialAhzab.isNotEmpty
@@ -149,6 +135,6 @@ class ExcelService {
     }
 
     final filename = r ? 'تقييم_${eval.studentName}.xlsx' : '${eval.studentName}.xlsx';
-    _triggerDownload(excel.save()!, filename);
+    await downloadFile(excel.save()!, filename);
   }
 }

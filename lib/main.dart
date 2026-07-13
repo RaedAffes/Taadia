@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +11,7 @@ import 'package:ta3dia/screens/admin_manage_taadia_screen.dart';
 import 'package:ta3dia/screens/home_screen.dart';
 import 'package:ta3dia/screens/login_screen.dart';
 import 'package:ta3dia/services/auth_services.dart';
+import 'package:ta3dia/services/background_download_service.dart';
 import 'package:ta3dia/services/code_lookup_service.dart';
 import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/evaluation_service.dart';
@@ -33,7 +35,11 @@ void main() async {
   );
   final quranService = QuranDownloadService.instance;
   await quranService.init();
-  quranService.startBackgroundDownload();
+  if (kIsWeb) {
+    quranService.startBackgroundDownload();
+  } else {
+    BackgroundDownloadService.instance.init();
+  }
   PexelsBackgroundService.instance.init();
   runApp(MyApp());
 }
@@ -242,6 +248,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
@@ -284,7 +291,39 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return LoginScreen();
         }
 
-        final authService = context.read<AuthService>();
+        if (authService.appUser == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF5F0EB),
+            body: ValueListenableBuilder<String?>(
+              valueListenable: PexelsBackgroundService.instance.imageUrlNotifier,
+              builder: (context, pexelsUrl, _) {
+                return Stack(
+                  children: [
+                    if (pexelsUrl != null)
+                      Positioned.fill(
+                        child: Image.network(pexelsUrl, fit: BoxFit.cover),
+                      ),
+                    if (pexelsUrl != null)
+                      Positioned.fill(
+                        child: Container(color: const Color(0xFFF5F0EB).withValues(alpha: 0.75)),
+                      ),
+                    const Center(
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        }
+
         if (authService.isAdmin) {
           analytics.setUserId(id: user.uid);
           analytics.logEvent(name: 'admin_access', parameters: {

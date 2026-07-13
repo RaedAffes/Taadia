@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
-import 'package:ta3dia/screens/admin_dashboard.dart';
+import 'package:ta3dia/screens/public_taadias_list_screen.dart';
 import 'package:ta3dia/screens/private_taadias_list_screen.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
@@ -82,7 +82,7 @@ class AdminManageTaadiaScreen extends StatelessWidget {
                 );
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => AdminDashboard()),
+                  MaterialPageRoute(builder: (_) => PublicTaadiasListScreen()),
                 );
               },
             ),

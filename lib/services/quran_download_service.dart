@@ -15,11 +15,13 @@ class QuranDownloadService {
   Directory? _cacheDir;
   final QuranCache _webCache = QuranCache();
   int _downloadedCount = 0;
+  bool _stopRequested = false;
 
   int get downloadedCount => _downloadedCount;
   int get totalToDownload => totalPages;
   bool get isComplete => _completed.length >= totalPages;
   double get progress => totalPages > 0 ? _completed.length / totalPages : 0;
+  bool get isDownloading => !_stopRequested && _downloading.isNotEmpty;
 
   static final instance = QuranDownloadService._();
   QuranDownloadService._();
@@ -104,6 +106,7 @@ class QuranDownloadService {
   }
 
   Future<void> startBackgroundDownload() async {
+    _stopRequested = false;
     final pagesToDownload = <int>[];
     for (var p = 1; p <= totalPages; p++) {
       if (!_completed.contains(p)) {
@@ -119,6 +122,10 @@ class QuranDownloadService {
     debugPrint('QuranDownloadService: downloading ${pagesToDownload.length} pages in background');
 
     for (var i = 0; i < pagesToDownload.length; i += _concurrency) {
+      if (_stopRequested) {
+        debugPrint('QuranDownloadService: download stopped by user');
+        return;
+      }
       final batch = pagesToDownload.sublist(
         i,
         (i + _concurrency).clamp(0, pagesToDownload.length),
@@ -127,5 +134,9 @@ class QuranDownloadService {
     }
 
     debugPrint('QuranDownloadService: background download complete! ${_completed.length}/$totalPages');
+  }
+
+  void stopDownload() {
+    _stopRequested = true;
   }
 }
