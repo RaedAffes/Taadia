@@ -97,7 +97,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: cs.onSurface,
-        actions: const [],
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, textDirection: TextDirection.ltr),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
       body: TaadiaBackground(
         child: SafeArea(

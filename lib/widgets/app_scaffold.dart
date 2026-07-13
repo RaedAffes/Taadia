@@ -19,7 +19,7 @@ import 'package:ta3dia/widgets/offline_banner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 
-class AppScaffold extends StatelessWidget {
+class AppScaffold extends StatefulWidget {
   final Widget body;
   final String? title;
   final String? subtitle;
@@ -36,6 +36,13 @@ class AppScaffold extends StatelessWidget {
   });
 
   @override
+  State<AppScaffold> createState() => _AppScaffoldState();
+}
+
+class _AppScaffoldState extends State<AppScaffold> {
+  double _scrollOffset = 0;
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final auth = Provider.of<AuthService>(context);
@@ -43,10 +50,16 @@ class AppScaffold extends StatelessWidget {
     final isAdmin = auth.isAdmin;
     final cs = Theme.of(context).colorScheme;
 
+    final rawProgress = (_scrollOffset / 250).clamp(0.0, 1.0);
+    final progress = Curves.easeOutCubic.transform(rawProgress);
+    final headerHeight = 200.0 - progress * 136;
+
     return Scaffold(
       appBar: IslamicHeader(
-        title: title ?? '',
-        subtitle: subtitle,
+        key: ValueKey(headerHeight.round()),
+        title: widget.title ?? '',
+        subtitle: widget.subtitle,
+        height: headerHeight,
         leading: Builder(
           builder: (ctx) {
             final isFirst = ModalRoute.of(ctx)?.isFirst ?? true;
@@ -66,7 +79,7 @@ class AppScaffold extends StatelessWidget {
             );
           },
         ),
-        actions: actions,
+        actions: widget.actions,
       ),
       endDrawer: Drawer(
         child: Column(
@@ -214,10 +227,20 @@ class AppScaffold extends StatelessWidget {
       body: Column(
         children: [
           OfflineBanner(),
-          Expanded(child: TaadiaBackground(child: body)),
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollUpdateNotification) {
+                  setState(() => _scrollOffset = notification.metrics.pixels);
+                }
+                return false;
+              },
+              child: TaadiaBackground(child: widget.body),
+            ),
+          ),
         ],
       ),
-      floatingActionButton: floatingActionButton,
+      floatingActionButton: widget.floatingActionButton,
     );
   }
 

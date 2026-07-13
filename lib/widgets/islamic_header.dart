@@ -82,14 +82,14 @@ class _DotInfo {
   });
 
   void update(math.Random rng) {
-    vx += (rng.nextDouble() - 0.5) * 0.007;
-    vy += (rng.nextDouble() - 0.5) * 0.006;
-    vx = vx.clamp(-0.018, 0.018);
-    vy = vy.clamp(-0.014, 0.014);
+    vx += (rng.nextDouble() - 0.5) * 0.002;
+    vy += (rng.nextDouble() - 0.5) * 0.002;
+    vx = vx.clamp(-0.06, 0.06);
+    vy = vy.clamp(-0.05, 0.05);
     x += vx;
     y += vy;
-    if (x < 0 || x > maxX) { vx = -vx; x = x.clamp(0.0, maxX); }
-    if (y < 0 || y > maxY) { vy = -vy; y = y.clamp(0.0, maxY); }
+    if (x < 0 || x > maxX) { vx = -vx * 0.5; x = x.clamp(0.0, maxX); }
+    if (y < 0 || y > maxY) { vy = -vy * 0.5; y = y.clamp(0.0, maxY); }
   }
 }
 
@@ -128,14 +128,21 @@ class _IslamicHeaderState extends State<IslamicHeader>
   final math.Random _rng = math.Random(42);
   List<_DotInfo>? _dots;
 
+  // Smooth content transitions based on height
+  double get _collapseProgress {
+    final minH = 64.0;
+    final maxH = 200.0;
+    return ((maxH - widget.height) / (maxH - minH)).clamp(0.0, 1.0);
+  }
+
   void _initDots(Size size) {
     _dots = List.generate(_dotCount, (_) {
       return _DotInfo(
         x: _rng.nextDouble() * size.width,
         y: _rng.nextDouble() * size.height,
         radius: _rng.nextDouble() * 2.5 + 0.8,
-        vx: (_rng.nextDouble() - 0.5) * 0.05,
-        vy: (_rng.nextDouble() - 0.5) * 0.04,
+        vx: (_rng.nextDouble() - 0.5) * 0.08,
+        vy: (_rng.nextDouble() - 0.5) * 0.06,
         maxX: size.width,
         maxY: size.height,
       );
@@ -204,6 +211,15 @@ class _IslamicHeaderState extends State<IslamicHeader>
     final cs = Theme.of(context).colorScheme;
     final isDark = cs.brightness == Brightness.dark;
     final height = widget.height;
+    final cp = _collapseProgress;
+    final titleFontSize = 24.0 - cp * 6.0;
+    final subtitleOpacity = 1.0 - cp * 0.85;
+    final dividerWidth = 50.0 - cp * 20.0;
+    final contentTopPadding = (widget.leading != null || widget.actions != null)
+        ? 52.0 - cp * 40.0
+        : 24.0 - cp * 14.0;
+    final contentBottomPadding = 20.0 - cp * 15.0;
+    final spacingBeforeDivider = 12.0 - cp * 8.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -255,13 +271,14 @@ class _IslamicHeaderState extends State<IslamicHeader>
                     left: popup.position.dx - 70,
                     top: popup.position.dy - 55,
                     width: 160,
-                    child: AnimatedOpacity(
-                      opacity: popup.visible ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                      child: Transform.scale(
-                        scale: popup.visible ? 1.0 : 0.8,
-                        alignment: Alignment.bottomCenter,
+                    child: AnimatedSlide(
+                      offset: popup.visible ? Offset.zero : const Offset(0, -0.4),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeOutCubic,
+                      child: AnimatedOpacity(
+                        opacity: popup.visible ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOutCubic,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 6),
@@ -324,10 +341,8 @@ class _IslamicHeaderState extends State<IslamicHeader>
                     padding: EdgeInsets.only(
                       left: 24,
                       right: 24,
-                      top: (widget.leading != null || widget.actions != null)
-                          ? 52
-                          : 24,
-                      bottom: 20,
+                      top: contentTopPadding,
+                      bottom: contentBottomPadding,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -335,32 +350,33 @@ class _IslamicHeaderState extends State<IslamicHeader>
                         Text(
                           widget.title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 24,
+                          style: TextStyle(
+                            fontSize: titleFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: 0.5,
                           ),
                         ),
                         if (widget.subtitle != null &&
-                            widget.subtitle!.isNotEmpty) ...[
+                            widget.subtitle!.isNotEmpty &&
+                            subtitleOpacity > 0.05) ...[
                           const SizedBox(height: 6),
                           Text(
                             widget.subtitle!,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: 14 - cp * 2,
+                              color: Colors.white.withValues(alpha: (0.85 * subtitleOpacity).clamp(0.0, 1.0)),
                               letterSpacing: 0.3,
                             ),
                           ),
                         ],
-                        const SizedBox(height: 12),
+                        SizedBox(height: spacingBeforeDivider),
                         Container(
-                          width: 50,
+                          width: dividerWidth,
                           height: 2.5,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.4),
+                            color: Colors.white.withValues(alpha: (0.4 * (1.0 - cp * 0.7)).clamp(0.0, 1.0)),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -390,8 +406,8 @@ class _DotsPainter extends CustomPainter {
       final speed = math.sqrt(dot.vx * dot.vx + dot.vy * dot.vy);
       final opacity = speed / 2.0;
 
-      paint.color = Colors.white.withValues(alpha: 0.08 + opacity * 0.22);
-      canvas.drawCircle(Offset(dot.x, dot.y), dot.radius, paint);
+      paint.color = Colors.white.withValues(alpha: 0.30 + opacity * 0.45);
+      canvas.drawCircle(Offset(dot.x, dot.y), dot.radius * 1.4, paint);
     }
   }
 

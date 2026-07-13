@@ -1026,21 +1026,22 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               : cs.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Row(
+      child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        cs.primary.withValues(alpha: 0.8),
-                        cs.primary.withValues(alpha: 0.4),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              cs.primary.withValues(alpha: 0.8),
+                              cs.primary.withValues(alpha: 0.4),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -1382,6 +1383,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             onChanged: q.isComplete ? null : (v) => q.note = v,
           ),
         ],
+        ),
       ),
     );
   }
@@ -2716,7 +2718,7 @@ class _DotsNavState extends State<_DotsNav> {
                       curve: Curves.easeInOut,
                     )
                   : null,
-              child: Icon(Icons.chevron_left, size: 16, color: canNext ? cs.primary : cs.outlineVariant),
+              child: Icon(Icons.chevron_left, size: 16, color: canNext ? cs.onSurface : cs.outlineVariant),
             ),
             SizedBox(width: 4),
             SizedBox(
@@ -2760,7 +2762,7 @@ class _DotsNavState extends State<_DotsNav> {
                       curve: Curves.easeInOut,
                     )
                   : null,
-              child: Icon(Icons.chevron_right, size: 16, color: canPrev ? cs.primary : cs.outlineVariant),
+              child: Icon(Icons.chevron_right, size: 16, color: canPrev ? cs.onSurface : cs.outlineVariant),
             ),
           ],
         ),
