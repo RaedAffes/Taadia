@@ -17,7 +17,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "ta3dia.web.app"
+    namespace = "com.example.ta3dia"
     compileSdk = flutter.compileSdkVersion
         ndkVersion = "28.2.13676358"
 
@@ -31,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "ta3dia.web.app"
+        applicationId = "com.example.ta3dia"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

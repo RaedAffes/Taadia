@@ -16,7 +16,6 @@ import 'package:ta3dia/screens/home_screen.dart';
 import 'package:ta3dia/screens/admin_manage_taadia_screen.dart';
 import 'package:ta3dia/screens/manage_groups_screen.dart';
 import 'package:ta3dia/widgets/offline_banner.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 
 class AppScaffold extends StatefulWidget {
@@ -205,20 +204,6 @@ class _AppScaffoldState extends State<AppScaffold> {
                 },
               ),
             Spacer(),
-              ListTile(
-              leading: Icon(
-                Icons.open_in_new,
-                color: cs.primary,
-              ),
-              title: Text(l.visitWebsite, style: TextStyle(color: cs.onSurface)),
-              onTap: () async {
-                Navigator.pop(context);
-                final uri = Uri.parse('https://ta3dia.web.app');
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
-            ),
             _logoutTile(context, auth),
             SizedBox(height: 16),
           ],

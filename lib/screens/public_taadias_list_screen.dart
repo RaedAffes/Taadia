@@ -9,8 +9,8 @@ import 'package:ta3dia/services/evaluation_service.dart';
 import 'package:ta3dia/services/offline_queue_service.dart';
 import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/group_service.dart';
+import 'package:ta3dia/screens/admin_create_taadia.dart';
 import 'package:ta3dia/screens/admin_taadia_results.dart';
-import 'package:ta3dia/screens/create_private_taadia_screen.dart';
 import 'package:ta3dia/screens/user_evaluate.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
@@ -266,8 +266,7 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
               onPressed: () async {
                 final created = await Navigator.push<bool>(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => CreatePrivateTaadiaScreen()),
+                  MaterialPageRoute(builder: (_) => CreateTaadiaScreen()),
                 );
                 if (created == true) taadiaService.loadTaadias();
               },
@@ -475,6 +474,10 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                                           ),
                                         ),
                                       ],
+                                      if (isAdmin) ...[
+                                        SizedBox(height: 8),
+                                        _adminTaadiaControls(t, taadiaService, l, cs),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -485,6 +488,140 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                       ],
                     ),
             ),
+    );
+  }
+
+  Widget _adminTaadiaControls(Taadia t, TaadiaService taadiaService, AppLocalizations l, ColorScheme cs) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: Icon(Icons.edit, size: 14),
+            label: Text(l.editTitle, style: TextStyle(fontSize: 12)),
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            onPressed: () => _showEditTaadiaDialog(t, taadiaService, l, cs),
+          ),
+        ),
+        SizedBox(width: 6),
+        PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, size: 18, color: cs.onSurfaceVariant),
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints(),
+          onSelected: (v) async {
+            if (v == 'toggle') {
+              if (t.status == 'active') {
+                await taadiaService.closeTaadia(t.id);
+              } else {
+                await taadiaService.openTaadia(t.id);
+              }
+            } else if (v == 'delete') {
+              _showDeleteTaadiaDialog(t, taadiaService, l, cs);
+            }
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: 'toggle',
+              child: Row(
+                children: [
+                  Icon(
+                    t.status == 'active' ? Icons.lock_open : Icons.lock,
+                    size: 18,
+                    color: t.status == 'active' ? cs.error : cs.tertiary,
+                  ),
+                  SizedBox(width: 8),
+                  Text(t.status == 'active' ? l.close : l.open),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline, size: 18, color: cs.error),
+                  SizedBox(width: 8),
+                  Text(l.delete, style: TextStyle(color: cs.error)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showEditTaadiaDialog(Taadia t, TaadiaService taadiaService, AppLocalizations l, ColorScheme cs) {
+    final titleController = TextEditingController(text: t.title);
+    final descController = TextEditingController(text: t.description);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.editTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(
+                labelText: l.assessmentTitle,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: l.descriptionOptional,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await taadiaService.updateTaadia(
+                t.id,
+                title: titleController.text.trim(),
+                description: descController.text.trim(),
+              );
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: Text(l.save),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteTaadiaDialog(Taadia t, TaadiaService taadiaService, AppLocalizations l, ColorScheme cs) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.delete),
+        content: Text(l.areYouSure),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: cs.error),
+            onPressed: () async {
+              await taadiaService.deleteTaadia(t.id);
+              if (mounted) Navigator.pop(ctx);
+            },
+            child: Text(l.delete),
+          ),
+        ],
+      ),
     );
   }
 

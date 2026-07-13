@@ -18,7 +18,9 @@ class AuthService extends ChangeNotifier {
   List<AppUser> get allUsers => _allUsers;
 
   GoogleSignIn get _googleSignInInstance {
-    _googleSignIn ??= GoogleSignIn();
+    _googleSignIn ??= GoogleSignIn(
+      serverClientId: '308482841964-lc4gs73gb1d3671l489n5k9u6dru88eh.apps.googleusercontent.com',
+    );
     return _googleSignIn!;
   }
 

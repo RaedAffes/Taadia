@@ -42,7 +42,7 @@
     function i(){return /iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream}
     function s(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
     window.triggerPwaInstall=async function(){if(s())return'already_installed';if(i())return'ios_instructions';if(d){d.prompt();var r=await d.userChoice;d=null;return r.outcome==='accepted'?'installed':'dismissed'}return'not_available'}
-    if('serviceWorker'in navigator){try{navigator.serviceWorker.register('sw.js',{scope:'/'}).then(function(reg){reg.addEventListener('updatefound',function(){var nw=reg.installing;if(nw){nw.addEventListener('statechange',function(){if(nw.state==='installed'&&navigator.serviceWorker.controller){nw.postMessage({type:'SKIP_WAITING'});setTimeout(function(){location.reload()},500)}})}})}catch(e){console.warn('SW failed:',e)}})})();
+    if('serviceWorker'in navigator){try{navigator.serviceWorker.register('sw.js',{scope:'/'}).then(function(reg){reg.addEventListener('updatefound',function(){var nw=reg.installing;if(nw){nw.addEventListener('statechange',function(){if(nw.state==='installed'&&navigator.serviceWorker.controller){nw.postMessage({type:'SKIP_WAITING'});setTimeout(function(){location.reload()},500)}})}});setInterval(function(){reg.update()},60000)}catch(e){console.warn('SW failed:',e)}})})();
   </script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-H9ZGMEK9YN"></script>

@@ -78,7 +78,7 @@ class TaadiaHeader extends StatelessWidget {
             title!,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 34,
               fontWeight: FontWeight.bold,
               color: cs.onSurface,
             ),

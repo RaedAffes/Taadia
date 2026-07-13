@@ -23,11 +23,13 @@ class _PageMeta {
   final String surahNameAr;
   final int surahNo;
   final int juz;
+  final int hizb;
   _PageMeta({
     required this.page,
     required this.surahNameAr,
     required this.surahNo,
     required this.juz,
+    required this.hizb,
   });
 }
 
@@ -52,6 +54,22 @@ const _surahNamesAr = [
   'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون',
   'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس',
 ];
+
+const _hizbStartPages = [
+  1, 11, 22, 32, 42, 51, 62, 72, 82, 92,
+  102, 111, 122, 132, 142, 151, 162, 173, 182, 192,
+  202, 212, 222, 231, 242, 252, 262, 273, 282, 292,
+  302, 312, 322, 332, 342, 352, 362, 371, 382, 392,
+  402, 413, 423, 431, 442, 451, 461, 471, 481, 490,
+  501, 511, 519, 528, 539, 550, 559, 569, 579, 589,
+];
+
+int _pageToHizb(int page) {
+  for (var i = _hizbStartPages.length - 1; i >= 0; i--) {
+    if (page >= _hizbStartPages[i]) return i + 1;
+  }
+  return 1;
+}
 
 class _QuranReaderScreenState extends State<QuranReaderScreen> {
   static final _savedPages = <String?, int>{};
@@ -114,6 +132,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
           surahNameAr: suraNo >= 0 && suraNo < _surahNamesAr.length ? _surahNamesAr[suraNo] : '',
           surahNo: suraNo,
           juz: v['jozz'] as int? ?? 1,
+          hizb: _pageToHizb(page),
         );
       }
     }
@@ -123,7 +142,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
           if (p - d >= 1 && _pageMeta.containsKey(p - d)) return _pageMeta[p - d]!;
           if (p + d <= _totalPages && _pageMeta.containsKey(p + d)) return _pageMeta[p + d]!;
         }
-        return _PageMeta(page: p, surahNameAr: '', surahNo: 1, juz: 1);
+        return _PageMeta(page: p, surahNameAr: '', surahNo: 1, juz: 1, hizb: _pageToHizb(p));
       });
     }
   }
@@ -207,7 +226,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
             _PageHeader(
               pageNumber: pageArabic,
               surahName: meta?.surahNameAr ?? '',
-              juz: meta?.juz ?? 1,
+              hizb: meta?.hizb ?? 1,
             ),
             Expanded(
               child: Directionality(
@@ -261,11 +280,12 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
       final pg = int.parse((v['page'] as String).split('-')[0]);
       surahPages.putIfAbsent(sn, () => pg);
     }
-    final surahList = surahPages.entries.map((e) => _PageMeta(
+    final List<_PageMeta> surahList = surahPages.entries.map((e) => _PageMeta(
       page: e.value,
       surahNameAr: e.key >= 0 && e.key < _surahNamesAr.length ? _surahNamesAr[e.key] : '',
       surahNo: e.key,
       juz: 1,
+      hizb: 1,
     )).toList()..sort((a, b) => a.surahNo.compareTo(b.surahNo));
 
     if (!mounted) return;
@@ -293,11 +313,11 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
 class _PageHeader extends StatelessWidget {
   final String pageNumber;
   final String surahName;
-  final int juz;
+  final int hizb;
   const _PageHeader({
     required this.pageNumber,
     required this.surahName,
-    required this.juz,
+    required this.hizb,
   });
 
   @override
@@ -316,7 +336,7 @@ class _PageHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'الجزء ${_arabicNumeral(juz)}',
+              'الحزب ${_arabicNumeral(hizb)}',
               style: const TextStyle(
                 fontFamily: 'Amiri', fontSize: 14, color: Color(0xFFD3BF90),
               ),

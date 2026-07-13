@@ -1,6 +1,6 @@
-const CACHE_NAME = 'ta3dia-v8';
-const CACHE_ASSETS = 'ta3dia-assets-v8';
-const CACHE_CROSS = 'ta3dia-cross-v8';
+const CACHE_NAME = 'ta3dia-v12';
+const CACHE_ASSETS = 'ta3dia-assets-v12';
+const CACHE_CROSS = 'ta3dia-cross-v12';
 
 const PRECACHE_URLS = [
   './',
@@ -36,6 +36,10 @@ self.addEventListener('activate', (event) => {
           .map((name) => caches.delete(name))
       );
       await self.clients.claim();
+      const clients = await self.clients.matchAll();
+      for (const client of clients) {
+        client.postMessage({ type: 'SW_ACTIVATED' });
+      }
     })()
   );
 });
@@ -55,7 +59,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cross-origin: network-only for APIs, cache-first for CDN assets
   if (url.origin !== self.location.origin) {
     if (url.hostname === 'firestore.googleapis.com' || url.hostname.includes('googleapis.com') || url.hostname.includes('firebaseio.com')) {
       event.respondWith(
@@ -74,7 +77,7 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_CROSS).then((cache) => cache.put(request, clone));
           }
           return response;
-        } catch () {
+        } catch (e) {
           return cached || new Response(null, { status: 503 });
         }
       })()
@@ -85,12 +88,10 @@ self.addEventListener('fetch', (event) => {
   const pathname = url.pathname;
   const isAsset = pathname.startsWith('/assets/');
   const isCanvaskit = pathname.startsWith('/canvaskit/');
-  const isMainJs = pathname.endsWith('main.dart.js') || pathname == './main.dart.js';
-  const isFlutterJs = pathname === '/flutter.js' || pathname === '/flutter_bootstrap.js';
+  const isMainJs = pathname.endsWith('main.dart.js') || pathname === './main.dart.js';
   const isFlutterJsNetwork = pathname === '/flutter_bootstrap.js';
   const isStatic = pathname.endsWith('.png') || pathname.endsWith('.ico') || pathname.endsWith('.json') || pathname.endsWith('.svg') || pathname.endsWith('.woff') || pathname.endsWith('.woff2') || pathname.endsWith('.ttf') || pathname.endsWith('.wasm');
 
-  // Network-first for flutter_bootstrap.js (app init)
   if (isFlutterJsNetwork) {
     event.respondWith(
       (async () => {
@@ -102,7 +103,7 @@ self.addEventListener('fetch', (event) => {
             cache.put(request, clone);
           }
           return response;
-        } catch () {
+        } catch (e) {
           return caches.match(request);
         }
       })()
@@ -110,7 +111,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for main.dart.js (always get latest)
   if (isMainJs) {
     event.respondWith(
       (async () => {
@@ -122,7 +122,7 @@ self.addEventListener('fetch', (event) => {
             cache.put(request, clone);
           }
           return response;
-        } catch () {
+        } catch (e) {
           return caches.match(request);
         }
       })()
@@ -130,8 +130,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for immutable Flutter assets
-  if (isAsset || isCanvaskit || isMainJs || isFlutterJs || isStatic) {
+  if (isAsset || isCanvaskit || isStatic) {
     event.respondWith(
       (async () => {
         const cached = await caches.match(request);
@@ -144,7 +143,7 @@ self.addEventListener('fetch', (event) => {
             cache.put(request, clone);
           }
           return response;
-        } catch () {
+        } catch (e) {
           return caches.match('./index.html');
         }
       })()
@@ -152,7 +151,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for index.html and the root
   if (pathname === '/' || pathname === '/index.html') {
     event.respondWith(
       (async () => {
@@ -164,7 +162,7 @@ self.addEventListener('fetch', (event) => {
             cache.put(request, clone);
           }
           return response;
-        } catch () {
+        } catch (e) {
           return caches.match(request);
         }
       })()
@@ -172,7 +170,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Default: network-first with cache fallback
   event.respondWith(
     (async () => {
       try {
@@ -183,7 +180,7 @@ self.addEventListener('fetch', (event) => {
           cache.put(request, clone);
         }
         return response;
-      } catch () {
+      } catch (e) {
         return caches.match(request);
       }
     })()

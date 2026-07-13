@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:ta3dia/services/quran_cache.dart';
 
 class QuranDownloadService {
   static const _baseUrl =
@@ -12,6 +13,7 @@ class QuranDownloadService {
   final Set<int> _downloading = {};
   final Set<int> _completed = {};
   Directory? _cacheDir;
+  final QuranCache _webCache = QuranCache();
   int _downloadedCount = 0;
 
   int get downloadedCount => _downloadedCount;
@@ -24,7 +26,10 @@ class QuranDownloadService {
 
   Future<void> init() async {
     if (kIsWeb) {
-      debugPrint('QuranDownloadService: init done (web - no disk cache)');
+      await _webCache.init();
+      _completed.addAll(await _webCache.getCompletedPages());
+      _downloadedCount = _completed.length;
+      debugPrint('QuranDownloadService: init done ($_downloadedCount/$totalPages in IndexedDB)');
       return;
     }
     try {
@@ -50,7 +55,10 @@ class QuranDownloadService {
   }
 
   Future<String?> getLocalSvg(int page) async {
-    if (kIsWeb || _cacheDir == null) return null;
+    if (kIsWeb) {
+      return _webCache.getPage(page);
+    }
+    if (_cacheDir == null) return null;
     final file = File('${_cacheDir!.path}/${page.toString().padLeft(3, '0')}.svg');
     if (await file.exists()) {
       try {
@@ -74,7 +82,10 @@ class QuranDownloadService {
         _completed.add(page);
         _downloadedCount = _completed.length;
 
-        if (!kIsWeb && _cacheDir != null) {
+        if (kIsWeb) {
+          await _webCache.savePage(page, response.body);
+          await _webCache.saveCompletedPages(_completed);
+        } else if (_cacheDir != null) {
           try {
             final file = File('${_cacheDir!.path}/${page.toString().padLeft(3, '0')}.svg');
             await file.writeAsString(response.body);

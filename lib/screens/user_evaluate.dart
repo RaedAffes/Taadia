@@ -2075,23 +2075,23 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                                 visualDensity: VisualDensity.compact,
                               ),
                               onPressed: _questions.length < 60
-                                  ? () {
-                                      final idx = _questions.length;
+                                   ? () {
+                                      final currentIdx = _pageController.page?.round() ?? 0;
                                       setState(() {
                                         _questions.add(QuestionItem(
-                                            number: idx + 1));
+                                            number: _questions.length + 1));
                                         _numQuestions = _questions.length;
                                       });
                                       _resetVerseIndices();
                                       WidgetsBinding.instance.addPostFrameCallback((_) {
                                         _pageController.animateToPage(
-                                          idx,
-                                          duration: Duration(milliseconds: 350),
+                                          currentIdx,
+                                          duration: Duration(milliseconds: 200),
                                           curve: Curves.easeInOut,
                                         );
                                       });
                                       if (!_isGenerating && _generateEnabled && _hasValidRange()) {
-                                        _generateQuestions(singleIndex: idx);
+                                        _generateQuestions(singleIndex: currentIdx);
                                       }
                                     }
                                   : null,
@@ -2612,13 +2612,16 @@ class _QuestionPagerState extends State<_QuestionPager> {
       children: [
         SizedBox(
           height: 420,
-          child: Directionality(
-            textDirection: TextDirection.ltr,
-            child: PageView.builder(
-              controller: widget.controller,
-              itemCount: widget.itemCount,
-              itemBuilder: (_, i) => RepaintBoundary(
-                child: widget.itemBuilder(i),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (_) => true,
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: PageView.builder(
+                controller: widget.controller,
+                itemCount: widget.itemCount,
+                itemBuilder: (_, i) => RepaintBoundary(
+                  child: widget.itemBuilder(i),
+                ),
               ),
             ),
           ),
@@ -2697,7 +2700,6 @@ class _DotsNavState extends State<_DotsNav> {
     final canNext = _index < count - 1;
 
     final dotSize = count <= 10 ? 10.0 : count <= 20 ? 8.0 : 6.0;
-    final activeW = count <= 10 ? 20.0 : count <= 20 ? 16.0 : 12.0;
     final dotSpacing = dotSize + 3;
 
     return Center(
@@ -2736,7 +2738,7 @@ class _DotsNavState extends State<_DotsNav> {
                       top: isActive ? 0 : (dotSize + 2 - dotSize) / 2,
                       child: AnimatedContainer(
                         duration: Duration(milliseconds: 250),
-                        width: isActive ? activeW : dotSize,
+                        width: dotSize,
                         height: isActive ? dotSize + 2 : dotSize,
                         decoration: BoxDecoration(
                           color: isActive
@@ -2744,9 +2746,7 @@ class _DotsNavState extends State<_DotsNav> {
                               : i < _index
                                   ? cs.primary.withValues(alpha: 0.3)
                                   : cs.outline,
-                          borderRadius: BorderRadius.circular(
-                            isActive ? (dotSize + 2) / 2 : dotSize / 2,
-                          ),
+                          borderRadius: BorderRadius.circular(dotSize / 2),
                         ),
                       ),
                     );

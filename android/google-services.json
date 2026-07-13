@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "308482841964",
+    "firebase_url": "https://ta3dia-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "ta3dia",
     "storage_bucket": "ta3dia.firebasestorage.app"
   },
@@ -9,10 +10,18 @@
       "client_info": {
         "mobilesdk_app_id": "1:308482841964:android:0b662f4ca36121506b6749",
         "android_client_info": {
-          "package_name": "ta3dia.web.app"
+          "package_name": "com.example.ta3dia"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "308482841964-ca8np92dmnoj86fh03k4q247berh8i96.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ta3dia",
+            "certificate_hash": "43d763330343ce2d51d0a7f5ee292684d2447bc6"
+          }
+        },
         {
           "client_id": "308482841964-lc4gs73gb1d3671l489n5k9u6dru88eh.apps.googleusercontent.com",
           "client_type": 3
