@@ -20,39 +20,63 @@ class CsvService {
     List<Evaluation> evals,
     AppLocalizations l, {
     String? formula,
+    Map<String, String>? classificationFilter,
   }) {
     final r = l.localeName == 'ar';
     final f = formula ?? taadia.formula;
+    final hasFilter = classificationFilter != null && classificationFilter.isNotEmpty;
 
     final excel = Excel.createExcel();
     final sheet = excel['Sheet1'];
 
+    final colWidths = List.filled(6, 0);
+    void track(int col, String text) {
+      final len = text.length;
+      if (len > colWidths[col]) colWidths[col] = len;
+    }
+
+    int row = 0;
     if (r) {
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0)).value =
-          TextCellValue('الترتيب');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 0)).value =
-          TextCellValue('الاسم');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 0)).value =
-          TextCellValue('نطاق الأحزاب');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0)).value =
-          TextCellValue('الإشعارات');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0)).value =
-          TextCellValue('التلقين');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 0)).value =
-          TextCellValue('العلامة');
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: row)).value =
+          TextCellValue(taadia.title);
+      track(5, taadia.title);
+      row++;
+      if (hasFilter) {
+        final fv = classificationFilter.values.join(' - ');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: row)).value =
+            TextCellValue(fv);
+        track(5, fv);
+        row++;
+      }
+      row++;
+      final arHeaders = ['الترتيب', 'الاسم', 'نطاق الأحزاب', 'الإشعارات', 'التلقين', 'العلامة'];
+      final arCols = [5, 4, 3, 2, 1, 0];
+      for (var c = 0; c < 6; c++) {
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: arCols[c], rowIndex: row)).value =
+            TextCellValue(arHeaders[c]);
+        track(arCols[c], arHeaders[c]);
+      }
+      row++;
     } else {
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0)).value =
-          TextCellValue('Rank');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 0)).value =
-          TextCellValue('Name');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: 0)).value =
-          TextCellValue('Ahzab Range');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0)).value =
-          TextCellValue('Ichaarat');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0)).value =
-          TextCellValue('Taalakin');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 0)).value =
-          TextCellValue('Score');
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value =
+          TextCellValue(taadia.title);
+      track(0, taadia.title);
+      row++;
+      if (hasFilter) {
+        final fv = classificationFilter.values.join(' - ');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value =
+            TextCellValue(fv);
+        track(0, fv);
+        row++;
+      }
+      row++;
+      final enHeaders = ['Rank', 'Name', 'Ahzab Range', 'Ichaarat', 'Taalakin', 'Score'];
+      for (var c = 0; c < 6; c++) {
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: row)).value =
+            TextCellValue(enHeaders[c]);
+        track(c, enHeaders[c]);
+      }
+      row++;
     }
 
     final scores = <String, double>{};
@@ -74,27 +98,59 @@ class CsvService {
       final rangeText = e.specialAhzab.isNotEmpty
           ? e.specialAhzab
           : '${l.ahzab} ${e.numAhzab}';
-      final row = i + 1;
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value =
-          TextCellValue('${ranks[i]}');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: row)).value =
-          TextCellValue(e.studentName);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: row)).value =
-          TextCellValue(rangeText);
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: row)).value =
-          TextCellValue('${e.totalIchaarat}');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: row)).value =
-          TextCellValue('${e.totalTaalakin}');
-      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: row)).value =
-          TextCellValue(mark);
+      if (r) {
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: row)).value =
+            TextCellValue('${ranks[i]}');
+        track(5, '${ranks[i]}');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: row)).value =
+            TextCellValue(e.studentName);
+        track(4, e.studentName);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: row)).value =
+            TextCellValue(rangeText);
+        track(3, rangeText);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: row)).value =
+            TextCellValue('${e.totalIchaarat}');
+        track(2, '${e.totalIchaarat}');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: row)).value =
+            TextCellValue('${e.totalTaalakin}');
+        track(1, '${e.totalTaalakin}');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value =
+            TextCellValue(mark);
+        track(0, mark);
+      } else {
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row)).value =
+            TextCellValue('${ranks[i]}');
+        track(0, '${ranks[i]}');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: row)).value =
+            TextCellValue(e.studentName);
+        track(1, e.studentName);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: row)).value =
+            TextCellValue(rangeText);
+        track(2, rangeText);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: row)).value =
+            TextCellValue('${e.totalIchaarat}');
+        track(3, '${e.totalIchaarat}');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: row)).value =
+            TextCellValue('${e.totalTaalakin}');
+        track(4, '${e.totalTaalakin}');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: row)).value =
+            TextCellValue(mark);
+        track(5, mark);
+      }
+      row++;
+    }
+
+    for (var c = 0; c < 6; c++) {
+      sheet.setColumnWidth(c, (colWidths[c] + 4).toDouble());
     }
 
     final bytes = excel.encode();
     if (bytes == null) return;
 
+    final classSuffix = hasFilter ? '_${classificationFilter.values.join('_')}' : '';
     final filename = r
-        ? '${taadia.title}.xlsx'
-        : '${taadia.title}_Report.xlsx';
+        ? '${taadia.title}$classSuffix.xlsx'
+        : '${taadia.title}_Report$classSuffix.xlsx';
     downloadFile(bytes, filename);
   }
 

@@ -13,6 +13,6 @@ class FormulaConfig {
   String toJson() => expression;
 
   String displayLabel(String ichaaratLabel, String taalakinLabel) {
-    return expression == 'jihawiya' ? 'جهوية (Jihawiya)' : 'محلية (Mahalia)';
+    return expression == 'jihawiya' ? 'جهوية' : 'محلية';
   }
 }

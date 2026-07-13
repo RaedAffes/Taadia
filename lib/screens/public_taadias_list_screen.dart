@@ -254,11 +254,12 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
     return AppScaffold(
       title: l.publicTaadias,
       actions: [
-        IconButton(
-          icon: Icon(Icons.vpn_key),
-          tooltip: l.enterAccessCode,
-          onPressed: _showCodeEntryDialog,
-        ),
+        if (!isAdmin)
+          IconButton(
+            icon: Icon(Icons.vpn_key),
+            tooltip: l.enterAccessCode,
+            onPressed: _showCodeEntryDialog,
+          ),
       ],
       floatingActionButton: isAdmin
           ? FloatingActionButton(
@@ -278,10 +279,10 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
           ? Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: () => taadiaService.loadTaadias(),
-              child: !hasItems
+              child              : !hasItems
                   ? ListView(
                       children: [
-                        _codeEntryBanner(l, cs),
+                        if (!isAdmin) _codeEntryBanner(l, cs),
                         SizedBox(height: 32),
                         Center(
                           child: Column(
@@ -301,8 +302,8 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                   : ListView(
                       padding: EdgeInsets.only(top: 8, left: 16, right: 16, bottom: 16),
                       children: [
-                        _codeEntryBanner(l, cs),
-                        if (pendingEntries.isNotEmpty) ...[
+                        if (!isAdmin) _codeEntryBanner(l, cs),
+                        if (!isAdmin && pendingEntries.isNotEmpty) ...[
                           SizedBox(height: 8),
                           Text(
                             l.pendingTaadias,
@@ -316,7 +317,7 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                           ...pendingEntries.map((entry) =>
                               _pendingCodeCard(entry.key, entry.value, l, cs, isRtl)),
                         ],
-                        if (resolvedEntries.isNotEmpty) ...[
+                        if (!isAdmin && resolvedEntries.isNotEmpty) ...[
                           ...resolvedEntries.map((entry) =>
                               _resolvedCodeCard(entry.key, entry.value, l, cs, isRtl)),
                         ],

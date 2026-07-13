@@ -123,7 +123,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
             _formulaOption(
               ctx,
               'mahalia',
-              'محلية (Mahalia)',
+              'محلية',
               Icons.location_city,
               cs.primary,
               _currentFormula,
@@ -132,7 +132,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
             _formulaOption(
               ctx,
               'jihawiya',
-              'جهوية (Jihawiya)',
+              'جهوية',
               Icons.public,
               cs.secondary,
               _currentFormula,
@@ -1251,6 +1251,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
           evals,
           l,
           formula: _showClassement ? _currentFormula : null,
+          classificationFilter: _classificationFilters.isNotEmpty ? _classificationFilters : null,
         );
       }
       if (mounted) {

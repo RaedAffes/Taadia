@@ -96,7 +96,7 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
             _formulaOption(
               ctx,
               'mahalia',
-              'محلية (Mahalia)',
+              'محلية',
               Icons.location_city,
               cs.primary,
               e.formula,
@@ -105,7 +105,7 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
             _formulaOption(
               ctx,
               'jihawiya',
-              'جهوية (Jihawiya)',
+              'جهوية',
               Icons.public,
               cs.secondary,
               e.formula,
