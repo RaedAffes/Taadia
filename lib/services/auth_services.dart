@@ -46,8 +46,19 @@ class AuthService extends ChangeNotifier {
       _authReady = true;
     } else {
       _currentUser = _auth.currentUser;
-      _authReady = true;
-      _isLoading = false;
+      _isLoading = true;
+      _auth.authStateChanges().listen((User? user) async {
+        _currentUser = user;
+        if (user != null) {
+          await _ensureUserDoc(user);
+        } else {
+          _appUser = null;
+          _authReady = true;
+          _isLoading = false;
+          notifyListeners();
+        }
+      });
+      return;
     }
     _auth.authStateChanges().listen((User? user) async {
       _currentUser = user;
@@ -55,14 +66,28 @@ class AuthService extends ChangeNotifier {
         await _ensureUserDoc(user);
       } else {
         _appUser = null;
-        notifyListeners();
-      }
-      if (!_authReady) {
-        _isLoading = false;
         _authReady = true;
+        _isLoading = false;
         notifyListeners();
       }
     });
+  }
+
+  void _setFallbackUser(User user) {
+    final provider = user.isAnonymous
+        ? 'anonymous'
+        : user.providerData.any((p) => p.providerId == 'google.com')
+        ? 'google'
+        : 'email';
+    _appUser = AppUser(
+      uid: user.uid,
+      email: user.email ?? '',
+      displayName: user.displayName ?? 'User',
+      role: 'user',
+      authProvider: provider,
+      createdAt: DateTime.now(),
+      lastLoginAt: DateTime.now(),
+    );
   }
 
   Future<void> _ensureUserDoc(User user) async {
@@ -130,7 +155,12 @@ class AuthService extends ChangeNotifier {
           lastLoginAt: DateTime.now(),
         );
       }
-    } catch (_) {}
+    } catch (_) {
+      _setFallbackUser(user);
+    }
+    _authReady = true;
+    _isLoading = false;
+    notifyListeners();
   }
 
   bool get isAdmin => _appUser?.isAdmin ?? false;

@@ -799,6 +799,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'This email belongs to a deleted account. Please use the original password to reclaim it.';
 
   @override
+  String get rangeAllQuran => 'All Quran';
+
+  @override
   String get rangeQuarter => 'Quarter';
 
   @override
@@ -806,6 +809,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rangeSurahs => 'Surahs';
+
+  @override
+  String get rangeSurahPages => 'Pages from Surah';
 
   @override
   String get rangeSurahAyahRange => 'Verses from Surah';
@@ -821,6 +827,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toAyah => 'To ayah';
+
+  @override
+  String get fromPage => 'From page';
+
+  @override
+  String get toPage => 'To page';
 
   @override
   String get selectSurah => 'Select surah';

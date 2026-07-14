@@ -42,11 +42,12 @@ class TaadiaService extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // Try to load from cache first to avoid infinite loading when offline
+    // Try to load from cache first with timeout
     try {
       final cacheSnapshot = await _firestore
           .collection('taadia')
-          .get(const GetOptions(source: Source.cache));
+          .get(const GetOptions(source: Source.cache))
+          .timeout(const Duration(seconds: 5));
       _taadias = cacheSnapshot.docs
           .map((doc) => Taadia.fromFirestore(doc.id, Map<String, dynamic>.from(doc.data() as Map)))
           .toList();

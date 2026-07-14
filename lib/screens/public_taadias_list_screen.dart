@@ -274,11 +274,17 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
               tooltip: l.createOwnTaadia,
             )
           : null,
-      body: taadiaService.isLoading && !hasItems
-          ? Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
+      body: RefreshIndicator(
               onRefresh: () => taadiaService.loadTaadias(),
-              child              : !hasItems
+              child: !hasItems && taadiaService.isLoading
+                  ? ListView(
+                      children: [
+                        if (!isAdmin) _codeEntryBanner(l, cs),
+                        SizedBox(height: 64),
+                        Center(child: CircularProgressIndicator()),
+                      ],
+                    )
+                  : !hasItems
                   ? ListView(
                       children: [
                         if (!isAdmin) _codeEntryBanner(l, cs),

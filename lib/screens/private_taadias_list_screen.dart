@@ -191,12 +191,23 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
           if (_currentTaadiaId != null) {
             taadiaId = _currentTaadiaId!;
           } else {
-            final id = await ts.createPrivateTaadia(
-              'تقييم ${DateTime.now().toString().substring(0, 16)}',
+            final offlineId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
+            final tempTaadia = Taadia(
+              id: offlineId,
+              title: 'تقييم ${DateTime.now().toString().substring(0, 16)}',
+              createdBy: '',
+              createdAt: DateTime.now(),
             );
-            if (id == null) return;
-            taadiaId = id;
-            _currentTaadiaId = id;
+            setState(() => _currentTaadiaId = offlineId);
+            taadiaId = offlineId;
+            // Create in background without blocking navigation
+            ts.createPrivateTaadia(
+              'تقييم ${DateTime.now().toString().substring(0, 16)}',
+            ).then((realId) {
+              if (realId != null && mounted && _currentTaadiaId == offlineId) {
+                setState(() => _currentTaadiaId = realId);
+              }
+            });
           }
           if (context.mounted) {
             await Navigator.push(

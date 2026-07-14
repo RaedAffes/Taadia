@@ -17,14 +17,16 @@ class _RangeCriterionDisplay {
 
   factory _RangeCriterionDisplay.fromMap(Map<String, dynamic> map) {
     final type = map['type'] as int;
-    switch (type) {
-      case 0: // hizbRange
+    switch (QuestionRangeType.values[type]) {
+      case QuestionRangeType.allQuran:
+        return _RangeCriterionDisplay._('كامل القرآن');
+      case QuestionRangeType.hizbRange:
         final hFrom = map['hizbFrom'] as int? ?? 1;
         final hTo = map['hizbTo'] as int? ?? 60;
         if (hTo == hFrom) return _RangeCriterionDisplay._('الحزب $hFrom');
         if (hTo - hFrom == 1) return _RangeCriterionDisplay._('أحزاب $hFrom-$hTo');
         return _RangeCriterionDisplay._('من الحزب $hFrom إلى $hTo');
-      case 1: // surahs
+      case QuestionRangeType.surahs:
         final sFrom = map['surahFrom'] as int?;
         final sTo = map['surahTo'] as int?;
         if (sFrom == null) return _RangeCriterionDisplay._('');
@@ -35,20 +37,25 @@ class _RangeCriterionDisplay {
         final toName = AiService.surahNameAr(sTo) ?? 'السورة $sTo';
         if (sTo - sFrom == 1) return _RangeCriterionDisplay._('سور $fromName - $toName');
         return _RangeCriterionDisplay._('من سورة $fromName إلى سورة $toName');
-      case 2: // surahAyahRange
+      case QuestionRangeType.surahAyahRange:
         final nums = map['surahNumbers'] as List? ?? [];
         final aFrom = map['ayaFrom'] as int?;
         final aTo = map['ayaTo'] as int?;
         if (nums.isEmpty) return _RangeCriterionDisplay._('');
         final name = AiService.surahNameAr(nums.first as int) ?? 'السورة ${nums.first}';
         return _RangeCriterionDisplay._('سورة $name ($aFrom-$aTo)');
-      case 3: // quarter
+      case QuestionRangeType.surahPages:
+        final nums = map['surahNumbers'] as List? ?? [];
+        final pFrom = map['pageFrom'] as int?;
+        final pTo = map['pageTo'] as int?;
+        if (nums.isEmpty) return _RangeCriterionDisplay._('');
+        final name = AiService.surahNameAr(nums.first as int) ?? 'السورة ${nums.first}';
+        return _RangeCriterionDisplay._('صفحات من سورة $name ($pFrom-$pTo)');
+      case QuestionRangeType.quarter:
         final qs = (map['quarterNumbers'] as List?)?.cast<int>() ?? <int>[];
         const labels = ['الأول', 'الثاني', 'الثالث', 'الرابع'];
         final selected = qs.map((q) => labels[q.clamp(1, 4) - 1]).join('، ');
         return _RangeCriterionDisplay._('الربع $selected');
-      default:
-        return _RangeCriterionDisplay._('');
     }
   }
 }

@@ -169,7 +169,7 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
             'title': _titleController.text.trim(),
           },
         );
-        Navigator.pop(context, taadiaId);
+        Navigator.pop(context, true);
       } else {
         final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -557,6 +557,15 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                           ),
                         )
                       : Text(l.create, style: TextStyle(fontSize: 16)),
+                ),
+              ),
+              SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: _loading ? null : () => Navigator.pop(context),
+                  child: Text(l.goBack, style: TextStyle(fontSize: 16)),
                 ),
               ),
             ],

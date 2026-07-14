@@ -1592,6 +1592,12 @@ abstract class AppLocalizations {
   /// **'This email belongs to a deleted account. Please use the original password to reclaim it.'**
   String get deletedAccountWrongPassword;
 
+  /// No description provided for @rangeAllQuran.
+  ///
+  /// In en, this message translates to:
+  /// **'All Quran'**
+  String get rangeAllQuran;
+
   /// No description provided for @rangeQuarter.
   ///
   /// In en, this message translates to:
@@ -1609,6 +1615,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Surahs'**
   String get rangeSurahs;
+
+  /// No description provided for @rangeSurahPages.
+  ///
+  /// In en, this message translates to:
+  /// **'Pages from Surah'**
+  String get rangeSurahPages;
 
   /// No description provided for @rangeSurahAyahRange.
   ///
@@ -1639,6 +1651,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'To ayah'**
   String get toAyah;
+
+  /// No description provided for @fromPage.
+  ///
+  /// In en, this message translates to:
+  /// **'From page'**
+  String get fromPage;
+
+  /// No description provided for @toPage.
+  ///
+  /// In en, this message translates to:
+  /// **'To page'**
+  String get toPage;
 
   /// No description provided for @selectSurah.
   ///

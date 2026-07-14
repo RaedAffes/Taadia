@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 
-enum QuestionRangeType { hizbRange, surahs, surahAyahRange, quarter }
+enum QuestionRangeType { allQuran, hizbRange, surahs, surahAyahRange, quarter, surahPages }
 
 class QuestionRange {
   final QuestionRangeType type;
@@ -14,6 +14,8 @@ class QuestionRange {
   final int? ayaFrom;
   final int? ayaTo;
   final List<int>? quarterNumbers;
+  final int? pageFrom;
+  final int? pageTo;
 
   QuestionRange({
     required this.type,
@@ -23,10 +25,15 @@ class QuestionRange {
     this.ayaFrom,
     this.ayaTo,
     this.quarterNumbers,
+    this.pageFrom,
+    this.pageTo,
   });
 
   List<Map<String, dynamic>> buildPool(List<Map<String, dynamic>> verses) {
     switch (type) {
+      case QuestionRangeType.allQuran:
+        return List<Map<String, dynamic>>.from(verses);
+
       case QuestionRangeType.hizbRange:
         final hFrom = hizbFrom ?? 1;
         final hTo = hizbTo ?? 60;
@@ -84,6 +91,23 @@ class QuestionRange {
         }
         return result;
       }
+
+      case QuestionRangeType.surahPages: {
+        final nums = surahNumbers;
+        if (nums == null || nums.isEmpty) return [];
+        final suraNo = nums.first;
+        final pFrom = pageFrom;
+        final pTo = pageTo;
+        return verses.where((v) {
+          if ((v['sura_no'] as num).toInt() != suraNo) return false;
+          final rawPage = '${v['page']}';
+          final pageStr = rawPage.contains('-') ? rawPage.split('-')[0] : rawPage;
+          final page = int.tryParse(pageStr) ?? 0;
+          if (pFrom != null && page < pFrom) return false;
+          if (pTo != null && page > pTo) return false;
+          return true;
+        }).toList();
+      }
     }
   }
 }
@@ -93,6 +117,7 @@ class AiService {
   static List<Map<String, dynamic>>? _surahList;
   static Map<int, String>? _surahNameArMap;
   static Map<int, int>? _surahAyaCount;
+  static Map<int, (int start, int end)>? _surahPageRange;
 
   static Future<List<Map<String, dynamic>>> loadVerses() async {
     if (_allVerses != null) return _allVerses!;
@@ -119,6 +144,24 @@ class AiService {
       _surahAyaCount![no] = (_surahAyaCount![no] ?? 0) + 1;
     }
 
+    // Compute page range per surah
+    _surahPageRange = {};
+    for (final v in _allVerses!) {
+      final no = (v['sura_no'] as num).toInt();
+      final rawPage = '${v['page']}';
+      final pageStr = rawPage.contains('-') ? rawPage.split('-')[0] : rawPage;
+      final page = int.tryParse(pageStr) ?? 0;
+      if (page <= 0) continue;
+      final existing = _surahPageRange![no];
+      if (existing == null) {
+        _surahPageRange![no] = (page, page);
+      } else {
+        final start = page < existing.$1 ? page : existing.$1;
+        final end = page > existing.$2 ? page : existing.$2;
+        _surahPageRange![no] = (start, end);
+      }
+    }
+
     // Assign hizb_no per verse: split each juz's verses into two halves
     final juzCount = <int, int>{};
     for (final v in _allVerses!) {
@@ -142,6 +185,32 @@ class AiService {
   static String? surahNameAr(int no) => _surahNameArMap?[no];
 
   static int? surahAyaCount(int no) => _surahAyaCount?[no];
+
+  static (int start, int end)? surahPageRange(int no) {
+    _ensurePageRanges();
+    return _surahPageRange?[no];
+  }
+
+  static void _ensurePageRanges() {
+    if (_surahPageRange != null) return;
+    if (_allVerses == null || _allVerses!.isEmpty) return;
+    _surahPageRange = {};
+    for (final v in _allVerses!) {
+      final no = (v['sura_no'] as num).toInt();
+      final rawPage = '${v['page']}';
+      final pageStr = rawPage.contains('-') ? rawPage.split('-')[0] : rawPage;
+      final page = int.tryParse(pageStr) ?? 0;
+      if (page <= 0) continue;
+      final existing = _surahPageRange![no];
+      if (existing == null) {
+        _surahPageRange![no] = (page, page);
+      } else {
+        final start = page < existing.$1 ? page : existing.$1;
+        final end = page > existing.$2 ? page : existing.$2;
+        _surahPageRange![no] = (start, end);
+      }
+    }
+  }
 
   static List<Map<String, dynamic>> get allVerses => _allVerses ?? [];
 

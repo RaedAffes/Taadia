@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PexelsBackgroundService {
   static const _apiKey = 'TAX5AQ6Abeg8jke8sVjAqMJSQmn2qsmlDi8RTY43kYYvu019Aar9RpBr';
   static const _baseUrl = 'https://api.pexels.com/v1/search';
+  static const _prefsKey = 'pexels_background_url';
 
   static final _queries = [
     'mosque interior',
@@ -58,8 +61,17 @@ class PexelsBackgroundService {
   Future<void> init() async {
     if (_loading) return;
     _loading = true;
-    _cachedUrl = null;
-    imageUrlNotifier.value = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    final savedUrl = prefs.getString(_prefsKey);
+
+    if (savedUrl != null) {
+      _cachedUrl = savedUrl;
+      imageUrlNotifier.value = _cachedUrl;
+      _precacheImage(_cachedUrl!);
+      debugPrint('PexelsBackgroundService: restored cached URL -> $_cachedUrl');
+    }
+
     try {
       final rng = Random();
       final query = _queries[rng.nextInt(_queries.length)];
@@ -70,8 +82,11 @@ class PexelsBackgroundService {
         final photos = data['photos'] as List?;
         if (photos != null && photos.isNotEmpty) {
           final photo = photos[rng.nextInt(photos.length)];
-          _cachedUrl = photo['src']['large2x'] ?? photo['src']['large'];
+          final newUrl = photo['src']['large2x'] ?? photo['src']['large'];
+          _cachedUrl = newUrl;
           imageUrlNotifier.value = _cachedUrl;
+          await prefs.setString(_prefsKey, newUrl);
+          _precacheImage(newUrl);
           debugPrint('PexelsBackgroundService: loaded image from "$query" -> $_cachedUrl');
         }
       } else {
@@ -81,6 +96,21 @@ class PexelsBackgroundService {
       debugPrint('PexelsBackgroundService: failed to load: $e');
     } finally {
       _loading = false;
+    }
+  }
+
+  void _precacheImage(String url) {
+    try {
+      final imageProvider = NetworkImage(url);
+      imageProvider.resolve(const ImageConfiguration()).addListener(
+        ImageStreamListener((_, __) {
+          debugPrint('PexelsBackgroundService: image precached successfully');
+        }, onError: (e, __) {
+          debugPrint('PexelsBackgroundService: precache error: $e');
+        }),
+      );
+    } catch (e) {
+      debugPrint('PexelsBackgroundService: precache failed: $e');
     }
   }
 }

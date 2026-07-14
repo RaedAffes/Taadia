@@ -15,10 +15,9 @@ import 'package:ta3dia/ai/ai_service.dart';
 import 'package:ta3dia/widgets/download_choice_dialog.dart';
 import 'package:ta3dia/screens/quran_reader_screen.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
-import 'package:ta3dia/widgets/offline_utils.dart';
 
 class _RangeCriterion {
-  QuestionRangeType type = QuestionRangeType.hizbRange;
+  QuestionRangeType type = QuestionRangeType.allQuran;
   int? hizbFrom;
   int? hizbTo;
   int? surahFrom;
@@ -26,6 +25,8 @@ class _RangeCriterion {
   final List<int> surahNumbers = [];
   int? ayaFrom;
   int? ayaTo;
+  int? pageFrom;
+  int? pageTo;
   final List<int> quarterNumbers = [];
 
   QuestionRange toQuestionRange() {
@@ -37,17 +38,21 @@ class _RangeCriterion {
     }
     return QuestionRange(
       type: type,
-      hizbFrom: hizbFrom,
-      hizbTo: hizbTo ?? hizbFrom,
+      hizbFrom: type == QuestionRangeType.allQuran ? 1 : hizbFrom,
+      hizbTo: type == QuestionRangeType.allQuran ? 60 : (hizbTo ?? hizbFrom),
       surahNumbers: suraNums,
       ayaFrom: ayaFrom,
       ayaTo: ayaTo,
+      pageFrom: pageFrom,
+      pageTo: pageTo,
       quarterNumbers: quarterNumbers.isNotEmpty ? List<int>.from(quarterNumbers) : null,
     );
   }
 
   String summary() {
     switch (type) {
+      case QuestionRangeType.allQuran:
+        return 'كامل القرآن';
       case QuestionRangeType.hizbRange:
         if (hizbTo == null || hizbTo == hizbFrom) return 'الحزب $hizbFrom';
         if (hizbTo! - hizbFrom! == 1) return 'أحزاب $hizbFrom-$hizbTo';
@@ -66,6 +71,18 @@ class _RangeCriterion {
             : '';
         return 'سورة $name ($ayaFrom-$ayaTo)';
       }
+      case QuestionRangeType.surahPages: {
+        final name = surahNumbers.isNotEmpty
+            ? (AiService.surahNameAr(surahNumbers.first) ?? '')
+            : '';
+        final pr = surahNumbers.isNotEmpty ? AiService.surahPageRange(surahNumbers.first) : null;
+        if (pr != null && pageFrom != null && pageTo != null) {
+          final normFrom = pageFrom! - pr.$1 + 1;
+          final normTo = pageTo! - pr.$1 + 1;
+          return 'صفحات من سورة $name ($normFrom-$normTo)';
+        }
+        return 'صفحات من سورة $name ($pageFrom-$pageTo)';
+      }
       case QuestionRangeType.quarter: {
         const labels = ['الأول', 'الثاني', 'الثالث', 'الرابع'];
         final selected = quarterNumbers.map((q) => labels[q - 1]).join('، ');
@@ -76,11 +93,15 @@ class _RangeCriterion {
 
   bool isValid() {
     switch (type) {
+      case QuestionRangeType.allQuran:
+        return true;
       case QuestionRangeType.hizbRange:
         return hizbFrom != null;
       case QuestionRangeType.surahs:
         return surahFrom != null;
       case QuestionRangeType.surahAyahRange:
+        return surahNumbers.isNotEmpty;
+      case QuestionRangeType.surahPages:
         return surahNumbers.isNotEmpty;
       case QuestionRangeType.quarter:
         return quarterNumbers.isNotEmpty;
@@ -97,6 +118,8 @@ class _RangeCriterion {
       'surahNumbers': List<int>.from(surahNumbers),
       'ayaFrom': ayaFrom,
       'ayaTo': ayaTo,
+      'pageFrom': pageFrom,
+      'pageTo': pageTo,
       'quarterNumbers': List<int>.from(quarterNumbers),
     };
   }
@@ -111,6 +134,8 @@ class _RangeCriterion {
     c.surahNumbers.addAll((map['surahNumbers'] as List?)?.cast<int>() ?? []);
     c.ayaFrom = map['ayaFrom'] as int?;
     c.ayaTo = map['ayaTo'] as int?;
+    c.pageFrom = map['pageFrom'] as int?;
+    c.pageTo = map['pageTo'] as int?;
     c.quarterNumbers
         .addAll((map['quarterNumbers'] as List?)?.cast<int>() ?? []);
     return c;
@@ -553,7 +578,6 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   Future<void> _generateQuestions({int? singleIndex}) async {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    if (guardOffline(context)) return;
     final count = singleIndex != null ? 1 : _numQuestions;
     if (count == 0) {
       if (mounted) {
@@ -1435,44 +1459,49 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: cs.outlineVariant),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<QuestionRangeType>(
-                      value: c.type,
-                      isExpanded: true,
-                      isDense: true,
-                      items: [
-                        DropdownMenuItem(value: QuestionRangeType.quarter, child: Text(l.rangeQuarter, style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: QuestionRangeType.hizbRange, child: Text(l.rangeHizbRange, style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: QuestionRangeType.surahs, child: Text(l.rangeSurahs, style: TextStyle(fontSize: 13))),
-                        DropdownMenuItem(value: QuestionRangeType.surahAyahRange, child: Text(l.rangeSurahAyahRange, style: TextStyle(fontSize: 13))),
-                      ],
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setState(() {
-                          c.type = v;
-                          if (v != QuestionRangeType.surahs && v != QuestionRangeType.surahAyahRange) {
-                            c.surahNumbers.clear();
-                          }
-                          if (v != QuestionRangeType.surahAyahRange) {
-                            c.ayaFrom = null;
-                            c.ayaTo = null;
-                          }
-                          if (v != QuestionRangeType.hizbRange) {
-                            c.hizbFrom = null;
-                            c.hizbTo = null;
-                          }
-                          if (v != QuestionRangeType.quarter) {
-                            c.quarterNumbers.clear();
-                          }
-                        });
-                      },
-                    ),
+                child: _dropdownWrapper(
+                  cs: cs,
+                  child: DropdownButton<QuestionRangeType>(
+                    value: c.type,
+                    isExpanded: true,
+                    isDense: true,
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+                    dropdownColor: cs.surface,
+                    elevation: 4,
+                    style: TextStyle(fontSize: 13, color: cs.onSurface),
+                    items: [
+                      DropdownMenuItem(value: QuestionRangeType.allQuran, child: Text(l.rangeAllQuran, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: QuestionRangeType.quarter, child: Text(l.rangeQuarter, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: QuestionRangeType.hizbRange, child: Text(l.rangeHizbRange, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: QuestionRangeType.surahs, child: Text(l.rangeSurahs, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: QuestionRangeType.surahPages, child: Text(l.rangeSurahPages, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: QuestionRangeType.surahAyahRange, child: Text(l.rangeSurahAyahRange, style: TextStyle(fontSize: 13))),
+                    ],
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        c.type = v;
+                        if (v != QuestionRangeType.surahs && v != QuestionRangeType.surahAyahRange && v != QuestionRangeType.surahPages) {
+                          c.surahNumbers.clear();
+                        }
+                        if (v != QuestionRangeType.surahAyahRange) {
+                          c.ayaFrom = null;
+                          c.ayaTo = null;
+                        }
+                        if (v != QuestionRangeType.surahPages) {
+                          c.pageFrom = null;
+                          c.pageTo = null;
+                        }
+                        if (v != QuestionRangeType.hizbRange) {
+                          c.hizbFrom = null;
+                          c.hizbTo = null;
+                        }
+                        if (v != QuestionRangeType.quarter) {
+                          c.quarterNumbers.clear();
+                        }
+                      });
+                    },
                   ),
                 ),
               ),
@@ -1493,10 +1522,47 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     );
   }
 
+  Widget _dropdownWrapper({
+    required Widget child,
+    required ColorScheme cs,
+  }) {
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            cs.surface,
+            cs.surfaceContainerHighest.withValues(alpha: 0.3),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: DropdownButtonHideUnderline(child: child),
+      ),
+    );
+  }
+
   Widget _buildCriterionInputs(int index, ColorScheme cs) {
     final l = AppLocalizations.of(context)!;
     final c = _rangeCriteria[index];
     switch (c.type) {
+      case QuestionRangeType.allQuran:
+        return const SizedBox.shrink();
+
       case QuestionRangeType.hizbRange:
         return Directionality(
           textDirection: TextDirection.ltr,
@@ -1534,8 +1600,54 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           ),
         );
 
+      case QuestionRangeType.surahPages:
+        final suraNo = c.surahNumbers.isNotEmpty ? c.surahNumbers.first : null;
+        final pageRange = suraNo != null ? AiService.surahPageRange(suraNo) : null;
+        return Column(
+          children: [
+            _surahDropdown(cs, suraNo, (v) {
+              setState(() {
+                c.surahNumbers.clear();
+                if (v != null) c.surahNumbers.add(v);
+                c.pageFrom = null;
+                c.pageTo = null;
+              });
+            }, hintText: c.surahNumbers.isNotEmpty ? l.addSurah : l.selectSurah),
+            if (suraNo != null && pageRange != null) ...[
+              SizedBox(height: 8),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _pageDropdown(
+                        cs,
+                        c.pageTo != null ? c.pageTo! - pageRange.$1 + 1 : null,
+                        (v) => setState(() => c.pageTo = v != null ? v + pageRange.$1 - 1 : null),
+                        label: l.toPage,
+                        count: pageRange.$2 - pageRange.$1 + 1,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: _pageDropdown(
+                        cs,
+                        c.pageFrom != null ? c.pageFrom! - pageRange.$1 + 1 : null,
+                        (v) => setState(() => c.pageFrom = v != null ? v + pageRange.$1 - 1 : null),
+                        label: l.fromPage,
+                        count: pageRange.$2 - pageRange.$1 + 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+
       case QuestionRangeType.surahAyahRange:
         final suraNo = c.surahNumbers.isNotEmpty ? c.surahNumbers.first : null;
+        final ayaCount = suraNo != null ? (AiService.surahAyaCount(suraNo) ?? 0) : 0;
         return Column(
           children: [
             _surahDropdown(cs, suraNo, (v) {
@@ -1546,22 +1658,22 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                 c.ayaTo = null;
               });
             }, hintText: c.surahNumbers.isNotEmpty ? l.addSurah : l.selectSurah),
-            if (suraNo != null) ...[
+            if (suraNo != null && ayaCount > 0) ...[
               SizedBox(height: 8),
               Directionality(
                 textDirection: TextDirection.ltr,
                 child: Row(
                   children: [
                     Expanded(
-                      child: _ayahField(cs, c.ayaTo, (v) {
+                      child: _verseDropdown(cs, c.ayaTo, (v) {
                         setState(() => c.ayaTo = v);
-                      }, label: l.toAyah, max: AiService.surahAyaCount(suraNo) ?? 0),
+                      }, label: l.toAyah, count: ayaCount),
                     ),
                     SizedBox(width: 8),
                     Expanded(
-                      child: _ayahField(cs, c.ayaFrom, (v) {
+                      child: _verseDropdown(cs, c.ayaFrom, (v) {
                         setState(() => c.ayaFrom = v);
-                      }, label: l.fromAyah, max: AiService.surahAyaCount(suraNo) ?? 0),
+                      }, label: l.fromAyah, count: ayaCount),
                     ),
                   ],
                 ),
@@ -1576,71 +1688,89 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   }
 
   Widget _hizbDropdown(ColorScheme cs, int? value, ValueChanged<int?> onChanged, {required String label}) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: value,
-          isExpanded: true,
-          isDense: true,
-          hint: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-          items: List.generate(60, (i) => i + 1).map((n) {
-            return DropdownMenuItem(value: n, child: Text('$n', style: TextStyle(fontSize: 13)));
-          }).toList(),
-          onChanged: onChanged,
-        ),
+    return _dropdownWrapper(
+      cs: cs,
+      child: DropdownButton<int>(
+        value: value,
+        isExpanded: true,
+        isDense: true,
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        hint: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+        dropdownColor: cs.surface,
+        elevation: 4,
+        style: TextStyle(fontSize: 13, color: cs.onSurface),
+        items: List.generate(60, (i) => i + 1).map((n) {
+          return DropdownMenuItem(value: n, child: Text('$n', style: TextStyle(fontSize: 13)));
+        }).toList(),
+        onChanged: onChanged,
       ),
     );
   }
 
   Widget _surahDropdown(ColorScheme cs, int? value, ValueChanged<int?> onChanged, {required String hintText}) {
     final surahs = AiService.surahList;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: value,
-          isExpanded: true,
-          isDense: true,
-          hint: Text(hintText, style: TextStyle(fontSize: 13)),
-          items: surahs.map((s) {
-            final no = s['number'] as int;
-            final name = s['nameAr'] as String? ?? '';
-            return DropdownMenuItem(value: no, child: Text('$no. $name', style: TextStyle(fontSize: 13)));
-          }).toList(),
-          onChanged: onChanged,
-        ),
+    return _dropdownWrapper(
+      cs: cs,
+      child: DropdownButton<int>(
+        value: value,
+        isExpanded: true,
+        isDense: true,
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        hint: Text(hintText, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+        dropdownColor: cs.surface,
+        elevation: 4,
+        style: TextStyle(fontSize: 13, color: cs.onSurface),
+        items: surahs.map((s) {
+          final no = s['number'] as int;
+          final name = s['nameAr'] as String? ?? '';
+          return DropdownMenuItem(value: no, child: Text('$no. $name', style: TextStyle(fontSize: 13)));
+        }).toList(),
+        onChanged: onChanged,
       ),
     );
   }
 
-  Widget _ayahField(ColorScheme cs, int? value, ValueChanged<int?> onChanged, {required String label, required int max}) {
-    return TextFormField(
-      initialValue: value?.toString() ?? '',
-      keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        labelText: label,
+  Widget _pageDropdown(ColorScheme cs, int? value, ValueChanged<int?> onChanged, {required String label, required int count}) {
+    return _dropdownWrapper(
+      cs: cs,
+      child: DropdownButton<int>(
+        value: value,
+        isExpanded: true,
         isDense: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        hint: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+        dropdownColor: cs.surface,
+        elevation: 4,
+        style: TextStyle(fontSize: 13, color: cs.onSurface),
+        items: List.generate(count, (i) => i + 1).map((n) {
+          return DropdownMenuItem(value: n, child: Text('$n', style: TextStyle(fontSize: 13)));
+        }).toList(),
+        onChanged: onChanged,
       ),
-      style: TextStyle(fontSize: 13),
-      onChanged: (v) {
-        final parsed = int.tryParse(v);
-        if (parsed != null && parsed >= 1 && parsed <= max) {
-          onChanged(parsed);
-        } else {
-          onChanged(null);
-        }
-      },
+    );
+  }
+
+  Widget _verseDropdown(ColorScheme cs, int? value, ValueChanged<int?> onChanged, {required String label, required int count}) {
+    return _dropdownWrapper(
+      cs: cs,
+      child: DropdownButton<int>(
+        value: value,
+        isExpanded: true,
+        isDense: true,
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        hint: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+        dropdownColor: cs.surface,
+        elevation: 4,
+        style: TextStyle(fontSize: 13, color: cs.onSurface),
+        items: List.generate(count, (i) => i + 1).map((n) {
+          return DropdownMenuItem(value: n, child: Text('$n', style: TextStyle(fontSize: 13)));
+        }).toList(),
+        onChanged: onChanged,
+      ),
     );
   }
 
@@ -1814,20 +1944,35 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                               }
                               return null;
                             },
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: cs.primary.withValues(alpha: 0.8)),
+                            dropdownColor: cs.surface,
+                            elevation: 4,
+                            style: TextStyle(fontSize: 14, color: cs.onSurface),
                             decoration: InputDecoration(
                               labelText: cfg.name.isNotEmpty
                                   ? cfg.name
                                   : '${l.select} ${i + 1}',
                               hintText: l.select,
                               prefixIcon: Icon(Icons.label_outline),
+                              filled: true,
+                              fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.15),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: cs.primary, width: 1.5),
                               ),
                             ),
                             items: cfg.options.map((opt) {
                               return DropdownMenuItem(
                                 value: opt,
-                                child: Text(opt, style: TextStyle(color: Colors.black)),
+                                child: Text(opt, style: TextStyle(color: cs.onSurface)),
                               );
                             }).toList(),
                             onChanged: (val) {
@@ -1891,47 +2036,43 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                     ],
 
                     SizedBox(height: 16),
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: cs.outlineVariant),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: _numQuestions > 0 ? _numQuestions : null,
-                          hint: Row(
-                            children: [
-                              Icon(
-                                Icons.quiz_outlined,
-                                size: 20,
-                                color: cs.primary,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                l.numberOfQuestions,
-                                style: TextStyle(color: cs.onSurfaceVariant),
-                              ),
-                            ],
-                          ),
-                          isExpanded: true,
-                          items: List.generate(60, (i) => i + 1).map((n) {
-                            return DropdownMenuItem(
-                              value: n,
-                              child: Text('$n'),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            final count = val ?? 0;
-                            setState(() {
-                              _numQuestions = count;
-                              _initQuestions(count);
-                            });
-                          },
+                    _dropdownWrapper(
+                      cs: cs,
+                      child: DropdownButton<int>(
+                        value: _numQuestions > 0 ? _numQuestions : null,
+                        hint: Row(
+                          children: [
+                            Icon(
+                              Icons.quiz_outlined,
+                              size: 20,
+                              color: cs.primary,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              l.numberOfQuestions,
+                              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+                            ),
+                          ],
                         ),
+                        isExpanded: true,
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+                        dropdownColor: cs.surface,
+                        elevation: 4,
+                        style: TextStyle(fontSize: 14, color: cs.onSurface),
+                        items: List.generate(60, (i) => i + 1).map((n) {
+                          return DropdownMenuItem(
+                            value: n,
+                            child: Text('$n'),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          final count = val ?? 0;
+                          setState(() {
+                            _numQuestions = count;
+                            _initQuestions(count);
+                          });
+                        },
                       ),
                     ),
                     SizedBox(height: 16),

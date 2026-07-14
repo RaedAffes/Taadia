@@ -794,16 +794,22 @@ class AppLocalizationsAr extends AppLocalizations {
       'هذا البريد الإلكتروني يتبع حساباً محذوفاً. الرجاء استخدام كلمة المرور الأصلية لاستعادته.';
 
   @override
-  String get rangeQuarter => ' :ربع';
+  String get rangeAllQuran => 'كامل القرآن :';
 
   @override
-  String get rangeHizbRange => ' :أحزاب';
+  String get rangeQuarter => 'ربع :';
 
   @override
-  String get rangeSurahs => ' :سور';
+  String get rangeHizbRange => 'أحزاب :';
 
   @override
-  String get rangeSurahAyahRange => ' :آيات من سورة';
+  String get rangeSurahs => 'سور :';
+
+  @override
+  String get rangeSurahPages => 'صفحات من سورة :';
+
+  @override
+  String get rangeSurahAyahRange => 'آيات من سورة :';
 
   @override
   String get from => 'من';
@@ -816,6 +822,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get toAyah => 'إلى الآية';
+
+  @override
+  String get fromPage => 'من صفحة';
+
+  @override
+  String get toPage => 'إلى صفحة';
 
   @override
   String get selectSurah => 'اختر سورة';
