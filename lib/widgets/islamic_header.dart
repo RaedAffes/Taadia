@@ -319,7 +319,7 @@ class _IslamicHeaderState extends State<IslamicHeader>
                     ),
                   ),
                 Positioned(
-                  top: MediaQuery.of(context).padding.top + 4,
+                  top: math.min(MediaQuery.of(context).padding.top + 4, widget.height - 48),
                   left: 0,
                   right: 0,
                   child: Directionality(

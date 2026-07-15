@@ -13,6 +13,7 @@ import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/ai/ai_service.dart';
 import 'package:ta3dia/screens/quran_reader_screen.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
+import 'package:ta3dia/widgets/onboarding_overlay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _RangeCriterion {
@@ -211,6 +212,11 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   final _studentNameController = TextEditingController();
   final _noteController = TextEditingController();
 
+  final _addRangeKey = GlobalKey();
+  final _generateKey = GlobalKey();
+  final _quranButtonKey = GlobalKey();
+  final _onboardingKey = GlobalKey<OnboardingOverlayState>();
+
   bool _showAddRangeTooltip = false;
 
   int _numQuestions = 0;
@@ -331,7 +337,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       if (!mounted) return;
       final auth = Provider.of<AuthService>(context, listen: false);
       if (!auth.isAdmin && !_isEditing) {
-        _checkAndShowAddRangeTooltip();
+        _onboardingKey.currentState?.show();
       }
     });
   }
@@ -390,7 +396,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     _classificationValues =
         Map<String, String>.from(draft['classificationValues'] as Map? ?? {});
     _editingEvaluationId = draft['editingEvaluationId'] as String?;
-    _formError = draft['formError'] as String?;
+    _formError = null;
     _oldAhzabText = draft['oldAhzabText'] as String? ?? '';
     if (draft['rangeCriteria'] is List) {
       _rangeCriteria
@@ -571,16 +577,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.check_rounded, size: 36, color: cs.primary),
-                  ),
-                  const SizedBox(height: 20),
+                  Icon(Icons.check_circle_outline_rounded, size: 56, color: cs.primary),
+                  const SizedBox(height: 16),
                   Text(
                     _isEditing ? l.updated(_studentNameController.text.trim()) : l.evaluated(_studentNameController.text.trim()),
                     textAlign: TextAlign.center,
@@ -646,9 +644,15 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     }
     setState(() => _isGenerating = true);
     try {
+      final currentVerseIdx = (singleIndex != null &&
+              singleIndex < _questionVerseIndices.length &&
+              _questionVerseIndices[singleIndex] >= 0)
+          ? _questionVerseIndices[singleIndex]
+          : null;
       final (questions, indices) = await AiService.generateDetailed(
         ranges: _rangeCriteria.map((c) => c.toQuestionRange()).toList(),
         count: count,
+        nearVerseIndex: currentVerseIdx,
       );
       if (mounted) {
         final allEmpty = questions.every((q) => q.isEmpty);
@@ -679,6 +683,12 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               _questionVerseIndices[i] = indices[i];
             }
           });
+          final auth = Provider.of<AuthService>(context, listen: false);
+          if (!auth.isAdmin && !_isEditing) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _onboardingKey.currentState?.showStep(2);
+            });
+          }
         }
       }
     } catch (_) {
@@ -740,21 +750,45 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     required VoidCallback onPressed,
     required ColorScheme cs,
   }) {
-    return IconButton(
-      icon: Icon(icon, size: 16),
-      tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
-      constraints: BoxConstraints(minWidth: 24, minHeight: 24),
-      padding: EdgeInsets.zero,
-      style: IconButton.styleFrom(
-        backgroundColor: enabled
-            ? cs.surfaceContainerHighest.withValues(alpha: 0.5)
-            : Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: enabled ? onPressed : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: enabled
+                ? cs.primaryContainer.withValues(alpha: 0.4)
+                : cs.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: enabled
+                  ? cs.primary.withValues(alpha: 0.3)
+                  : cs.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: enabled ? cs.primary : cs.outlineVariant,
+              ),
+              SizedBox(width: 4),
+              Text(
+                tooltip,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: enabled ? cs.primary : cs.outlineVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      onPressed: enabled ? onPressed : null,
     );
   }
 
@@ -903,7 +937,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(width: 6),
+               const SizedBox(width: 6),
               Icon(
                 Icons.keyboard_arrow_down,
                 size: 18,
@@ -915,6 +949,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       ),
     );
   }
+
 
   void _showQuranOverlay(int verseIndex) {
     if (verseIndex < 0 || verseIndex >= AiService.allVerses.length) return;
@@ -1031,12 +1066,15 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             cs: cs,
           ),
           SizedBox(width: 2),
-          _ayaNavButton(
-            icon: Icons.menu_book,
-            tooltip: 'Open in Quran',
-            enabled: true,
-            onPressed: () => _showQuranOverlay(_questionVerseIndices[index]),
-            cs: cs,
+          KeyedSubtree(
+            key: index == 0 ? _quranButtonKey : null,
+            child: _ayaNavButton(
+              icon: Icons.menu_book,
+              tooltip: 'Open in Quran',
+              enabled: true,
+              onPressed: () => _showQuranOverlay(_questionVerseIndices[index]),
+              cs: cs,
+            ),
           ),
         ],
       ),
@@ -1725,19 +1763,21 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isRtl = l.localeName == 'ar';
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) return;
-        _draftCache[_draftKey] = _captureDraft();
-      },
-      child: AppScaffold(
-      title: widget.taadiaTitle,
-      actions: [
-          IconButton(
-            icon: Icon(Icons.menu_book),
-            tooltip: 'القرآن',
-            onPressed: () => Navigator.push(
+    return Stack(
+      children: [
+        PopScope(
+          canPop: true,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) return;
+            _draftCache[_draftKey] = _captureDraft();
+          },
+          child: AppScaffold(
+          title: widget.taadiaTitle,
+          actions: [
+              IconButton(
+                icon: Icon(Icons.menu_book),
+                tooltip: 'القرآن',
+                onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => QuranReaderScreen(pageKey: 'eval-appbar')),
             ),
@@ -2030,19 +2070,51 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          OutlinedButton.icon(
-                            icon: Icon(Icons.add, size: 18),
-                            label: Text(l.addRange),
-                            style: OutlinedButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
+                          Container(
+                            key: _addRangeKey,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: cs.primary.withValues(alpha: 0.4),
+                                width: 1.5,
+                              ),
+                              color: cs.primaryContainer.withValues(alpha: 0.2),
                             ),
-                            onPressed: () {
-                              setState(() => _rangeCriteria.add(_RangeCriterion()));
-                            },
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () {
+                                setState(() => _rangeCriteria.add(_RangeCriterion()));
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: cs.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(Icons.add, size: 16, color: cs.onPrimary),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      l.addRange,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                        color: cs.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                           if (_showAddRangeTooltip)
                             Positioned(
-                              bottom: 52,
+                              bottom: 60,
                               left: 0,
                               right: 0,
                               child: _buildAddRangeTooltip(),
@@ -2061,6 +2133,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                             child: SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
+                                key: _generateKey,
                                 icon: _isGenerating
                                     ? SizedBox(
                                         width: 18, height: 18,
@@ -2295,8 +2368,33 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                 ],
               ),
             ),
-      ),
-      ),
+          ),
+        ),
+        ),
+        OnboardingOverlay(
+          key: _onboardingKey,
+          storageKey: 'eval_onboarding_v2',
+          steps: [
+            OnboardingStep(
+              targetKey: _addRangeKey,
+              title: isRtl ? 'تحديد النطاق' : 'Select Range',
+              description: isRtl
+                  ? 'أضف أحزاباً أو سوراً أو أرباعاً لتخصيص أسئلتك'
+                  : 'Add ahzab, surahs, or quarters to customize your questions',
+              icon: Icons.tune,
+            ),
+            OnboardingStep(
+              targetKey: _generateKey,
+              title: isRtl ? 'توليد الأسئلة' : 'Generate Questions',
+              description: isRtl
+                  ? 'اضغط هنا لتوليد الأسئلة بناءً على النطاق المحدد (اختياري - للمساعدة)'
+                  : 'Tap here to generate questions based on your selected range (optional - just to help)',
+              icon: Icons.auto_awesome,
+              isLast: true,
+            ),
+          ],
+        ),
+      ],
     );
   }
 

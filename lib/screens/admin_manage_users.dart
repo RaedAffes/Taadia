@@ -149,6 +149,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
 
   Future<void> _deleteUser(AppUser user) async {
     final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     if (user.uid ==
         Provider.of<AuthService>(context, listen: false).currentUser?.uid) {
       if (mounted)
@@ -170,16 +171,27 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l.deleteUserTitle),
-        content: Text(l.deleteUserConfirm(user.displayName)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.delete_outline, color: cs.error, size: 22),
+            SizedBox(width: 8),
+            Text(l.deleteUserTitle, style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: Text(l.deleteUserConfirm(user.displayName), style: TextStyle(height: 1.5)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.cancel),
+            child: Text(l.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l.delete, style: TextStyle(color: Colors.red)),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(l.delete),
           ),
         ],
       ),
@@ -248,30 +260,61 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
             child: _loading
                 ? Center(child: CircularProgressIndicator())
                 : _users.isEmpty
-                ? Center(child: Text(l.noUsersFound))
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.people_outline, size: 40, color: cs.onSurfaceVariant),
+                        SizedBox(height: 8),
+                        Text(l.noUsersFound, style: TextStyle(color: cs.onSurfaceVariant)),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
                     padding: EdgeInsets.all(16),
                     itemCount: _users.length,
                     itemBuilder: (context, index) {
                       final user = _users[index];
-                      return Card(
+                      final avatarColors = [
+                        cs.primary, cs.tertiary,
+                        Color(0xFF7B8C6B), Color(0xFF6B7B8C),
+                        Color(0xFF8C6B7B), Color(0xFF8B7D6B),
+                      ];
+                      final color = avatarColors[index % avatarColors.length];
+                      return AnimatedContainer(
+                        duration: Duration(milliseconds: 200),
                         margin: EdgeInsets.only(bottom: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                        decoration: BoxDecoration(
+                          color: cs.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: user.isAdmin
+                                ? cs.primary.withValues(alpha: 0.3)
+                                : cs.outlineVariant.withValues(alpha: 0.4),
+                            width: user.isAdmin ? 1.5 : 1,
+                          ),
                         ),
                         child: Padding(
                           padding: EdgeInsets.all(12),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                backgroundColor: user.isAdmin
-                                    ? cs.tertiaryContainer
-                                    : cs.surfaceContainerHighest,
-                                child: Icon(
-                                  user.isAdmin ? Icons.shield : Icons.person,
-                                  color: user.isAdmin
-                                      ? cs.onTertiaryContainer
-                                      : cs.onSurfaceVariant,
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [color, color.withValues(alpha: 0.7)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    user.isAdmin ? Icons.shield : Icons.person,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
                                 ),
                               ),
                               SizedBox(width: 12),
@@ -292,7 +335,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                                     Text(
                                       user.email,
                                       style: TextStyle(
-                                        fontSize: 13,
+                                        fontSize: 12,
                                         color: cs.onSurfaceVariant,
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -300,7 +343,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                                   ],
                                 ),
                               ),
-                              SizedBox(width: 8),
+                              SizedBox(width: 6),
                               Container(
                                 padding: EdgeInsets.symmetric(
                                   horizontal: 10,
@@ -308,21 +351,22 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: user.isAdmin
-                                      ? cs.tertiaryContainer
+                                      ? cs.primaryContainer
                                       : cs.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   user.isAdmin ? l.admin : l.user,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                     color: user.isAdmin
-                                        ? cs.onTertiaryContainer
+                                        ? cs.onPrimaryContainer
                                         : cs.onSurfaceVariant,
                                   ),
                                 ),
                               ),
+                              SizedBox(width: 4),
                               _smallIconBtn(
                                 user.isAdmin
                                     ? Icons.person_remove

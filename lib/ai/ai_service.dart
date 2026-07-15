@@ -224,12 +224,19 @@ class AiService {
   static Future<(List<String>, List<int>)> generateDetailed({
     required List<QuestionRange> ranges,
     required int count,
+    int? nearVerseIndex,
   }) async {
     if (count <= 0 || ranges.isEmpty) return (<String>[], <int>[]);
     final verses = await loadVerses();
+
+    int? nearSura;
+    if (nearVerseIndex != null && nearVerseIndex >= 0 && nearVerseIndex < verses.length) {
+      nearSura = (verses[nearVerseIndex]['sura_no'] as num).toInt();
+    }
+
     final pools = ranges.map((r) {
       final seen = <int>{};
-      final pool = r.buildPool(verses).where((v) {
+      var pool = r.buildPool(verses).where((v) {
         final id = v['id'] as int;
         if (!seen.add(id)) return false;
         final sura = (v['sura_no'] as num).toInt();
@@ -238,6 +245,13 @@ class AiService {
         if (hizb == 59 || hizb == 60) return false;
         return true;
       }).toList();
+      if (nearSura != null) {
+        final nearPool = pool.where((v) {
+          final sura = (v['sura_no'] as num).toInt();
+          return (sura - nearSura!).abs() <= 1;
+        }).toList();
+        if (nearPool.isNotEmpty) pool = nearPool;
+      }
       pool.sort((a, b) {
         final cmp = (a['sura_no'] as num).compareTo(b['sura_no'] as num);
         if (cmp != 0) return cmp;
@@ -297,6 +311,7 @@ class AiService {
     );
     final surahCounts = <int, int>{};
     final surahAyahs = <int, List<int>>{};
+    const rob3SurahRanges = [(1, 6), (7, 18), (19, 35), (36, 114)];
     for (final i in validIndices) {
       var pool = pools[i];
       final n = counts[i] ?? 0;
@@ -305,47 +320,109 @@ class AiService {
       final isQ4 = hasQuarter4 &&
           ranges[i].type == QuestionRangeType.quarter &&
           ranges[i].quarterNumbers?.contains(4) == true;
+      final isQuarter = ranges[i].type == QuestionRangeType.quarter;
 
       pool = pool.where((v) {
         final sura = (v['sura_no'] as num).toInt();
         if (sura == 1) return false;
         final hizb = (v['hizb_no'] as num).toInt();
         if (hizb == 59 || hizb == 60) return false;
-        final aya = (v['aya_no'] as num).toInt();
-        final juz = (v['jozz'] as num).toInt();
-        final totalAya = surahAyaCount(sura) ?? 0;
-        final skipCount = (totalAya * 0.1).ceil().clamp(1, 5);
-        if (juz < 29 && aya <= skipCount) return false;
-        if (aya > totalAya - skipCount) return false;
+        if (!isQuarter) {
+          final aya = (v['aya_no'] as num).toInt();
+          final juz = (v['jozz'] as num).toInt();
+          final totalAya = surahAyaCount(sura) ?? 0;
+          final skipCount = (totalAya * 0.1).ceil().clamp(1, 5);
+          if (juz < 29 && aya <= skipCount) return false;
+          if (aya > totalAya - skipCount) return false;
+        }
         return true;
       }).toList();
 
       if (pool.isEmpty) continue;
-      final hasEarlySurahs = pool.any((v) => (v['sura_no'] as num).toInt() < 78);
-      if (hasEarlySurahs) {
-        pool.removeWhere((v) => (v['sura_no'] as num).toInt() >= 78);
+      if (!isQuarter) {
+        final hasEarlySurahs = pool.any((v) => (v['sura_no'] as num).toInt() < 78);
+        if (hasEarlySurahs) {
+          pool.removeWhere((v) => (v['sura_no'] as num).toInt() >= 78);
+        }
       }
       if (pool.isEmpty) continue;
 
-      if (ranges[i].type == QuestionRangeType.quarter &&
-          (ranges[i].quarterNumbers?.length ?? 0) > 1) {
-        final qNums = ranges[i].quarterNumbers!;
-        const surahRanges = [(1, 6), (7, 18), (19, 35), (36, 114)];
-        final perQ = n ~/ qNums.length;
-        int r = n % qNums.length;
-        for (final qn in qNums) {
-          final idx = qn.clamp(1, 4) - 1;
-          final sFrom = surahRanges[idx].$1;
-          final sTo = surahRanges[idx].$2;
-          final needed = perQ + (r > 0 ? 1 : 0);
-          if (r > 0) r--;
+      if (isQuarter) {
+        final qNums = ranges[i].quarterNumbers ?? [];
+        if (qNums.length > 1) {
+          final perQ = n ~/ qNums.length;
+          int r = n % qNums.length;
+          for (final qn in qNums) {
+            final idx = qn.clamp(1, 4) - 1;
+            final sFrom = rob3SurahRanges[idx].$1;
+            final sTo = rob3SurahRanges[idx].$2;
+            final needed = perQ + (r > 0 ? 1 : 0);
+            if (r > 0) r--;
+            if (needed <= 0) continue;
+            final qPool = pool.where((v) {
+              final sura = (v['sura_no'] as num).toInt();
+              return sura >= sFrom && sura <= sTo;
+            }).toList();
+            if (qPool.isEmpty) continue;
+            selected.addAll(_pickFromPool(qPool, needed, isQ4, rng,
+                surahCounts: surahCounts,
+                surahAyahs: surahAyahs));
+          }
+        } else {
+          final perSub = n ~/ 4;
+          int extra = n % 4;
+          for (final (sFrom, sTo) in rob3SurahRanges) {
+            final needed = perSub + (extra > 0 ? 1 : 0);
+            if (extra > 0) extra--;
+            if (needed <= 0) continue;
+            final subPool = pool.where((v) {
+              final sura = (v['sura_no'] as num).toInt();
+              return sura >= sFrom && sura <= sTo;
+            }).toList();
+            if (subPool.isEmpty) continue;
+            selected.addAll(_pickFromPool(subPool, needed, isQ4, rng,
+                surahCounts: surahCounts,
+                surahAyahs: surahAyahs));
+          }
+          if (selected.isEmpty) {
+            selected.addAll(_pickFromPool(pool, n, isQ4, rng,
+                surahCounts: surahCounts,
+                surahAyahs: surahAyahs));
+          }
+        }
+      } else if (ranges[i].type == QuestionRangeType.allQuran ||
+          ranges[i].type == QuestionRangeType.hizbRange) {
+        final List<(int, int)> subRanges;
+        if (ranges[i].type == QuestionRangeType.allQuran) {
+          subRanges = rob3SurahRanges;
+        } else {
+          final hFrom = ranges[i].hizbFrom ?? 1;
+          final hTo = ranges[i].hizbTo ?? 60;
+          final totalHizbs = hTo - hFrom + 1;
+          final chunkSize = (totalHizbs / 4).ceil().clamp(1, totalHizbs);
+          subRanges = [];
+          for (int h = hFrom; h <= hTo; h += chunkSize) {
+            final end = (h + chunkSize - 1).clamp(h, hTo);
+            subRanges.add((h, end));
+          }
+        }
+        final perSub = n ~/ subRanges.length;
+        int extra = n % subRanges.length;
+        for (final (sFrom, sTo) in subRanges) {
+          final needed = perSub + (extra > 0 ? 1 : 0);
+          if (extra > 0) extra--;
           if (needed <= 0) continue;
-          final qPool = pool.where((v) {
+          final subPool = pool.where((v) {
             final sura = (v['sura_no'] as num).toInt();
-            return sura >= sFrom && sura <= sTo;
+            if (ranges[i].type == QuestionRangeType.allQuran) {
+              return sura >= sFrom && sura <= sTo;
+            } else {
+              final hizb = (v['hizb_no'] as num).toInt();
+              return hizb >= sFrom && hizb <= sTo;
+            }
           }).toList();
-          if (qPool.isEmpty) continue;
-          selected.addAll(_pickFromPool(qPool, needed, isQ4, rng,
+          if (subPool.isEmpty) continue;
+          selected.addAll(_pickFromPool(subPool, needed, isQ4, rng,
               surahCounts: surahCounts,
               surahAyahs: surahAyahs));
         }
@@ -465,6 +542,7 @@ class AiService {
 
     final surahCounts = <int, int>{};
     final surahAyahs = <int, List<int>>{};
+    const rob3SurahRanges2 = [(1, 6), (7, 18), (19, 35), (36, 114)];
 
     for (final i in validIndices) {
       var pool = pools[i];
@@ -474,48 +552,109 @@ class AiService {
       final isQ4 = hasQuarter4 &&
           ranges[i].type == QuestionRangeType.quarter &&
           ranges[i].quarterNumbers?.contains(4) == true;
+      final isQuarter = ranges[i].type == QuestionRangeType.quarter;
 
       pool = pool.where((v) {
         final sura = (v['sura_no'] as num).toInt();
         if (sura == 1) return false;
         final hizb = (v['hizb_no'] as num).toInt();
         if (hizb == 59 || hizb == 60) return false;
-        final aya = (v['aya_no'] as num).toInt();
-        final juz = (v['jozz'] as num).toInt();
-        final totalAya = surahAyaCount(sura) ?? 0;
-        final skipCount = (totalAya * 0.1).ceil().clamp(1, 5);
-        if (juz < 29 && aya <= skipCount) return false;
-        if (aya > totalAya - skipCount) return false;
+        if (!isQuarter) {
+          final aya = (v['aya_no'] as num).toInt();
+          final juz = (v['jozz'] as num).toInt();
+          final totalAya = surahAyaCount(sura) ?? 0;
+          final skipCount = (totalAya * 0.1).ceil().clamp(1, 5);
+          if (juz < 29 && aya <= skipCount) return false;
+          if (aya > totalAya - skipCount) return false;
+        }
         return true;
       }).toList();
 
       if (pool.isEmpty) continue;
-
-      final hasEarlySurahs = pool.any((v) => (v['sura_no'] as num).toInt() < 78);
-      if (hasEarlySurahs) {
-        pool.removeWhere((v) => (v['sura_no'] as num).toInt() >= 78);
+      if (!isQuarter) {
+        final hasEarlySurahs = pool.any((v) => (v['sura_no'] as num).toInt() < 78);
+        if (hasEarlySurahs) {
+          pool.removeWhere((v) => (v['sura_no'] as num).toInt() >= 78);
+        }
       }
       if (pool.isEmpty) continue;
 
-      if (ranges[i].type == QuestionRangeType.quarter &&
-          (ranges[i].quarterNumbers?.length ?? 0) > 1) {
-        final qNums = ranges[i].quarterNumbers!;
-        const surahRanges = [(1, 6), (7, 18), (19, 35), (36, 114)];
-        final perQ = n ~/ qNums.length;
-        int r = n % qNums.length;
-        for (final qn in qNums) {
-          final idx = qn.clamp(1, 4) - 1;
-          final sFrom = surahRanges[idx].$1;
-          final sTo = surahRanges[idx].$2;
-          final needed = perQ + (r > 0 ? 1 : 0);
-          if (r > 0) r--;
+      if (isQuarter) {
+        final qNums = ranges[i].quarterNumbers ?? [];
+        if (qNums.length > 1) {
+          final perQ = n ~/ qNums.length;
+          int r = n % qNums.length;
+          for (final qn in qNums) {
+            final idx = qn.clamp(1, 4) - 1;
+            final sFrom = rob3SurahRanges2[idx].$1;
+            final sTo = rob3SurahRanges2[idx].$2;
+            final needed = perQ + (r > 0 ? 1 : 0);
+            if (r > 0) r--;
+            if (needed <= 0) continue;
+            final qPool = pool.where((v) {
+              final sura = (v['sura_no'] as num).toInt();
+              return sura >= sFrom && sura <= sTo;
+            }).toList();
+            if (qPool.isEmpty) continue;
+            selected.addAll(_pickFromPool(qPool, needed, isQ4, rng,
+                surahCounts: surahCounts,
+                surahAyahs: surahAyahs));
+          }
+        } else {
+          final perSub = n ~/ 4;
+          int extra = n % 4;
+          for (final (sFrom, sTo) in rob3SurahRanges2) {
+            final needed = perSub + (extra > 0 ? 1 : 0);
+            if (extra > 0) extra--;
+            if (needed <= 0) continue;
+            final subPool = pool.where((v) {
+              final sura = (v['sura_no'] as num).toInt();
+              return sura >= sFrom && sura <= sTo;
+            }).toList();
+            if (subPool.isEmpty) continue;
+            selected.addAll(_pickFromPool(subPool, needed, isQ4, rng,
+                surahCounts: surahCounts,
+                surahAyahs: surahAyahs));
+          }
+          if (selected.isEmpty) {
+            selected.addAll(_pickFromPool(pool, n, isQ4, rng,
+                surahCounts: surahCounts,
+                surahAyahs: surahAyahs));
+          }
+        }
+      } else if (ranges[i].type == QuestionRangeType.allQuran ||
+          ranges[i].type == QuestionRangeType.hizbRange) {
+        final List<(int, int)> subRanges;
+        if (ranges[i].type == QuestionRangeType.allQuran) {
+          subRanges = rob3SurahRanges2;
+        } else {
+          final hFrom = ranges[i].hizbFrom ?? 1;
+          final hTo = ranges[i].hizbTo ?? 60;
+          final totalHizbs = hTo - hFrom + 1;
+          final chunkSize = (totalHizbs / 4).ceil().clamp(1, totalHizbs);
+          subRanges = [];
+          for (int h = hFrom; h <= hTo; h += chunkSize) {
+            final end = (h + chunkSize - 1).clamp(h, hTo);
+            subRanges.add((h, end));
+          }
+        }
+        final perSub = n ~/ subRanges.length;
+        int extra = n % subRanges.length;
+        for (final (sFrom, sTo) in subRanges) {
+          final needed = perSub + (extra > 0 ? 1 : 0);
+          if (extra > 0) extra--;
           if (needed <= 0) continue;
-          final qPool = pool.where((v) {
-            final sura = (v['sura_no'] as num).toInt();
-            return sura >= sFrom && sura <= sTo;
+          final subPool = pool.where((v) {
+            if (ranges[i].type == QuestionRangeType.allQuran) {
+              final sura = (v['sura_no'] as num).toInt();
+              return sura >= sFrom && sura <= sTo;
+            } else {
+              final hizb = (v['hizb_no'] as num).toInt();
+              return hizb >= sFrom && hizb <= sTo;
+            }
           }).toList();
-          if (qPool.isEmpty) continue;
-          selected.addAll(_pickFromPool(qPool, needed, isQ4, rng,
+          if (subPool.isEmpty) continue;
+          selected.addAll(_pickFromPool(subPool, needed, isQ4, rng,
               surahCounts: surahCounts,
               surahAyahs: surahAyahs));
         }

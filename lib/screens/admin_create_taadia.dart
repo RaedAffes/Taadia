@@ -670,28 +670,45 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       insetPadding: EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Text(
-              l.selectUsers,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.people, size: 20, color: cs.onPrimaryContainer),
+                ),
+                SizedBox(width: 10),
+                Text(
+                  l.selectUsers,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: l.searchByName,
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: Icon(Icons.search, size: 20),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                isDense: true,
               ),
               onChanged: _filter,
             ),
@@ -702,14 +719,18 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
                 : _buildContent(l),
           ),
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: FilledButton(
                 onPressed: () {
                   widget.onDone(_selectedGroups, _selectedUsers);
                   Navigator.pop(context);
                 },
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                ),
                 child: Text(l.done),
               ),
             ),
@@ -752,16 +773,12 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
         );
 
         children.add(
-          CheckboxListTile(
-            dense: true,
-            value: allGroupsSelected,
-            title: Text(
-              allGroupsSelected
-                  ? (isRtl ? 'إلغاء تحديد الكل' : 'Deselect all')
-                  : (isRtl ? 'تحديد الكل' : 'Select all'),
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            onChanged: (checked) {
+          _buildSelectAllTile(
+            isSelected: allGroupsSelected,
+            label: allGroupsSelected
+                ? (isRtl ? 'إلغاء تحديد الكل' : 'Deselect all')
+                : (isRtl ? 'تحديد الكل' : 'Select all'),
+            onSelect: (checked) {
               setState(() {
                 if (checked == true) {
                   for (final group in adminGroups) {
@@ -795,18 +812,11 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
           final groupSelected = _selectedGroups.contains(group.id);
 
           children.add(
-            CheckboxListTile(
-              dense: true,
-              value: groupSelected || allMembersSelected,
-              title: Text(
-                group.name,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                '${group.members.length} ${isRtl ? 'عضواً' : 'members'}',
-                style: TextStyle(fontSize: 11),
-              ),
-              onChanged: (checked) {
+            _buildGroupTile(
+              name: group.name,
+              memberCount: group.members.length,
+              isSelected: groupSelected || allMembersSelected,
+              onSelect: (checked) {
                 setState(() {
                   if (checked == true) {
                     _selectedGroups.add(group.id);
@@ -843,16 +853,12 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
         (e) => _selectedUsers.contains(e.key),
       );
       children.add(
-        CheckboxListTile(
-          dense: true,
-          value: allUsersSelected,
-          title: Text(
-            allUsersSelected
-                ? (isRtl ? 'إلغاء تحديد الكل' : 'Deselect all')
-                : (isRtl ? 'تحديد الكل' : 'Select all'),
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-          onChanged: (checked) {
+        _buildSelectAllTile(
+          isSelected: allUsersSelected,
+          label: allUsersSelected
+              ? (isRtl ? 'إلغاء تحديد الكل' : 'Deselect all')
+              : (isRtl ? 'تحديد الكل' : 'Select all'),
+          onSelect: (checked) {
             setState(() {
               if (checked == true) {
                 for (final entry in _filteredUsers) {
@@ -877,25 +883,263 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
   }
 
   Widget _buildUserTile(MapEntry<String, AppUser> entry, AppLocalizations l) {
-    return CheckboxListTile(
-      dense: true,
-      value: _selectedUsers.contains(entry.key),
-      title: Text(
-        entry.value.displayName.isNotEmpty
-            ? entry.value.displayName
-            : entry.value.email,
-        style: TextStyle(fontSize: 14),
+    final cs = Theme.of(context).colorScheme;
+    final isSelected = _selectedUsers.contains(entry.key);
+    final initials = entry.value.displayName.isNotEmpty
+        ? entry.value.displayName[0].toUpperCase()
+        : entry.value.email[0].toUpperCase();
+    final avatarColors = [
+      cs.primary, cs.tertiary,
+      Color(0xFF7B8C6B), Color(0xFF6B7B8C),
+      Color(0xFF8C6B7B), Color(0xFF8B7D6B),
+    ];
+    final idx = _filteredUsers.indexOf(entry);
+    final color = avatarColors[idx % avatarColors.length];
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 200),
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? cs.primaryContainer.withValues(alpha: 0.4)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected
+              ? cs.primary.withValues(alpha: 0.5)
+              : cs.outlineVariant.withValues(alpha: 0.3),
+        ),
       ),
-      subtitle: Text(entry.value.email, style: TextStyle(fontSize: 11)),
-      onChanged: (checked) {
-        setState(() {
-          if (checked == true) {
-            _selectedUsers.add(entry.key);
-          } else {
-            _selectedUsers.remove(entry.key);
-          }
-        });
-      },
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          setState(() {
+            if (isSelected) {
+              _selectedUsers.remove(entry.key);
+            } else {
+              _selectedUsers.add(entry.key);
+            }
+          });
+        },
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, color.withValues(alpha: 0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    initials,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.value.displayName.isNotEmpty
+                          ? entry.value.displayName
+                          : entry.value.email,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: cs.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      entry.value.email,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: isSelected ? cs.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: isSelected ? cs.primary : cs.outlineVariant,
+                    width: 1.5,
+                  ),
+                ),
+                child: isSelected
+                    ? Icon(Icons.check, size: 14, color: cs.onPrimary)
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectAllTile({
+    required bool isSelected,
+    required String label,
+    required ValueChanged<bool?> onSelect,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? cs.primaryContainer.withValues(alpha: 0.3)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected
+              ? cs.primary.withValues(alpha: 0.4)
+              : cs.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => onSelect(!isSelected),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: isSelected ? cs.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: isSelected ? cs.primary : cs.outlineVariant,
+                    width: 1.5,
+                  ),
+                ),
+                child: isSelected
+                    ? Icon(Icons.check, size: 14, color: cs.onPrimary)
+                    : null,
+              ),
+              SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: cs.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupTile({
+    required String name,
+    required int memberCount,
+    required bool isSelected,
+    required ValueChanged<bool?> onSelect,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final isRtl = AppLocalizations.of(context)!.localeName == 'ar';
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? cs.primaryContainer.withValues(alpha: 0.3)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected
+              ? cs.primary.withValues(alpha: 0.4)
+              : cs.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => onSelect(!isSelected),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: isSelected ? cs.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: isSelected ? cs.primary : cs.outlineVariant,
+                    width: 1.5,
+                  ),
+                ),
+                child: isSelected
+                    ? Icon(Icons.check, size: 14, color: cs.onPrimary)
+                    : null,
+              ),
+              SizedBox(width: 10),
+              Container(
+                padding: EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: cs.secondaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.group, size: 16, color: cs.onSecondaryContainer),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      isRtl
+                          ? '$memberCount عضواً'
+                          : '$memberCount members',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

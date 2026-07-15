@@ -168,6 +168,13 @@ class _AppBody extends StatelessWidget {
               foregroundColor: Colors.white,
             ),
             dividerTheme: DividerThemeData(color: Color(0xFFE8E3DD)),
+            snackBarTheme: SnackBarThemeData(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              elevation: 4,
+            ),
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
@@ -231,6 +238,13 @@ class _AppBody extends StatelessWidget {
             ),
             dividerTheme: DividerThemeData(color: Color(0xFF5A544E)),
             drawerTheme: DrawerThemeData(backgroundColor: Color(0xFF4A443E)),
+            snackBarTheme: SnackBarThemeData(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              elevation: 4,
+            ),
           ),
           home: AuthWrapper(),
         ),

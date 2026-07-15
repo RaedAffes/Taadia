@@ -98,6 +98,16 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
     return sorted;
   }
 
+  int _getRank(List<Evaluation> sorted, int index) {
+    int rank = 1;
+    for (var i = 0; i < index; i++) {
+      if (_calcResult(sorted[i]) > _calcResult(sorted[index])) {
+        rank++;
+      }
+    }
+    return rank;
+  }
+
   Future<void> _showFormulaDialog() async {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
@@ -811,15 +821,16 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
 
   Widget _studentSliverList(List<Evaluation> evals) {
     final showRank = widget.taadia.isPrivate || _showClassement;
+    final ranked = showRank ? _sortedWithRank(evals) : evals;
     return SliverPadding(
       padding: EdgeInsets.symmetric(horizontal: 16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           return _buildStudentCard(
-            evals[index],
-            rank: showRank ? index + 1 : null,
+            ranked[index],
+            rank: showRank ? _getRank(ranked, index) : null,
           );
-        }, childCount: evals.length),
+        }, childCount: ranked.length),
       ),
     );
   }
@@ -909,17 +920,8 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                     ),
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: cs.surfaceContainerHighest,
-                    child: Text(
-                      eval.studentName.isNotEmpty
-                          ? eval.studentName[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: cs.primary,
-                      ),
-                    ),
+                    backgroundColor: cs.primaryContainer,
+                    child: Icon(Icons.person, size: 22, color: cs.onPrimaryContainer),
                   ),
                   SizedBox(width: 12),
                   Expanded(

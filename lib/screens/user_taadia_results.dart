@@ -233,17 +233,8 @@ class _UserTaadiaResultsState extends State<UserTaadiaResults> {
                 children: [
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: cs.surfaceContainerHighest,
-                    child: Text(
-                      eval.studentName.isNotEmpty
-                          ? eval.studentName[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: cs.primary,
-                      ),
-                    ),
+                    backgroundColor: cs.primaryContainer,
+                    child: Icon(Icons.person, size: 20, color: cs.onPrimaryContainer),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

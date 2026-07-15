@@ -225,7 +225,17 @@ class _AppScaffoldState extends State<AppScaffold> {
           ),
         ],
       ),
-      floatingActionButton: widget.floatingActionButton,
+      floatingActionButton: widget.floatingActionButton != null
+          ? LongPressDraggable<Widget>(
+              data: widget.floatingActionButton,
+              feedback: Material(
+                color: Colors.transparent,
+                child: widget.floatingActionButton!,
+              ),
+              childWhenDragging: SizedBox.shrink(),
+              child: widget.floatingActionButton!,
+            )
+          : null,
     );
   }
 

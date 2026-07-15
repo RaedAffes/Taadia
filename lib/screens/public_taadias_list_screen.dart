@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
 import 'package:ta3dia/models/taadia_model.dart';
@@ -22,6 +23,8 @@ class PublicTaadiasListScreen extends StatefulWidget {
 }
 
 class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
+  String? _justAccessedId;
+
   @override
   void initState() {
     super.initState();
@@ -33,83 +36,61 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
 
   void _showCodeEntryDialog() {
     final l = AppLocalizations.of(context)!;
-    final codeController = TextEditingController();
-
-    void submitCode(BuildContext ctx) async {
-      final code = codeController.text.trim();
-      if (code.length != 4) return;
-      final taadiaService =
-          Provider.of<TaadiaService>(context, listen: false);
-      final auth = Provider.of<AuthService>(context, listen: false);
-      final codeLookup =
-          Provider.of<CodeLookupService>(context, listen: false);
-
-      final taadia = taadiaService.validateAccessCode(code);
-      Navigator.pop(ctx);
-
-      if (taadia != null && auth.currentUser != null) {
-        final userId = auth.currentUser!.uid;
-        if (taadia.accessUsers.containsKey(userId)) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l.alreadyHaveAccess),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-          return;
-        }
-        await taadiaService.cacheTaadiaByCode(taadia);
-        await taadiaService.grantUserAccess(taadia.id, userId);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l.accessGranted),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l.taadiaNotFound),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
+    final cs = Theme.of(context).colorScheme;
+    final isRtl = l.localeName == 'ar';
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l.enterAccessCode),
-        content: TextField(
-          controller: codeController,
-          textDirection: l.localeName == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-          decoration: InputDecoration(
-            labelText: l.accessCode,
-            hintText: l.accessCodeHint,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          keyboardType: TextInputType.number,
-          maxLength: 4,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l.cancel),
-          ),
-          TextButton(
-            onPressed: () => submitCode(ctx),
-            child: Text(l.verify),
-          ),
-        ],
+      barrierColor: Colors.black54,
+      builder: (ctx) => _CodeEntryDialog(
+        isRtl: isRtl,
+        l: l,
+        cs: cs,
+        onCodeSubmitted: (code) async {
+          final taadiaService =
+              Provider.of<TaadiaService>(context, listen: false);
+          final auth = Provider.of<AuthService>(context, listen: false);
+
+          final taadia = taadiaService.validateAccessCode(code);
+          Navigator.pop(ctx);
+
+          if (taadia != null && auth.currentUser != null) {
+            final userId = auth.currentUser!.uid;
+            if (taadia.accessUsers.containsKey(userId)) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l.alreadyHaveAccess),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+              return;
+            }
+            await taadiaService.cacheTaadiaByCode(taadia);
+            await taadiaService.grantUserAccess(taadia.id, userId);
+            if (mounted) {
+              setState(() => _justAccessedId = taadia.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l.accessGranted),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            }
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l.taadiaNotFound),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
       ),
     );
   }
@@ -923,5 +904,265 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
       ),
     );
   }
+}
 
+class _CodeEntryDialog extends StatefulWidget {
+  final bool isRtl;
+  final AppLocalizations l;
+  final ColorScheme cs;
+  final Future<void> Function(String code) onCodeSubmitted;
+
+  const _CodeEntryDialog({
+    required this.isRtl,
+    required this.l,
+    required this.cs,
+    required this.onCodeSubmitted,
+  });
+
+  @override
+  State<_CodeEntryDialog> createState() => _CodeEntryDialogState();
+}
+
+class _CodeEntryDialogState extends State<_CodeEntryDialog> {
+  final List<TextEditingController> _controllers =
+      List.generate(4, (_) => TextEditingController());
+  late final List<FocusNode> _focusNodes;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNodes = List.generate(4, (i) {
+      return FocusNode(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.backspace &&
+              _controllers[i].text.isEmpty &&
+              i > 0) {
+            _controllers[i - 1].clear();
+            _focusNodes[i - 1].requestFocus();
+            setState(() {});
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+      );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNodes[0].requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final n in _focusNodes) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  String get _code => _controllers.map((c) => c.text).join();
+
+  void _onDigitChanged(int index, String value) {
+    if (value.length == 1 && index < 3) {
+      _focusNodes[index + 1].requestFocus();
+    }
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.cs;
+    final l = widget.l;
+    final isRtl = widget.isRtl;
+    final code = _code;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      backgroundColor: cs.surface,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cs.primary, cs.primary.withValues(alpha: 0.7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.primary.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.vpn_key_rounded, size: 28, color: cs.onPrimary),
+            ),
+            SizedBox(height: 20),
+            Text(
+              l.enterAccessCode,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: cs.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              isRtl
+                  ? 'أدخل رمز الوصول المكون من 4 أرقام'
+                  : 'Enter the 4-digit access code',
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 28),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (i) {
+                  final isFilled = _controllers[i].text.isNotEmpty;
+                  final isFocused = _focusNodes[i].hasFocus;
+                  return Container(
+                    width: 56,
+                    height: 64,
+                    margin: EdgeInsets.symmetric(horizontal: 6),
+                    child: TextField(
+                      controller: _controllers[i],
+                      focusNode: _focusNodes[i],
+                      textAlign: TextAlign.center,
+                      keyboardType: TextInputType.number,
+                      maxLength: 1,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: cs.onSurface,
+                      ),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        contentPadding: EdgeInsets.zero,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: isFocused
+                                ? cs.primary
+                                : isFilled
+                                    ? cs.primary.withValues(alpha: 0.6)
+                                    : cs.outlineVariant.withValues(alpha: 0.5),
+                            width: isFocused ? 2.5 : isFilled ? 2 : 1.5,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: isFilled
+                                ? cs.primary.withValues(alpha: 0.6)
+                                : cs.outlineVariant.withValues(alpha: 0.5),
+                            width: isFilled ? 2 : 1.5,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: cs.primary,
+                            width: 2.5,
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: isFocused
+                            ? cs.primaryContainer.withValues(alpha: 0.2)
+                            : isFilled
+                                ? cs.primaryContainer.withValues(alpha: 0.1)
+                                : cs.surfaceContainerHighest
+                                    .withValues(alpha: 0.3),
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      onChanged: (v) => _onDigitChanged(i, v),
+                    ),
+                  );
+                }),
+              ),
+            ),
+            SizedBox(height: 28),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _submitting
+                        ? null
+                        : () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(color: cs.outlineVariant),
+                    ),
+                    child: Text(
+                      l.cancel,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: (code.length == 4 && !_submitting)
+                        ? () async {
+                            setState(() => _submitting = true);
+                            await widget.onCodeSubmitted(code);
+                            if (mounted) setState(() => _submitting = false);
+                          }
+                        : null,
+                    style: FilledButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: _submitting
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: cs.onPrimary,
+                            ),
+                          )
+                        : Icon(Icons.check_rounded, size: 20),
+                    label: Text(
+                      _submitting ? (isRtl ? 'جاري التحقق...' : 'Verifying...') : l.verify,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

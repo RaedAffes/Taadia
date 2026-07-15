@@ -351,17 +351,8 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 24,
-                                  backgroundColor: cs.surfaceContainerHighest,
-                                  child: Text(
-                                    e.studentName.isNotEmpty
-                                        ? e.studentName[0].toUpperCase()
-                                        : '?',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                      color: cs.primary,
-                                    ),
-                                  ),
+                                  backgroundColor: cs.primaryContainer,
+                                  child: Icon(Icons.person, size: 22, color: cs.onPrimaryContainer),
                                 ),
                                 SizedBox(width: 12),
                                 Expanded(

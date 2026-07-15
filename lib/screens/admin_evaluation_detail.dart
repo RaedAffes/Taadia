@@ -89,17 +89,8 @@ class AdminEvaluationDetail extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 32,
-                      backgroundColor: cs.surfaceContainerHighest,
-                      child: Text(
-                        evaluation.studentName.isNotEmpty
-                            ? evaluation.studentName[0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: cs.primary,
-                        ),
-                      ),
+                      backgroundColor: cs.primaryContainer,
+                      child: Icon(Icons.person, size: 32, color: cs.onPrimaryContainer),
                     ),
                     SizedBox(height: 12),
                     Text(

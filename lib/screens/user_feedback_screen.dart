@@ -14,10 +14,18 @@ class UserFeedbackScreen extends StatefulWidget {
 class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
   final _newCtrl = TextEditingController();
   final Map<String, TextEditingController> _replyCtrls = {};
+  final Map<String, bool> _expanded = {};
+  final Map<String, ScrollController> _scrollCtrls = {};
+  bool _sending = false;
 
   TextEditingController _ctrl(String id) {
     if (!_replyCtrls.containsKey(id)) _replyCtrls[id] = TextEditingController();
     return _replyCtrls[id]!;
+  }
+
+  ScrollController _scrollCtrl(String id) {
+    if (!_scrollCtrls.containsKey(id)) _scrollCtrls[id] = ScrollController();
+    return _scrollCtrls[id]!;
   }
 
   @override
@@ -39,31 +47,28 @@ class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
   void dispose() {
     _newCtrl.dispose();
     for (var c in _replyCtrls.values) c.dispose();
+    for (var c in _scrollCtrls.values) c.dispose();
     super.dispose();
   }
 
   void _sendNewFeedback(AuthService auth) async {
     final msg = _newCtrl.text.trim();
-    if (msg.isEmpty) return;
+    if (msg.isEmpty || _sending) return;
+    setState(() => _sending = true);
     final uid = auth.currentUser?.uid ?? '';
     final name = auth.appUser?.displayName ?? '';
     final svc = Provider.of<FeedbackService>(context, listen: false);
     final err = await svc.submitFeedback(uid, name, msg);
     if (mounted) {
+      setState(() => _sending = false);
       if (err.isEmpty) {
         _newCtrl.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.feedbackSent),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(err),
-            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -93,6 +98,7 @@ class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
             content: Text(err),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -101,18 +107,30 @@ class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
 
   Future<void> _deleteFeedback(FeedbackService fb, String id) async {
     final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l.areYouSure),
-        content: Text(l.confirmDeleteFeedback),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.delete_outline, color: cs.error, size: 22),
+            SizedBox(width: 8),
+            Text(l.areYouSure, style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: Text(l.confirmDeleteFeedback, style: TextStyle(height: 1.5)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.cancel),
+            child: Text(l.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             child: Text(l.delete),
           ),
         ],
@@ -124,10 +142,9 @@ class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(err.isEmpty ? l.feedbackDeleted : err),
-          backgroundColor: err.isEmpty
-              ? null
-              : Theme.of(context).colorScheme.error,
+          backgroundColor: err.isEmpty ? null : cs.error,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -139,18 +156,30 @@ class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
     String replyId,
   ) async {
     final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l.areYouSure),
-        content: Text(l.confirmDeleteReply),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.delete_outline, color: cs.error, size: 22),
+            SizedBox(width: 8),
+            Text(l.areYouSure, style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: Text(l.confirmDeleteReply, style: TextStyle(height: 1.5)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.cancel),
+            child: Text(l.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             child: Text(l.delete),
           ),
         ],
@@ -162,103 +191,367 @@ class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(err.isEmpty ? l.replyDeleted : err),
-          backgroundColor: err.isEmpty
-              ? null
-              : Theme.of(context).colorScheme.error,
+          backgroundColor: err.isEmpty ? null : cs.error,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
   }
 
-  Widget _replyBubble(
-    FeedbackReply r,
-    bool canDelete,
-    VoidCallback onDelete,
-    AppLocalizations l,
-    ColorScheme cs,
-  ) {
-    return Container(
-      margin: EdgeInsets.only(top: 8),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: (r.isAdmin ? cs.tertiaryContainer : cs.primaryContainer)
-            .withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            r.isAdmin ? Icons.shield : Icons.person,
-            size: 14,
-            color: r.isAdmin ? cs.tertiary : cs.primary,
-          ),
-          SizedBox(width: 6),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+  String _relativeTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  Widget _buildChatBubble({
+    required String message,
+    required bool isAdmin,
+    required String senderName,
+    required DateTime time,
+    required bool canDelete,
+    required VoidCallback? onDelete,
+    required ColorScheme cs,
+    required AppLocalizations l,
+    required bool isRtl,
+  }) {
+    final isMe = !isAdmin;
+    final bubbleColor = isAdmin
+        ? cs.tertiaryContainer.withValues(alpha: 0.5)
+        : cs.primaryContainer.withValues(alpha: 0.5);
+    final textColor = isAdmin ? cs.onTertiaryContainer : cs.onPrimaryContainer;
+    final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+
+    return GestureDetector(
+      onLongPress: canDelete ? onDelete : null,
+      child: Container(
+        margin: EdgeInsets.only(
+          top: 6,
+          bottom: 2,
+          left: isMe ? 48 : 8,
+          right: isMe ? 8 : 48,
+        ),
+        child: Column(
+          crossAxisAlignment: align,
+          children: [
+            if (isAdmin)
+              Padding(
+                padding: EdgeInsets.only(bottom: 3, left: 4, right: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    Icon(Icons.shield, size: 12, color: cs.tertiary),
+                    SizedBox(width: 4),
                     Text(
-                      r.senderName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: r.isAdmin ? cs.tertiary : cs.primary,
-                      ),
-                    ),
-                    if (r.isAdmin) ...[
-                      SizedBox(width: 4),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: cs.tertiary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                          child: Text(
-                          l.admin,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            color: cs.tertiary,
-                          ),
-                        ),
-                      ),
-                    ],
-                    SizedBox(width: 6),
-                    Text(
-                      _formatDate(r.createdAt, l),
+                      senderName.isNotEmpty ? senderName : l.admin,
                       style: TextStyle(
                         fontSize: 11,
-                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        color: cs.tertiary,
+                      ),
+                    ),
+                    Container(
+                      margin: EdgeInsets.only(left: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: cs.tertiary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        l.admin,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: cs.tertiary,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 4),
-                Text(
-                  r.message,
-                  style: TextStyle(
-                    color: r.isAdmin
-                        ? cs.onTertiaryContainer
-                        : cs.onPrimaryContainer,
-                    fontSize: 13,
-                    height: 1.3,
-                  ),
+              ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(isMe ? 18 : 4),
+                  bottomRight: Radius.circular(isMe ? 4 : 18),
                 ),
-              ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _relativeTime(time),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: textColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      if (canDelete) ...[
+                        SizedBox(width: 6),
+                        Icon(
+                          Icons.delete_outline,
+                          size: 11,
+                          color: cs.error.withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConversationThread(FeedbackItem item, FeedbackService fb, AuthService auth, AppLocalizations l, ColorScheme cs) {
+    final isExpanded = _expanded[item.id] ?? false;
+    final uid = auth.currentUser?.uid ?? '';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              setState(() {
+                _expanded[item.id] = !isExpanded;
+              });
+            },
+            child: Container(
+              padding: EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [cs.primary, cs.primary.withValues(alpha: 0.7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(Icons.person, color: cs.onPrimary, size: 20),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.userFeedback,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          item.message,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _relativeTime(item.createdAt),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      StreamBuilder<List<FeedbackReply>>(
+                        stream: fb.repliesStream(item.id),
+                        builder: (context, snap) {
+                          final count = snap.data?.length ?? 0;
+                          if (count == 0) return SizedBox.shrink();
+                          return Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$count',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: cs.onPrimary,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  SizedBox(width: 4),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _deleteFeedback(fb, item.id),
+                    child: Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.delete_outline, size: 16, color: cs.error.withValues(alpha: 0.7)),
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0,
+                    duration: Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down, color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
             ),
           ),
-          if (canDelete)
-            IconButton(
-              icon: Icon(Icons.delete_outline, size: 16),
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(),
-              color: cs.error,
-              onPressed: onDelete,
+          AnimatedCrossFade(
+            firstChild: SizedBox.shrink(),
+            secondChild: Container(
+              padding: EdgeInsets.only(left: 14, right: 14, top: 4),
+              child: StreamBuilder<List<FeedbackReply>>(
+                stream: fb.repliesStream(item.id),
+                builder: (context, snap) {
+                  final replies = snap.data ?? [];
+                  return Column(
+                    children: [
+                      if (replies.isNotEmpty)
+                        Container(
+                          margin: EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Expanded(child: Divider(color: cs.outlineVariant.withValues(alpha: 0.5))),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  '${replies.length} ${replies.length == 1 ? l.reply : l.reply}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: cs.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Expanded(child: Divider(color: cs.outlineVariant.withValues(alpha: 0.5))),
+                            ],
+                          ),
+                        ),
+                      ...replies.map(
+                        (r) => _buildChatBubble(
+                          message: r.message,
+                          isAdmin: r.isAdmin,
+                          senderName: r.senderName,
+                          time: r.createdAt,
+                          canDelete: r.senderId == uid,
+                          onDelete: () => _deleteReply(fb, item.id, r.id),
+                          cs: cs,
+                          l: l,
+                          isRtl: Directionality.of(context) == TextDirection.rtl,
+                        ),
+                      ),
+                      Container(
+                        margin: EdgeInsets.only(top: 8, bottom: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _ctrl(item.id),
+                                decoration: InputDecoration(
+                                  hintText: l.replyHint,
+                                  hintStyle: TextStyle(fontSize: 13),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide(color: cs.outlineVariant),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide(color: cs.outlineVariant),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                    borderSide: BorderSide(color: cs.primary, width: 1.5),
+                                  ),
+                                  filled: true,
+                                  fillColor: cs.surface,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                ),
+                                maxLines: 2,
+                                minLines: 1,
+                                textInputAction: TextInputAction.send,
+                                onSubmitted: (_) => _sendReply(fb, auth, item.id),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [cs.primary, cs.primary.withValues(alpha: 0.8)],
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: Icon(Icons.send_rounded, size: 18, color: cs.onPrimary),
+                                padding: EdgeInsets.zero,
+                                constraints: BoxConstraints(minWidth: 40, minHeight: 40),
+                                onPressed: () => _sendReply(fb, auth, item.id),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: Duration(milliseconds: 250),
+          ),
         ],
       ),
     );
@@ -270,210 +563,133 @@ class _UserFeedbackScreenState extends State<UserFeedbackScreen> {
     final fb = Provider.of<FeedbackService>(context);
     final auth = Provider.of<AuthService>(context);
     final cs = Theme.of(context).colorScheme;
-    final uid = auth.currentUser?.uid ?? '';
 
     return AppScaffold(
       title: l.userFeedback,
       body: Column(
         children: [
           Container(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 14),
             decoration: BoxDecoration(
               color: cs.surface,
-              border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+              border: Border(
+                bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4), width: 1),
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _newCtrl,
-                  maxLines: 3,
-                  minLines: 1,
-                  decoration: InputDecoration(
-                    hintText: l.feedbackHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _newCtrl,
+                      maxLines: 4,
+                      minLines: 1,
+                      textInputAction: TextInputAction.newline,
+                      decoration: InputDecoration(
+                        hintText: l.feedbackHint,
+                        hintStyle: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 12,
+                        ),
+                      ),
+                      style: TextStyle(fontSize: 14),
                     ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+                  ),
+                  Container(
+                    margin: EdgeInsets.only(bottom: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [cs.primary, cs.primary.withValues(alpha: 0.8)],
+                      ),
+                      shape: BoxShape.circle,
                     ),
-                    isDense: true,
+                    child: IconButton(
+                      icon: _sending
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: cs.onPrimary,
+                              ),
+                            )
+                          : Icon(Icons.send_rounded, size: 18, color: cs.onPrimary),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(minWidth: 40, minHeight: 40),
+                      onPressed: _sending ? null : () => _sendNewFeedback(auth),
+                    ),
                   ),
-                ),
-                SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _sendNewFeedback(auth),
-                    icon: Icon(Icons.send, size: 16),
-                    label: Text(l.save),
-                  ),
-                ),
-              ],
+                  SizedBox(width: 6),
+                ],
+              ),
             ),
           ),
           Expanded(
             child: fb.myLoading
-                ? Center(child: CircularProgressIndicator())
-                : fb.myItems.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.feedback_outlined,
-                          size: 48,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          l.noFeedbackHistory,
-                          style: TextStyle(color: cs.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+                    child: CircularProgressIndicator(color: cs.primary),
                   )
-                : ListView.builder(
-                    padding: EdgeInsets.all(16),
-                    itemCount: fb.myItems.length,
-                    itemBuilder: (context, index) {
-                      final item = fb.myItems[index];
-                      final isOwner = item.userId == uid;
-                      return Card(
-                        margin: EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor: cs.primaryContainer,
-                                    child: Icon(
-                                      Icons.person,
-                                      size: 14,
-                                      color: cs.onPrimaryContainer,
-                                    ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    l.userFeedback,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: cs.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  Spacer(),
-                                  Text(
-                                    _formatDate(item.createdAt, l),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: cs.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  if (isOwner) ...[
-                                    SizedBox(width: 8),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        size: 18,
-                                        color: cs.error,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(),
-                                      onPressed: () =>
-                                          _deleteFeedback(fb, item.id),
-                                    ),
-                                  ],
-                                ],
+                : fb.myItems.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: cs.primaryContainer.withValues(alpha: 0.3),
+                                shape: BoxShape.circle,
                               ),
-                              SizedBox(height: 10),
-                              Text(
-                                item.message,
-                                style: TextStyle(
-                                  color: cs.onSurface,
-                                  height: 1.4,
-                                ),
+                              child: Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                size: 40,
+                                color: cs.primary,
                               ),
-                              StreamBuilder<List<FeedbackReply>>(
-                                stream: fb.repliesStream(item.id),
-                                builder: (context, snap) {
-                                  final replies = snap.data ?? [];
-                                  if (replies.isEmpty) return SizedBox.shrink();
-                                  return Column(
-                                    children: replies
-                                        .map(
-                                          (r) => _replyBubble(
-                                            r,
-                                            isOwner || r.senderId == uid,
-                                            () =>
-                                                _deleteReply(fb, item.id, r.id),
-                                            l,
-                                            cs,
-                                          ),
-                                        )
-                                        .toList(),
-                                  );
-                                },
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              l.noFeedbackHistory,
+                              style: TextStyle(
+                                color: cs.onSurfaceVariant,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
                               ),
-                              SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _ctrl(item.id),
-                                      decoration: InputDecoration(
-                                        hintText: l.replyHint,
-                                        border: OutlineInputBorder(),
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                      ),
-                                      maxLines: 2,
-                                      minLines: 1,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Material(
-                                    color: cs.primaryContainer,
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(8),
-                                      onTap: () =>
-                                          _sendReply(fb, auth, item.id),
-                                      child: Padding(
-                                        padding: EdgeInsets.all(8),
-                                        child: Icon(
-                                          Icons.send,
-                                          size: 18,
-                                          color: cs.onPrimaryContainer,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              l.feedbackHint,
+                              style: TextStyle(
+                                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                                fontSize: 12,
                               ),
-                            ],
-                          ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      )
+                    : ListView.builder(
+                        padding: EdgeInsets.all(16),
+                        itemCount: fb.myItems.length,
+                        itemBuilder: (context, index) {
+                          final item = fb.myItems[index];
+                          return _buildConversationThread(item, fb, auth, l, cs);
+                        },
+                      ),
           ),
         ],
       ),
     );
-  }
-
-  String _formatDate(DateTime dt, AppLocalizations l) {
-    final h = dt.hour.toString().padLeft(2, '0');
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '${dt.day}/${dt.month}/${dt.year} $h:$m';
   }
 }
