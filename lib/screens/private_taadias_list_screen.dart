@@ -21,6 +21,7 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
   String? _currentTaadiaId;
   StreamSubscription? _evalSub;
 
+
   @override
   void initState() {
     super.initState();
@@ -386,55 +387,10 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
-                                              GestureDetector(
+                                               GestureDetector(
                                                 onTap: () =>
                                                     _showFormulaForEval(e),
-                                                child: Container(
-                                                  padding: EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: cs.tertiaryContainer
-                                                        .withValues(
-                                                          alpha: 0.25,
-                                                        ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: cs.tertiary
-                                                          .withValues(
-                                                            alpha: 0.5,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.swap_horiz,
-                                                        size: 13,
-                                                        color: cs.tertiary,
-                                                      ),
-                                                      SizedBox(width: 4),
-                                                      Text(
-                                                        _formulaLabel(
-                                                          e.formula,
-                                                          l,
-                                                        ),
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: cs.tertiary,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
+                                                child: _formulaBadge(e, cs, l),
                                               ),
                                             ],
                                           ),
@@ -604,6 +560,38 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
                                       },
                                     ),
                                   ),
+                                  SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(Icons.delete_outline, size: 18, color: cs.error),
+                                      tooltip: l.deleteEvaluation,
+                                      onPressed: () async {
+                                        final confirmed = await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: Text(l.deleteEvaluation),
+                                            content: Text(l.areYouSure),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(ctx, false),
+                                                child: Text(l.cancel),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(ctx, true),
+                                                child: Text(l.deleteEvaluation, style: TextStyle(color: cs.error)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirmed == true && context.mounted) {
+                                          await Provider.of<EvaluationService>(context, listen: false)
+                                              .deleteEvaluation(e.id);
+                                        }
+                                      },
+                                    ),
+                                  ),
                                   Padding(
                                     padding: EdgeInsets.symmetric(
                                       horizontal: 4,
@@ -682,6 +670,32 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
               fontWeight: FontWeight.bold,
               color: color,
               letterSpacing: -0.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _formulaBadge(Evaluation e, ColorScheme cs, AppLocalizations l) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: cs.tertiaryContainer.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.tertiary.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.swap_horiz, size: 13, color: cs.tertiary),
+          SizedBox(width: 4),
+          Text(
+            _formulaLabel(e.formula, l),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: cs.tertiary,
             ),
           ),
         ],

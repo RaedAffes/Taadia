@@ -229,7 +229,15 @@ class AiService {
     final verses = await loadVerses();
     final pools = ranges.map((r) {
       final seen = <int>{};
-      final pool = r.buildPool(verses).where((v) => seen.add(v['id'] as int)).toList();
+      final pool = r.buildPool(verses).where((v) {
+        final id = v['id'] as int;
+        if (!seen.add(id)) return false;
+        final sura = (v['sura_no'] as num).toInt();
+        if (sura == 1) return false;
+        final hizb = (v['hizb_no'] as num).toInt();
+        if (hizb == 59 || hizb == 60) return false;
+        return true;
+      }).toList();
       pool.sort((a, b) {
         final cmp = (a['sura_no'] as num).compareTo(b['sura_no'] as num);
         if (cmp != 0) return cmp;
@@ -258,7 +266,8 @@ class AiService {
     int remaining = count;
     for (final i in validIndices) {
       final isSurah = ranges[i].type == QuestionRangeType.surahs ||
-          ranges[i].type == QuestionRangeType.surahAyahRange;
+          ranges[i].type == QuestionRangeType.surahAyahRange ||
+          ranges[i].type == QuestionRangeType.surahPages;
       if (isSurah && remaining > 0) {
         counts[i] = 1;
         remaining--;
@@ -267,7 +276,8 @@ class AiService {
     if (remaining > 0) {
       final nonSurah = validIndices.where((i) =>
           ranges[i].type != QuestionRangeType.surahs &&
-          ranges[i].type != QuestionRangeType.surahAyahRange).toList();
+          ranges[i].type != QuestionRangeType.surahAyahRange &&
+          ranges[i].type != QuestionRangeType.surahPages).toList();
       if (nonSurah.isNotEmpty) {
         final perNonSurah = remaining ~/ nonSurah.length;
         int extra = remaining % nonSurah.length;
@@ -383,7 +393,15 @@ class AiService {
     // Build a sorted, deduplicated pool per range
     final pools = ranges.map((r) {
       final seen = <int>{};
-      final pool = r.buildPool(verses).where((v) => seen.add(v['id'] as int)).toList();
+      final pool = r.buildPool(verses).where((v) {
+        final id = v['id'] as int;
+        if (!seen.add(id)) return false;
+        final sura = (v['sura_no'] as num).toInt();
+        if (sura == 1) return false;
+        final hizb = (v['hizb_no'] as num).toInt();
+        if (hizb == 59 || hizb == 60) return false;
+        return true;
+      }).toList();
       pool.sort((a, b) {
         final cmp = (a['sura_no'] as num).compareTo(b['sura_no'] as num);
         if (cmp != 0) return cmp;
@@ -414,7 +432,8 @@ class AiService {
     int remaining = count;
     for (final i in validIndices) {
       final isSurah = ranges[i].type == QuestionRangeType.surahs ||
-          ranges[i].type == QuestionRangeType.surahAyahRange;
+          ranges[i].type == QuestionRangeType.surahAyahRange ||
+          ranges[i].type == QuestionRangeType.surahPages;
       if (isSurah && remaining > 0) {
         counts[i] = 1;
         remaining--;
@@ -423,7 +442,8 @@ class AiService {
     if (remaining > 0) {
       final nonSurah = validIndices.where((i) =>
           ranges[i].type != QuestionRangeType.surahs &&
-          ranges[i].type != QuestionRangeType.surahAyahRange).toList();
+          ranges[i].type != QuestionRangeType.surahAyahRange &&
+          ranges[i].type != QuestionRangeType.surahPages).toList();
       if (nonSurah.isNotEmpty) {
         final perNonSurah = remaining ~/ nonSurah.length;
         int extra = remaining % nonSurah.length;
@@ -557,23 +577,19 @@ class AiService {
       return count >= limit;
     });
 
-    final surahGroups = bySurah.entries.map((e) => e.value).toList();
-    if (surahGroups.isEmpty) return selected;
-    final actualN = n > surahGroups.length ? surahGroups.length : n;
-      final offset = rng.nextDouble();
-      final step = 1.0 / actualN;
-      for (int si = 0; si < actualN; si++) {
-        final x = (offset + si * step) % 1.0;
-        final mapped = _rangePosition(x);
-        int idx = (mapped * (surahGroups.length - 1))
-            .round()
-            .clamp(0, surahGroups.length - 1);
-        final verse = _pickVerse(
-            surahGroups[idx], isQ4, rng,
-            surahAyahs: sAyahs);
-        _trackVerse(verse, sCounts, sAyahs);
-        selected.add(verse);
-      }
+    final surahKeys = bySurah.keys.toList();
+    if (surahKeys.isEmpty) return selected;
+    // Shuffle so picks are spread across different surahs
+    surahKeys.shuffle(rng);
+    final actualN = n > surahKeys.length ? surahKeys.length : n;
+    for (int si = 0; si < actualN; si++) {
+      final sura = surahKeys[si];
+      final verse = _pickVerse(
+          bySurah[sura]!, isQ4, rng,
+          surahAyahs: sAyahs);
+      _trackVerse(verse, sCounts, sAyahs);
+      selected.add(verse);
+    }
     return selected;
   }
 
@@ -582,16 +598,6 @@ class AiService {
     final sura = (verse['sura_no'] as num).toInt();
     counts[sura] = (counts[sura] ?? 0) + 1;
     ayahs.putIfAbsent(sura, () => []).add((verse['aya_no'] as num).toInt());
-  }
-
-  /// Maps a question-index fraction [0..1] to a range-position fraction [0..1].
-  ///  - Beginning (first 10% of questions) → first 5% of the range
-  ///  - Middle   (10–50% of questions)     →  5–40% of the range
-  ///  - Final    (50–100% of questions)    → 40–100% of the range
-  static double _rangePosition(double frac) {
-    if (frac < 0.1) return 0.5 * frac;
-    if (frac < 0.5) return 0.05 + 0.875 * (frac - 0.1);
-    return 0.4 + 1.2 * (frac - 0.5);
   }
 
   static Map<String, dynamic> _pickVerse(

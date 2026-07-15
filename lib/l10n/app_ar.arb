@@ -294,5 +294,21 @@
   "enterManually": "إدخال يدوي",
   "taadiaNotFound": "التعدية غير موجودة",
   "enterAhzabRange": "أدخل نطاق الأحزاب",
-  "uncheckQuestionFirst": "قم بإلغاء تحديد السؤال أولاً"
+  "uncheckQuestionFirst": "قم بإلغاء تحديد السؤال أولاً",
+  "wtPublicTaadiaBanner": "اضغط هنا لإدخال رمز من 4 أرقام والانضمام للتعديات الخاصة",
+  "wtPrivateNewEval": "اضغط هنا لإنشاء تقييم جديد",
+  "wtPrivateFormula": "اضغط هنا للتبديل بين أنواع الصيغ",
+  "wtEvalRange": "ابدأ باختيار نطاق الآيات المراد تقييمها",
+  "wtEvalAddRange": "أضف نطاقات أخرى إذا لزم الأمر",
+  "wtEvalGenerateSwitch": "فعّل هذا لإنشاء أسئلة تلقائياً، أو أطفئه للإدخال اليدوي",
+  "wtEvalQuranPages": "افتح قارئ القرآن لمتابعة الآيات",
+  "wtEvalQuestionAdd": "أضف أو احذف الأسئلة من هنا",
+  "wtEvalQuestionCheck": "حدد السؤال كمكتمل عندما تنتهي منه",
+  "wtEvalSwipe": "اسحب يميناً أو يساراً للتنقل بين الأسئلة",
+  "wtEvalSave": "احفظ تقييمك عندما تنتهي",
+  "wtGenQuran": "افتح القرآن لمتابعة الآية التي تقيّمها",
+  "wtGenRegenerate": "اضغط لإنشاء سؤال مختلف",
+  "wtGenVerseNav": "تنقل بين الآيات بأزرار",
+  "wtNext": "التالي",
+  "wtSkip": "تخطي"
 }

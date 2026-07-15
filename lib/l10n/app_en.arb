@@ -350,5 +350,21 @@
   "enterManually": "Enter manually",
   "taadiaNotFound": "Taadia not found",
   "enterAhzabRange": "Enter ahzab range",
-  "uncheckQuestionFirst": "You need to uncheck the question first"
+  "uncheckQuestionFirst": "You need to uncheck the question first",
+  "wtPublicTaadiaBanner": "Tap here to enter a 4-digit code and join private taadias",
+  "wtPrivateNewEval": "Tap here to create a new evaluation",
+  "wtPrivateFormula": "Tap here to switch between formula types",
+  "wtEvalRange": "Start by selecting the range of verses to evaluate",
+  "wtEvalAddRange": "Add more ranges if needed",
+  "wtEvalGenerateSwitch": "Turn this on to auto-generate questions, or leave off for manual entry",
+  "wtEvalQuranPages": "Open the Quran reader to follow along with verses",
+  "wtEvalQuestionAdd": "Add or remove questions here",
+  "wtEvalQuestionCheck": "Mark a question as complete when you finish it",
+  "wtEvalSwipe": "Swipe left or right to navigate between questions",
+  "wtEvalSave": "Save your evaluation when finished",
+  "wtGenQuran": "Open the Quran to follow the verse you are evaluating",
+  "wtGenRegenerate": "Tap to regenerate a different question",
+  "wtGenVerseNav": "Navigate between verses with these buttons",
+  "wtNext": "Next",
+  "wtSkip": "Skip"
 }

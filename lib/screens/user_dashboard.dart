@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
-import 'package:ta3dia/screens/user_evaluate.dart';
+import 'package:ta3dia/screens/user_taadia_results.dart';
 import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/group_service.dart';
@@ -64,7 +64,9 @@ class _UserDashboardState extends State<UserDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l.welcomeUser(authService.appUser?.displayName ?? 'User'),
+                  authService.currentUser?.isAnonymous == true
+                      ? l.welcome
+                      : l.welcomeUser(authService.appUser?.displayName ?? ''),
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -135,11 +137,8 @@ class _UserDashboardState extends State<UserDashboard> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => EvaluateScreen(
-                                        taadiaId: t.id,
-                                        taadiaTitle: t.title,
-                                        taadiaDescription: t.description,
-                                        classifications: t.classifications,
+                                      builder: (_) => UserTaadiaResults(
+                                        taadia: t,
                                       ),
                                     ),
                                   ).then((_) => _loadTaadias());
@@ -218,11 +217,8 @@ class _UserDashboardState extends State<UserDashboard> {
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
-                                                        builder: (_) => EvaluateScreen(
-                                                          taadiaId: t.id,
-                                                          taadiaTitle: t.title,
-                                                          taadiaDescription: t.description,
-                                                          classifications: t.classifications,
+                                                        builder: (_) => UserTaadiaResults(
+                                                          taadia: t,
                                                         ),
                                                       ),
                                                     ).then((_) => _loadTaadias());

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
 import 'package:ta3dia/models/evaluation_model.dart';
@@ -9,12 +10,10 @@ import 'package:ta3dia/models/taadia_model.dart';
 import 'package:ta3dia/services/evaluation_service.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/taadia_service.dart';
-import 'package:ta3dia/services/pdf_service.dart';
-import 'package:ta3dia/services/csv_service.dart';
 import 'package:ta3dia/ai/ai_service.dart';
-import 'package:ta3dia/widgets/download_choice_dialog.dart';
 import 'package:ta3dia/screens/quran_reader_screen.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _RangeCriterion {
   QuestionRangeType type = QuestionRangeType.allQuran;
@@ -212,6 +211,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   final _studentNameController = TextEditingController();
   final _noteController = TextEditingController();
 
+  bool _showAddRangeTooltip = false;
+
   int _numQuestions = 0;
   List<QuestionItem> _questions = [];
   bool _loading = false;
@@ -325,6 +326,14 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         }
       }
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = Provider.of<AuthService>(context, listen: false);
+      if (!auth.isAdmin && !_isEditing) {
+        _checkAndShowAddRangeTooltip();
+      }
+    });
   }
 
   static final Map<String, Map<String, dynamic>> _draftCache = {};
@@ -549,16 +558,47 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       setState(() => _loading = false);
       if (ok) {
         _draftCache.remove(_draftKey);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? l.updated(_studentNameController.text.trim())
-                  : l.evaluated(_studentNameController.text.trim()),
+        final msg = _isEditing
+            ? l.updated(_studentNameController.text.trim())
+            : l.evaluated(_studentNameController.text.trim());
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.check_rounded, size: 36, color: cs.primary),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    _isEditing ? l.updated(_studentNameController.text.trim()) : l.evaluated(_studentNameController.text.trim()),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            backgroundColor: cs.primary,
           ),
         );
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
         widget.analytics.logEvent(
           name: _isEditing ? 'evaluation_updated' : 'evaluation_submitted',
           parameters: {
@@ -570,12 +610,13 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             'is_editing': _isEditing.toString(),
           },
         );
-        _resetForm();
+        Navigator.pop(context, true);
       }
     }
   }
 
   Future<void> _generateQuestions({int? singleIndex}) async {
+    _hideAddRangeTooltip();
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final count = singleIndex != null ? 1 : _numQuestions;
@@ -795,213 +836,83 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     _resetVerseIndices();
   }
 
-  void _startEdit(Evaluation e) {
-    Navigator.pop(context);
-    _draftCache.remove(_draftKey);
-    _evaluatorNameController.text = e.evaluatorName;
-    _studentNameController.text = e.studentName;
-    _noteController.text = e.note;
-    setState(() {
-      _oldAhzabText = e.specialAhzab;
-      _numQuestions = e.numQuestions;
-      _category = List.from(e.categories);
-      _classificationValues = Map.from(e.classificationValues);
-      _editingEvaluationId = e.id;
-      _formError = null;
-      _rangeCriteria.clear();
-      if (e.rangeCriteria.isNotEmpty) {
-        _rangeCriteria.addAll(
-          e.rangeCriteria.map((m) => _RangeCriterion.fromMap(m)),
-        );
-      } else {
-        _rangeCriteria.add(_RangeCriterion());
-      }
-      if (e.questions.isNotEmpty) {
-        _questions = e.questions
-            .map((q) => QuestionItem(
-                  number: q.number,
-                  ichaarat: q.ichaarat,
-                  taalakin: q.taalakin,
-                  note: q.note,
-                  questionText: q.questionText,
-                  topCubes: List.from(q.topCubes),
-                  bottomCubes: List.from(q.bottomCubes),
-                ))
-            .toList();
-        _resetVerseIndices();
-      }
-    });
+  Future<void> _checkAndShowAddRangeTooltip() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('add_range_tooltip_seen') == true) return;
+    if (!mounted) return;
+    await Future.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+    setState(() => _showAddRangeTooltip = true);
+    await prefs.setBool('add_range_tooltip_seen', true);
   }
 
-  void _showEvaluationsList() {
-    final cs = Theme.of(context).colorScheme;
-    final evalService = Provider.of<EvaluationService>(context, listen: false);
-    evalService.loadMyEvaluations(widget.taadiaId);
+  void _hideAddRangeTooltip() {
+    if (_showAddRangeTooltip) setState(() => _showAddRangeTooltip = false);
+  }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.7,
-          builder: (context, scrollController) {
-            return Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: cs.outlineVariant,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    AppLocalizations.of(context)!.myEvaluations,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Expanded(
-                    child: Consumer<EvaluationService>(
-                      builder: (context, service, _) {
-                        final l = AppLocalizations.of(context)!;
-                        if (service.isLoading)
-                          return Center(child: CircularProgressIndicator());
-                        if (service.evaluations.isEmpty)
-                          return Center(child: Text(l.noEvaluationsYet));
-                        return ListView.builder(
-                          controller: scrollController,
-                          itemCount: service.evaluations.length,
-                          itemBuilder: (context, index) {
-                            final e = service.evaluations[index];
-                            return Card(
-                              margin: EdgeInsets.only(bottom: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor:
-                                          cs.surfaceContainerHighest,
-                                      child: Icon(
-                                        Icons.person,
-                                        color: cs.primary,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            e.studentName,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 15,
-                                              color: cs.onSurface,
-                                            ),
-                                          ),
-                                          SizedBox(height: 4),
-                                            Wrap(
-                                              spacing: 8,
-                                              runSpacing: 4,
-                                              children: [
-                                                if (e.specialAhzab.isNotEmpty)
-                                                  _evalChip(
-                                                    e.specialAhzab,
-                                                    cs.outlineVariant,
-                                                  ),
-                                              ],
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.download,
-                                        color: cs.secondary,
-                                      ),
-                                      onPressed: () async {
-                                        try {
-                                          final l = AppLocalizations.of(
-                                            context,
-                                          )!;
-                                          await PdfService.downloadSingleEvaluationPdf(
-                                            e,
-                                            l,
-                                          );
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text('PDF downloaded'),
-                                                backgroundColor: cs.primary,
-                                              ),
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text('Failed: $e'),
-                                                backgroundColor: cs.error,
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.edit_outlined,
-                                        color: cs.primary,
-                                      ),
-                                      onPressed: () => _startEdit(e),
-                                    ),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        color: cs.error,
-                                      ),
-                                      onPressed: () async {
-                                        await service.deleteEvaluation(e.id);
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
+  Widget _buildAddRangeTooltip() {
+    return GestureDetector(
+      onTap: _hideAddRangeTooltip,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutBack,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            alignment: Alignment.bottomCenter,
+            child: child,
+          );
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primaryContainer,
+                Theme.of(context).colorScheme.secondaryContainer,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
-            );
-          },
-        );
-      },
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.lightbulb_outline,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'يمكنك اضافة عدة سور أو أحزاب من هنا',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.keyboard_arrow_down,
+                size: 18,
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1038,6 +949,99 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
 
   Widget _questionWidget(int index, AppLocalizations l, ColorScheme cs) {
     final q = _questions[index];
+
+    final headerContent = Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  cs.primary.withValues(alpha: 0.8),
+                  cs.primary.withValues(alpha: 0.4),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                '${q.number}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: cs.onPrimary,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${l.question} ${q.number}',
+              textAlign: TextAlign.start,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: cs.onSurface,
+              ),
+            ),
+          ),
+          Checkbox(
+            value: q.isComplete,
+            onChanged: (v) => setState(() => q.isComplete = v ?? false),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ],
+      ),
+    );
+
+    final navContent = Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ayaNavButton(
+            icon: Icons.skip_previous,
+            tooltip: 'Next Aya',
+            enabled: true,
+            onPressed: () => _nextAya(index),
+            cs: cs,
+          ),
+          SizedBox(width: 2),
+          _ayaNavButton(
+            icon: Icons.refresh,
+            tooltip: 'Regenerate',
+            enabled: _versesLoaded && !_isGenerating && _generateEnabled && _hasValidRange(),
+            onPressed: q.isComplete
+                ? () => _showUncheckMessage(context)
+                : () => _generateQuestions(singleIndex: index),
+            cs: cs,
+          ),
+          SizedBox(width: 2),
+          _ayaNavButton(
+            icon: Icons.skip_next,
+            tooltip: 'Previous Aya',
+            enabled: true,
+            onPressed: () => _previousAya(index),
+            cs: cs,
+          ),
+          SizedBox(width: 2),
+          _ayaNavButton(
+            icon: Icons.menu_book,
+            tooltip: 'Open in Quran',
+            enabled: true,
+            onPressed: () => _showQuranOverlay(_questionVerseIndices[index]),
+            cs: cs,
+          ),
+        ],
+      ),
+    );
+
     return Container(
       margin: EdgeInsets.zero,
       padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -1051,101 +1055,13 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         ),
       ),
       child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              cs.primary.withValues(alpha: 0.8),
-                              cs.primary.withValues(alpha: 0.4),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${q.number}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: cs.onPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${l.question} ${q.number}',
-                    textAlign: TextAlign.start,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                ),
-                Checkbox(
-                  value: q.isComplete,
-                  onChanged: (v) => setState(() => q.isComplete = v ?? false),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ],
-            ),
-          ),
-          if (q.questionText.isNotEmpty) ...[
-                SizedBox(height: 8),
-                Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _ayaNavButton(
-                        icon: Icons.skip_previous,
-                        tooltip: 'Next Aya',
-                        enabled: true,
-                        onPressed: () => _nextAya(index),
-                        cs: cs,
-                      ),
-                      SizedBox(width: 2),
-                      _ayaNavButton(
-                        icon: Icons.refresh,
-                        tooltip: 'Regenerate',
-                        enabled: _versesLoaded && !_isGenerating && _generateEnabled && _hasValidRange(),
-                        onPressed: q.isComplete
-                            ? () => _showUncheckMessage(context)
-                            : () => _generateQuestions(singleIndex: index),
-                        cs: cs,
-                      ),
-                      SizedBox(width: 2),
-                      _ayaNavButton(
-                        icon: Icons.skip_next,
-                        tooltip: 'Previous Aya',
-                        enabled: true,
-                        onPressed: () => _previousAya(index),
-                        cs: cs,
-                      ),
-                      SizedBox(width: 2),
-                      _ayaNavButton(
-                        icon: Icons.menu_book,
-                        tooltip: 'Open in Quran',
-                        enabled: true,
-                        onPressed: () => _showQuranOverlay(_questionVerseIndices[index]),
-                        cs: cs,
-                      ),
-                    ],
-                  ),
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            headerContent,
+            if (q.questionText.isNotEmpty) ...[
+              SizedBox(height: 8),
+              navContent,
                 SizedBox(height: 8),
                 Container(
                   constraints: BoxConstraints(maxHeight: 120),
@@ -1445,7 +1361,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   Widget _buildCriterionCard(int index, ColorScheme cs) {
     final l = AppLocalizations.of(context)!;
     final c = _rangeCriteria[index];
-    return Container(
+    final card = Container(
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1520,6 +1436,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         ],
       ),
     );
+    return card;
   }
 
   Widget _dropdownWrapper({
@@ -1817,19 +1734,14 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       child: AppScaffold(
       title: widget.taadiaTitle,
       actions: [
-        IconButton(
-          icon: Icon(Icons.menu_book),
-          tooltip: 'القرآن',
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => QuranReaderScreen(pageKey: 'eval-appbar')),
+          IconButton(
+            icon: Icon(Icons.menu_book),
+            tooltip: 'القرآن',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => QuranReaderScreen(pageKey: 'eval-appbar')),
+            ),
           ),
-        ),
-        IconButton(
-          icon: Icon(Icons.list),
-          tooltip: l.myEvaluations,
-          onPressed: _showEvaluationsList,
-        ),
       ],
       body: Directionality(
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
@@ -2115,15 +2027,27 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
 
                     // Add criterion button
                     Center(
-                      child: OutlinedButton.icon(
-                        icon: Icon(Icons.add, size: 18),
-                        label: Text(l.addRange),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        onPressed: () {
-                          setState(() => _rangeCriteria.add(_RangeCriterion()));
-                        },
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          OutlinedButton.icon(
+                            icon: Icon(Icons.add, size: 18),
+                            label: Text(l.addRange),
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            onPressed: () {
+                              setState(() => _rangeCriteria.add(_RangeCriterion()));
+                            },
+                          ),
+                          if (_showAddRangeTooltip)
+                            Positioned(
+                              bottom: 52,
+                              left: 0,
+                              right: 0,
+                              child: _buildAddRangeTooltip(),
+                            ),
+                        ],
                       ),
                     ),
                     SizedBox(height: 16),
@@ -2157,17 +2081,17 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                             ),
                           ),
                           SizedBox(width: 12),
-                          Switch(
-                            value: _generateEnabled,
-                            onChanged: (v) => setState(() {
-                              _generateEnabled = v;
-                              if (!v) {
-                                for (final q in _questions) {
-                                  q.questionText = '';
+                            Switch(
+                              value: _generateEnabled,
+                              onChanged: (v) => setState(() {
+                                _generateEnabled = v;
+                                if (!v) {
+                                  for (final q in _questions) {
+                                    q.questionText = '';
+                                  }
                                 }
-                              }
-                            }),
-                          ),
+                              }),
+                            ),
                         ],
                       ),
                     ),
@@ -2200,22 +2124,22 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                       ),
                       SizedBox(height: 16),
                       _QuestionPager(
-                        controller: _pageController,
-                        itemCount: _questions.length,
-                        itemBuilder: (i) => _questionWidget(i, l, cs),
-                      ),
+                          controller: _pageController,
+                          itemCount: _questions.length,
+                          itemBuilder: (i) => _questionWidget(i, l, cs),
+                        ),
                       SizedBox(height: 12),
                       Center(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            OutlinedButton.icon(
-                              icon: Icon(Icons.add, size: 18),
-                              label: Text(l.add),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              onPressed: _questions.length < 60
+                              OutlinedButton.icon(
+                                icon: Icon(Icons.add, size: 18),
+                                label: Text(l.add),
+                                style: OutlinedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                onPressed: _questions.length < 60
                                    ? () {
                                       final currentIdx = _pageController.page?.round() ?? 0;
                                       setState(() {
@@ -2235,8 +2159,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                                         _generateQuestions(singleIndex: currentIdx);
                                       }
                                     }
-                                  : null,
-                            ),
+                                   : null,
+                              ),
                             SizedBox(width: 8),
                             OutlinedButton.icon(
                               icon: Icon(Icons.remove, size: 18),
@@ -2327,10 +2251,10 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                       ),
                     SizedBox(height: 24),
                     SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _loading ? null : _submit,
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _submit,
                         child: _loading
                             ? SizedBox(
                                   width: 24,
@@ -2346,19 +2270,6 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                                     : l.saveEvaluation,
                                 style: TextStyle(fontSize: 16),
                               ),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: _resetForm,
-                        icon: Icon(_isEditing ? Icons.close : Icons.refresh),
-                        label: Text(
-                          _isEditing ? l.cancelEdit : l.startNewStudent,
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: cs.primary,
-                        ),
                       ),
                     ),
                     SizedBox(height: 32),
@@ -2704,27 +2615,6 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             ? Center(
                 child: Icon(Icons.close, size: 14, color: color))
             : null,
-      ),
-    );
-  }
-
-  Widget _evalChip(String text, Color color) {
-    return Container(
-      constraints: BoxConstraints(maxWidth: 260),
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }

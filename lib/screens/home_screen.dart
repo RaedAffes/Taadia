@@ -55,13 +55,15 @@ class HomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (authService.currentUser != null) Text(
-              l.welcomeUser(
-                authService.currentUser!.displayName?.isNotEmpty == true
-                    ? authService.currentUser!.displayName!
-                    : (authService.currentUser!.email?.isNotEmpty == true
-                        ? authService.currentUser!.email!.split('@').first
-                        : l.guest),
-              ),
+              authService.currentUser!.isAnonymous
+                  ? l.welcome
+                  : l.welcomeUser(
+                      authService.currentUser!.displayName?.isNotEmpty == true
+                          ? authService.currentUser!.displayName!
+                          : (authService.currentUser!.email?.isNotEmpty == true
+                              ? authService.currentUser!.email!.split('@').first
+                              : ''),
+                    ),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,

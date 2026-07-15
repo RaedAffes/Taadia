@@ -238,7 +238,12 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                 classifications: widget.taadia.classifications,
               ),
             ),
-          );
+          ).then((_) {
+            if (mounted) {
+              Provider.of<EvaluationService>(context, listen: false)
+                  .loadEvaluations(widget.taadia.id);
+            }
+          });
         },
         child: Icon(Icons.add),
         tooltip: l.evaluate,
@@ -1085,6 +1090,38 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                                 ),
                               );
                             }
+                          }
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.delete_outline, size: 18, color: cs.error),
+                        tooltip: l.deleteEvaluation,
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(l.deleteEvaluation),
+                              content: Text(l.areYouSure),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(l.cancel),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: Text(l.deleteEvaluation, style: TextStyle(color: cs.error)),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirmed == true && context.mounted) {
+                            await Provider.of<EvaluationService>(context, listen: false)
+                                .deleteEvaluation(eval.id);
                           }
                         },
                       ),

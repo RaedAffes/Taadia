@@ -1783,6 +1783,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You need to uncheck the question first'**
   String get uncheckQuestionFirst;
+
+  /// No description provided for @wtPublicTaadiaBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to enter a 4-digit code and join private taadias'**
+  String get wtPublicTaadiaBanner;
+
+  /// No description provided for @wtPrivateNewEval.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to create a new evaluation'**
+  String get wtPrivateNewEval;
+
+  /// No description provided for @wtPrivateFormula.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to switch between formula types'**
+  String get wtPrivateFormula;
+
+  /// No description provided for @wtEvalRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Start by selecting the range of verses to evaluate'**
+  String get wtEvalRange;
+
+  /// No description provided for @wtEvalAddRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Add more ranges if needed'**
+  String get wtEvalAddRange;
+
+  /// No description provided for @wtEvalGenerateSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn this on to auto-generate questions, or leave off for manual entry'**
+  String get wtEvalGenerateSwitch;
+
+  /// No description provided for @wtEvalQuranPages.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the Quran reader to follow along with verses'**
+  String get wtEvalQuranPages;
+
+  /// No description provided for @wtEvalQuestionAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add or remove questions here'**
+  String get wtEvalQuestionAdd;
+
+  /// No description provided for @wtEvalQuestionCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark a question as complete when you finish it'**
+  String get wtEvalQuestionCheck;
+
+  /// No description provided for @wtEvalSwipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe left or right to navigate between questions'**
+  String get wtEvalSwipe;
+
+  /// No description provided for @wtEvalSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save your evaluation when finished'**
+  String get wtEvalSave;
+
+  /// No description provided for @wtGenQuran.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the Quran to follow the verse you are evaluating'**
+  String get wtGenQuran;
+
+  /// No description provided for @wtGenRegenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to regenerate a different question'**
+  String get wtGenRegenerate;
+
+  /// No description provided for @wtGenVerseNav.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigate between verses with these buttons'**
+  String get wtGenVerseNav;
+
+  /// No description provided for @wtNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get wtNext;
+
+  /// No description provided for @wtSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get wtSkip;
 }
 
 class _AppLocalizationsDelegate

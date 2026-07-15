@@ -900,4 +900,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get uncheckQuestionFirst => 'You need to uncheck the question first';
+
+  @override
+  String get wtPublicTaadiaBanner =>
+      'Tap here to enter a 4-digit code and join private taadias';
+
+  @override
+  String get wtPrivateNewEval => 'Tap here to create a new evaluation';
+
+  @override
+  String get wtPrivateFormula => 'Tap here to switch between formula types';
+
+  @override
+  String get wtEvalRange =>
+      'Start by selecting the range of verses to evaluate';
+
+  @override
+  String get wtEvalAddRange => 'Add more ranges if needed';
+
+  @override
+  String get wtEvalGenerateSwitch =>
+      'Turn this on to auto-generate questions, or leave off for manual entry';
+
+  @override
+  String get wtEvalQuranPages =>
+      'Open the Quran reader to follow along with verses';
+
+  @override
+  String get wtEvalQuestionAdd => 'Add or remove questions here';
+
+  @override
+  String get wtEvalQuestionCheck =>
+      'Mark a question as complete when you finish it';
+
+  @override
+  String get wtEvalSwipe => 'Swipe left or right to navigate between questions';
+
+  @override
+  String get wtEvalSave => 'Save your evaluation when finished';
+
+  @override
+  String get wtGenQuran =>
+      'Open the Quran to follow the verse you are evaluating';
+
+  @override
+  String get wtGenRegenerate => 'Tap to regenerate a different question';
+
+  @override
+  String get wtGenVerseNav => 'Navigate between verses with these buttons';
+
+  @override
+  String get wtNext => 'Next';
+
+  @override
+  String get wtSkip => 'Skip';
 }

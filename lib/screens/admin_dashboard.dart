@@ -304,7 +304,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                                 classifications: t.classifications,
                                               ),
                                             ),
-                                          );
+                                          ).then((_) {
+                                            if (mounted) {
+                                              Provider.of<EvaluationService>(context, listen: false)
+                                                  .loadEvaluations(t.id);
+                                            }
+                                          });
                                         },
                                         cs,
                                       ),

@@ -72,7 +72,7 @@ class EvaluationService extends ChangeNotifier {
             if (seen.add(eval.id)) _evaluations.add(eval);
           }
         } catch (_) {}
-        _evaluations.sort((a, b) => a.studentName.compareTo(b.studentName));
+        _evaluations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       } catch (_) {}
       _isLoading = false;
       notifyListeners();
@@ -122,7 +122,7 @@ class EvaluationService extends ChangeNotifier {
     }
     try {
       _mergePendingLocalEvaluations(taadiaId: taadiaId);
-      _evaluations.sort((a, b) => a.studentName.compareTo(b.studentName));
+      _evaluations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (_) {}
     _isLoading = false;
     notifyListeners();
@@ -137,7 +137,7 @@ class EvaluationService extends ChangeNotifier {
                   .where((e) => seen2.add(e.id))
                   .toList();
               _mergePendingLocalEvaluations(taadiaId: taadiaId);
-              _evaluations.sort((a, b) => a.studentName.compareTo(b.studentName));
+              _evaluations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
               _errorMessage = null;
             } catch (_) {}
             _isLoading = false;
@@ -202,7 +202,7 @@ class EvaluationService extends ChangeNotifier {
             if (seen.add(eval.id)) _evaluations.add(eval);
           }
         } catch (_) {}
-        _evaluations.sort((a, b) => a.studentName.compareTo(b.studentName));
+        _evaluations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       } catch (_) {}
       _isLoading = false;
       notifyListeners();
@@ -240,7 +240,7 @@ class EvaluationService extends ChangeNotifier {
     }
     try {
       _mergePendingLocalEvaluations(taadiaId: taadiaId);
-      _evaluations.sort((a, b) => a.studentName.compareTo(b.studentName));
+      _evaluations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (_) {}
     _isLoading = false;
     notifyListeners();
@@ -255,7 +255,7 @@ class EvaluationService extends ChangeNotifier {
                   .where((e) => seen2.add(e.id))
                   .toList();
               _mergePendingLocalEvaluations(taadiaId: taadiaId);
-              _evaluations.sort((a, b) => a.studentName.compareTo(b.studentName));
+              _evaluations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
               _errorMessage = null;
             } catch (_) {}
             _isLoading = false;
@@ -346,7 +346,7 @@ class EvaluationService extends ChangeNotifier {
         return e;
       }).toList();
     }
-    _evaluations.sort((a, b) => a.studentName.compareTo(b.studentName));
+    _evaluations.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     notifyListeners();
 
     if (accessCode != null) {

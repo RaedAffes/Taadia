@@ -4,6 +4,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
 import 'package:ta3dia/providers/app_state.dart';
 import 'package:ta3dia/screens/login_screen.dart';
+
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 

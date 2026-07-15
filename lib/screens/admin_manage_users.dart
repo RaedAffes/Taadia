@@ -53,6 +53,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                         u.email.toLowerCase().contains(query),
                   )
                   .toList();
+        _sortUsers(_users);
         _loading = false;
       });
     }
@@ -62,11 +63,17 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     setState(() => _loading = true);
     final authService = Provider.of<AuthService>(context, listen: false);
     await authService.getAllUsers();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _users = authService.allUsers;
+        _sortUsers(_users);
         _loading = false;
       });
+    }
+  }
+
+  static void _sortUsers(List<AppUser> users) {
+    users.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   void _searchUser() {
@@ -74,7 +81,10 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     final authService = Provider.of<AuthService>(context, listen: false);
     final all = authService.allUsers;
     if (query.isEmpty) {
-      setState(() => _users = all);
+      setState(() {
+        _users = all;
+        _sortUsers(_users);
+      });
     } else {
       setState(() {
         _users = all
@@ -84,6 +94,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                   u.email.toLowerCase().contains(query),
             )
             .toList();
+        _sortUsers(_users);
       });
     }
   }

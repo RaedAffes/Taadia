@@ -163,6 +163,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
           final r = await http.get(Uri.parse(_pageUrl(p)));
           if (r.statusCode == 200) {
             svg = r.body;
+            _downloadService.savePageContent(p, svg);
           }
         }
         if (svg != null) {
@@ -183,6 +184,42 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _retryPage(int page) async {
+    setState(() {
+      _failedPages.remove(page);
+      _svgCache.remove(page);
+    });
+    _loadingPages.remove(page);
+    await _preloadSingle(page);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _preloadSingle(int p) async {
+    if (_loadingPages.contains(p) || _svgCache.containsKey(p)) return;
+    _loadingPages.add(p);
+    try {
+      String? svg;
+      svg = await _downloadService.getLocalSvg(p);
+      if (svg == null) {
+        final r = await http.get(Uri.parse(_pageUrl(p)));
+        if (r.statusCode == 200) {
+          svg = r.body;
+          _downloadService.savePageContent(p, svg);
+        }
+      }
+      if (svg != null) {
+        _svgCache[p] = svg;
+        if (mounted) setState(() => _failedPages.remove(p));
+      } else {
+        if (mounted) setState(() => _failedPages.add(p));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _failedPages.add(p));
+    } finally {
+      _loadingPages.remove(p);
+    }
   }
 
   void _goToPage(int page, {String? highlightAyah}) {
@@ -249,6 +286,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
                       svgContent: _svgCache[p],
                       hasError: _failedPages.contains(p),
                       highlightAyah: _highlightAyah,
+                      onRetry: () => _retryPage(p),
                     );
                   },
                 ),
@@ -448,19 +486,21 @@ class _MushafPage extends StatelessWidget {
   final String? svgContent;
   final bool hasError;
   final String? highlightAyah;
+  final VoidCallback? onRetry;
 
   const _MushafPage({
     super.key,
     this.svgContent,
     required this.hasError,
     this.highlightAyah,
+    this.onRetry,
   });
 
   @override
   Widget build(BuildContext context) {
     Widget body;
     if (hasError) {
-      body = const _ErrorPage();
+      body = _ErrorPage(onRetry: onRetry);
     } else if (svgContent != null) {
       final svg = SvgPicture.string(
         _preprocessSvg(svgContent!, highlightAyah: highlightAyah),
@@ -493,21 +533,30 @@ class _MushafPage extends StatelessWidget {
 }
 
 class _ErrorPage extends StatelessWidget {
-  const _ErrorPage();
+  final VoidCallback? onRetry;
+  const _ErrorPage({this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Color(0xFF8B7D6B)),
-          const SizedBox(height: 8),
-          const Text(
-            'تعذر تحميل الصفحة',
-            style: TextStyle(fontFamily: 'Amiri', fontSize: 16, color: Color(0xFF6C5A3B)),
-          ),
-        ],
+      child: GestureDetector(
+        onTap: onRetry,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Color(0xFF8B7D6B)),
+            const SizedBox(height: 8),
+            const Text(
+              'تعذر تحميل الصفحة',
+              style: TextStyle(fontFamily: 'Amiri', fontSize: 16, color: Color(0xFF6C5A3B)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'اضغط للمحاولة مرة أخرى',
+              style: TextStyle(fontFamily: 'Amiri', fontSize: 13, color: Color(0xFF6C5A3B).withAlpha(150)),
+            ),
+          ],
+        ),
       ),
     );
   }

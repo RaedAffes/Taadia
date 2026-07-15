@@ -894,4 +894,54 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get uncheckQuestionFirst => 'قم بإلغاء تحديد السؤال أولاً';
+
+  @override
+  String get wtPublicTaadiaBanner =>
+      'اضغط هنا لإدخال رمز من 4 أرقام والانضمام للتعديات الخاصة';
+
+  @override
+  String get wtPrivateNewEval => 'اضغط هنا لإنشاء تقييم جديد';
+
+  @override
+  String get wtPrivateFormula => 'اضغط هنا للتبديل بين أنواع الصيغ';
+
+  @override
+  String get wtEvalRange => 'ابدأ باختيار نطاق الآيات المراد تقييمها';
+
+  @override
+  String get wtEvalAddRange => 'أضف نطاقات أخرى إذا لزم الأمر';
+
+  @override
+  String get wtEvalGenerateSwitch =>
+      'فعّل هذا لإنشاء أسئلة تلقائياً، أو أطفئه للإدخال اليدوي';
+
+  @override
+  String get wtEvalQuranPages => 'افتح قارئ القرآن لمتابعة الآيات';
+
+  @override
+  String get wtEvalQuestionAdd => 'أضف أو احذف الأسئلة من هنا';
+
+  @override
+  String get wtEvalQuestionCheck => 'حدد السؤال كمكتمل عندما تنتهي منه';
+
+  @override
+  String get wtEvalSwipe => 'اسحب يميناً أو يساراً للتنقل بين الأسئلة';
+
+  @override
+  String get wtEvalSave => 'احفظ تقييمك عندما تنتهي';
+
+  @override
+  String get wtGenQuran => 'افتح القرآن لمتابعة الآية التي تقيّمها';
+
+  @override
+  String get wtGenRegenerate => 'اضغط لإنشاء سؤال مختلف';
+
+  @override
+  String get wtGenVerseNav => 'تنقل بين الآيات بأزرار';
+
+  @override
+  String get wtNext => 'التالي';
+
+  @override
+  String get wtSkip => 'تخطي';
 }

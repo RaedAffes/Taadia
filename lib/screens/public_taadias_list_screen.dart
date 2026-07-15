@@ -11,6 +11,7 @@ import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/group_service.dart';
 import 'package:ta3dia/screens/admin_create_taadia.dart';
 import 'package:ta3dia/screens/admin_taadia_results.dart';
+import 'package:ta3dia/screens/user_taadia_results.dart';
 import 'package:ta3dia/screens/user_evaluate.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
@@ -358,11 +359,8 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => EvaluateScreen(
-                                          taadiaId: t.id,
-                                          taadiaTitle: t.title,
-                                          taadiaDescription: t.description,
-                                          classifications: t.classifications,
+                                        builder: (_) => UserTaadiaResults(
+                                          taadia: t,
                                         ),
                                       ),
                                     );
@@ -755,6 +753,8 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
 
   Widget _resolvedCodeCard(String code, CachedTaadia taadia, AppLocalizations l, ColorScheme cs, bool isRtl) {
     final taadiaService = context.read<TaadiaService>();
+    final auth = context.read<AuthService>();
+    final isAdmin = auth.isAdmin;
     final live = taadiaService.taadias.where((t) => t.id == taadia.id);
     final isActive = live.isNotEmpty ? live.first.status == 'active' : taadia.active;
     final liveDescription = live.isNotEmpty ? live.first.description : taadia.description;
@@ -776,18 +776,38 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
             );
             return;
           }
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => EvaluateScreen(
-                taadiaId: taadia.id,
-                taadiaTitle: taadia.title,
-                taadiaDescription: taadia.description,
-                classifications: taadia.classifications.map((m) => ClassificationConfig.fromMap(m)).toList(),
-                active: isActive,
-              ),
-            ),
-          );
+          if (isAdmin) {
+            if (live.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AdminTaadiaResults(taadia: live.first),
+                ),
+              );
+            }
+          } else {
+            if (live.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UserTaadiaResults(taadia: live.first),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EvaluateScreen(
+                    taadiaId: taadia.id,
+                    taadiaTitle: taadia.title,
+                    taadiaDescription: taadia.description,
+                    classifications: taadia.classifications.map((m) => ClassificationConfig.fromMap(m)).toList(),
+                    active: isActive,
+                  ),
+                ),
+              );
+            }
+          }
         },
         child: Padding(
           padding: EdgeInsets.all(12),

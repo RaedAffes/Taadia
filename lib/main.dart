@@ -10,6 +10,7 @@ import 'package:ta3dia/providers/app_state.dart';
 import 'package:ta3dia/screens/admin_manage_taadia_screen.dart';
 import 'package:ta3dia/screens/home_screen.dart';
 import 'package:ta3dia/screens/login_screen.dart';
+
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/background_download_service.dart';
 import 'package:ta3dia/services/code_lookup_service.dart';
@@ -104,19 +105,19 @@ class _AppBody extends StatelessWidget {
       ],
       child: Consumer<AppState>(
         builder: (context, state, _) => MaterialApp(
-          title: 'Taadia',
-          debugShowCheckedModeBanner: false,
-          themeMode: state.themeMode,
-          themeAnimationDuration: Duration(milliseconds: 200),
-          themeAnimationCurve: Curves.easeOut,
-          locale: state.locale,
-          builder: (context, child) =>
-              OfflineObserver(child: Directionality(
-                textDirection: state.locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-                child: child!
-              )),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
+            title: 'Taadia',
+            debugShowCheckedModeBanner: false,
+            themeMode: state.themeMode,
+            themeAnimationDuration: Duration(milliseconds: 200),
+            themeAnimationCurve: Curves.easeOut,
+            locale: state.locale,
+            builder: (context, child) =>
+                OfflineObserver(child: Directionality(
+                  textDirection: state.locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                  child: child!
+                )),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: ThemeData(
             useMaterial3: true,
             colorScheme: ColorScheme.light(
@@ -246,6 +247,7 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
+
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
@@ -253,36 +255,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF5F0EB),
-            body: ValueListenableBuilder<String?>(
-              valueListenable: PexelsBackgroundService.instance.imageUrlNotifier,
-              builder: (context, pexelsUrl, _) {
-                return Stack(
-                  children: [
-                    if (pexelsUrl != null)
-                      Positioned.fill(
-                        child: Image.network(pexelsUrl, fit: BoxFit.cover),
-                      ),
-                    if (pexelsUrl != null)
-                      Positioned.fill(
-                        child: Container(color: const Color(0xFFF5F0EB).withValues(alpha: 0.75)),
-                      ),
-                    const Center(
-                      child: SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          );
+          return _buildLoading();
         }
 
         final user = snapshot.data;
@@ -292,39 +265,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         if (authService.appUser == null) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF5F0EB),
-            body: ValueListenableBuilder<String?>(
-              valueListenable: PexelsBackgroundService.instance.imageUrlNotifier,
-              builder: (context, pexelsUrl, _) {
-                return Stack(
-                  children: [
-                    if (pexelsUrl != null)
-                      Positioned.fill(
-                        child: Image.network(pexelsUrl, fit: BoxFit.cover),
-                      ),
-                    if (pexelsUrl != null)
-                      Positioned.fill(
-                        child: Container(color: const Color(0xFFF5F0EB).withValues(alpha: 0.75)),
-                      ),
-                    const Center(
-                      child: SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          );
+          return _buildLoading();
         }
 
-        if (authService.isAdmin) {
+        final isAdmin = authService.isAdmin;
+
+        if (isAdmin) {
           analytics.setUserId(id: user.uid);
           analytics.logEvent(name: 'admin_access', parameters: {
             'user_id': user.uid,
@@ -338,6 +284,39 @@ class _AuthWrapperState extends State<AuthWrapper> {
         });
         return HomeScreen();
       },
+    );
+  }
+
+  Widget _buildLoading() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F0EB),
+      body: ValueListenableBuilder<String?>(
+        valueListenable: PexelsBackgroundService.instance.imageUrlNotifier,
+        builder: (context, pexelsUrl, _) {
+          return Stack(
+            children: [
+              if (pexelsUrl != null)
+                Positioned.fill(
+                  child: Image.network(pexelsUrl, fit: BoxFit.cover),
+                ),
+              if (pexelsUrl != null)
+                Positioned.fill(
+                  child: Container(color: const Color(0xFFF5F0EB).withValues(alpha: 0.75)),
+                ),
+              const Center(
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

@@ -29,6 +29,7 @@ class AuthService extends ChangeNotifier {
   String? _errorCode;
   AppUser? _appUser;
   bool _authReady = false;
+  bool _suppressAuthListener = false;
 
   User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
@@ -50,7 +51,9 @@ class AuthService extends ChangeNotifier {
       _auth.authStateChanges().listen((User? user) async {
         _currentUser = user;
         if (user != null) {
-          await _ensureUserDoc(user);
+          if (!_suppressAuthListener) {
+            await _ensureUserDoc(user);
+          }
         } else {
           _appUser = null;
           _authReady = true;
@@ -63,7 +66,9 @@ class AuthService extends ChangeNotifier {
     _auth.authStateChanges().listen((User? user) async {
       _currentUser = user;
       if (user != null) {
-        await _ensureUserDoc(user);
+        if (!_suppressAuthListener) {
+          await _ensureUserDoc(user);
+        }
       } else {
         _appUser = null;
         _authReady = true;
@@ -173,6 +178,7 @@ class AuthService extends ChangeNotifier {
     try {
       _errorCode = null;
       _isLoading = true;
+      _suppressAuthListener = true;
       notifyListeners();
 
       final isAnonymous = _auth.currentUser?.isAnonymous ?? false;
@@ -221,6 +227,7 @@ class AuthService extends ChangeNotifier {
         await _ensureUserDoc(result.user!);
         _cleanupDeletedDocs(email);
         _isLoading = false;
+        _suppressAuthListener = false;
         notifyListeners();
         return true;
       }
@@ -232,11 +239,13 @@ class AuthService extends ChangeNotifier {
       }
       _errorCode = e.code;
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
       return false;
     } catch (e) {
       _errorCode = 'Error: ${e.toString()}';
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
     }
     return false;
@@ -347,6 +356,7 @@ class AuthService extends ChangeNotifier {
     try {
       _errorCode = null;
       _isLoading = true;
+      _suppressAuthListener = true;
       notifyListeners();
 
       final isAnonymous = _auth.currentUser?.isAnonymous ?? false;
@@ -363,6 +373,7 @@ class AuthService extends ChangeNotifier {
             .signIn();
         if (googleUser == null) {
           _isLoading = false;
+          _suppressAuthListener = false;
           notifyListeners();
           return false;
         }
@@ -379,16 +390,23 @@ class AuthService extends ChangeNotifier {
         }
       }
 
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _ensureUserDoc(user);
+      }
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       _errorCode = e.code;
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
     } catch (e) {
       _errorCode = 'Error: ${e.toString()}';
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
     }
     return false;
@@ -398,6 +416,7 @@ class AuthService extends ChangeNotifier {
     try {
       _errorCode = null;
       _isLoading = true;
+      _suppressAuthListener = true;
       notifyListeners();
 
       final result = await _auth.signInAnonymously();
@@ -423,18 +442,23 @@ class AuthService extends ChangeNotifier {
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
         );
+      } else if (user != null) {
+        await _ensureUserDoc(user);
       }
 
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       _errorCode = e.code;
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
     } catch (e) {
       _errorCode = 'Error: ${e.toString()}';
       _isLoading = false;
+      _suppressAuthListener = false;
       notifyListeners();
     }
     return false;

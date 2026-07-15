@@ -72,6 +72,24 @@ class QuranDownloadService {
     return null;
   }
 
+  Future<void> savePageContent(int page, String svgContent) async {
+    if (page < 1 || page > totalPages) return;
+    if (_completed.contains(page)) return;
+    _completed.add(page);
+    _downloadedCount = _completed.length;
+    if (kIsWeb) {
+      await _webCache.savePage(page, svgContent);
+      await _webCache.saveCompletedPages(_completed);
+    } else if (_cacheDir != null) {
+      try {
+        final file = File('${_cacheDir!.path}/${page.toString().padLeft(3, '0')}.svg');
+        await file.writeAsString(svgContent);
+      } catch (e) {
+        debugPrint('QuranDownloadService: failed to write page $page to disk: $e');
+      }
+    }
+  }
+
   Future<void> downloadPage(int page) async {
     if (page < 1 || page > totalPages) return;
     if (_completed.contains(page) || _downloading.contains(page)) return;

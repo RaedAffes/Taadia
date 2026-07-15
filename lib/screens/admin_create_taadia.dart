@@ -29,6 +29,7 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
   Set<String> _selectedUserIds = {};
   bool _isManualCode = false;
   String _accessCode = '';
+  String _manualCode = '';
   final _accessCodeController = TextEditingController();
   String? _codeError;
   final _categoryInputController = TextEditingController();
@@ -394,21 +395,11 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                 ),
                 child: Column(
                   children: [
-                    SwitchListTile(
-                      title: Text(l.selectUsers),
-                      subtitle: Text(l.selectUsersDesc),
-                      value: _selectedUserIds.isNotEmpty,
-                      onChanged: (v) {
-                        if (!v) {
-                          setState(() => _selectedUserIds.clear());
-                        }
-                      },
-                    ),
                     if (_selectedUserIds.isNotEmpty)
                       Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 4,
+                          vertical: 8,
                         ),
                         child: Text(
                           '${_selectedUserIds.length} ${l.usersSelected.toLowerCase()}',
@@ -461,9 +452,11 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
                         _isManualCode = !v;
                         _codeError = null;
                         if (_isManualCode) {
-                          _accessCodeController.text = _accessCode;
+                          _accessCodeController.text = _manualCode.isNotEmpty
+                              ? _manualCode
+                              : _accessCode;
                         } else {
-                          _regenerateCode();
+                          _manualCode = _accessCodeController.text;
                         }
                       });
                     },
@@ -477,28 +470,53 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
               ),
               SizedBox(height: 12),
               if (_isManualCode)
-                TextFormField(
-                  controller: _accessCodeController,
-                  decoration: InputDecoration(
-                    labelText: l.accessCodeHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    errorText: _codeError,
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cs.outlineVariant),
                   ),
-                  keyboardType: TextInputType.number,
-                  maxLength: 4,
-                  onChanged: (v) {
-                    setState(() => _codeError = null);
-                  },
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return l.accessCodeHint;
-                    if (v.trim().length != 4) return l.accessCodeHint;
-                    if (int.tryParse(v.trim()) == null) return l.invalidCode;
-                    return null;
-                  },
+                  child: Row(
+                    children: [
+                      Icon(Icons.vpn_key, color: cs.primary),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _accessCodeController,
+                          decoration: InputDecoration(
+                            hintText: l.accessCodeHint,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            counterText: '',
+                            hintStyle: TextStyle(
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 4,
+                            color: cs.primary,
+                          ),
+                          keyboardType: TextInputType.number,
+                          maxLength: 4,
+                          onChanged: (v) {
+                            _manualCode = v;
+                            setState(() => _codeError = null);
+                          },
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return l.accessCodeHint;
+                            if (v.trim().length != 4) return l.accessCodeHint;
+                            if (int.tryParse(v.trim()) == null) return l.invalidCode;
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 )
               else
                 Container(
@@ -618,9 +636,7 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
         .where((u) => !u.isAdmin)
         .map((u) => MapEntry(u.uid, u))
         .toList();
-    _allUsers.sort(
-      (a, b) => a.value.displayName.compareTo(b.value.displayName),
-    );
+    _allUsers.sort((a, b) => b.value.createdAt.compareTo(a.value.createdAt));
     _filteredUsers = List.from(_allUsers);
     _loaded = true;
     if (mounted) setState(() {});

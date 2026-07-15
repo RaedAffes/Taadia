@@ -41,7 +41,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
             .where((u) => !u.isAdmin)
             .map((u) => MapEntry(u.uid, u))
             .toList();
-        allUsers.sort((a, b) => a.value.displayName.compareTo(b.value.displayName));
+        allUsers.sort((a, b) => b.value.createdAt.compareTo(a.value.createdAt));
         filteredUsers = List.from(allUsers);
       } catch (e) {
         filteredUsers = [];
@@ -427,7 +427,7 @@ class __ManageGroupMembersScreenState
           .where((u) => !u.isAdmin)
           .map((u) => MapEntry(u.uid, u))
           .toList();
-      _allUsers.sort((a, b) => a.value.displayName.compareTo(b.value.displayName));
+      _allUsers.sort((a, b) => b.value.createdAt.compareTo(a.value.createdAt));
       _filteredUsers = List.from(_allUsers);
       _syncSelectedIds();
     } catch (e) {
