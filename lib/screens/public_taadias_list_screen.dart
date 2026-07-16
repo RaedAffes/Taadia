@@ -110,6 +110,85 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
     );
   }
 
+  Future<void> _onEditTaadia(Taadia t) async {
+    final l = AppLocalizations.of(context)!;
+    final titleCtrl = TextEditingController(text: t.title);
+    final descCtrl = TextEditingController(text: t.description);
+    final cs = Theme.of(context).colorScheme;
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.editTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              textDirection: l.localeName == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+              decoration: InputDecoration(labelText: l.assessmentTitle, hintText: t.title),
+              autofocus: true,
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: descCtrl,
+              textDirection: l.localeName == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+              decoration: InputDecoration(labelText: l.descriptionOptional, hintText: l.descriptionHint),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, {'title': titleCtrl.text.trim(), 'description': descCtrl.text.trim()}),
+            child: Text(l.save),
+          ),
+        ],
+      ),
+    );
+    if (result != null) {
+      final taadiaService = Provider.of<TaadiaService>(context, listen: false);
+      final updates = <String, dynamic>{};
+      if (result['title']!.isNotEmpty && result['title'] != t.title) updates['title'] = result['title'];
+      if (result['description'] != t.description) updates['description'] = result['description'];
+      if (updates.isNotEmpty) {
+        final ok = await taadiaService.updateTaadia(t.id, title: updates['title'], description: updates['description']);
+        if (mounted && !ok) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.updateFailed), backgroundColor: cs.error));
+        }
+      }
+    }
+  }
+
+  Future<void> _onToggleTaadia(Taadia t) async {
+    final taadiaService = Provider.of<TaadiaService>(context, listen: false);
+    if (t.status == 'active') {
+      await taadiaService.closeTaadia(t.id);
+    } else {
+      await taadiaService.openTaadia(t.id);
+    }
+  }
+
+  Future<void> _onDeleteTaadia(Taadia t) async {
+    final l = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.deleteConfirm(t.title)),
+        content: Text(l.areYouSure),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l.delete, style: TextStyle(color: cs.error))),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final taadiaService = Provider.of<TaadiaService>(context, listen: false);
+      await taadiaService.deleteTaadia(t.id);
+    }
+  }
+
   Widget _codeEntryBanner(AppLocalizations l, ColorScheme cs) {
     return Container(
       width: double.infinity,
@@ -327,6 +406,9 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
                 justAccessedId: _justAccessedId,
                 onCodeEntry: _showCodeEntryDialog,
                 onDeletePending: _onDeletePending,
+                onEditTaadia: _onEditTaadia,
+                onToggleTaadia: _onToggleTaadia,
+                onDeleteTaadia: _onDeleteTaadia,
               ),
       ),
     );
@@ -346,6 +428,9 @@ class _LazyList extends StatelessWidget {
   final String? justAccessedId;
   final VoidCallback onCodeEntry;
   final Future<void> Function(String code, String taadiaId) onDeletePending;
+  final Future<void> Function(Taadia t)? onEditTaadia;
+  final Future<void> Function(Taadia t)? onToggleTaadia;
+  final Future<void> Function(Taadia t)? onDeleteTaadia;
 
   const _LazyList({
     this.scrollController,
@@ -359,6 +444,9 @@ class _LazyList extends StatelessWidget {
     this.justAccessedId,
     required this.onCodeEntry,
     required this.onDeletePending,
+    this.onEditTaadia,
+    this.onToggleTaadia,
+    this.onDeleteTaadia,
   });
 
   @override
@@ -447,6 +535,9 @@ class _LazyList extends StatelessWidget {
                     cs: cs,
                     isRtl: isRtl,
                     isAdmin: isAdmin,
+                    onEdit: onEditTaadia,
+                    onToggle: onToggleTaadia,
+                    onDelete: onDeleteTaadia,
                   );
               }
             },
@@ -793,6 +884,9 @@ class _AccessibleCard extends StatelessWidget {
   final ColorScheme cs;
   final bool isRtl;
   final bool isAdmin;
+  final Future<void> Function(Taadia t)? onEdit;
+  final Future<void> Function(Taadia t)? onToggle;
+  final Future<void> Function(Taadia t)? onDelete;
 
   const _AccessibleCard({
     required this.taadia,
@@ -800,6 +894,9 @@ class _AccessibleCard extends StatelessWidget {
     required this.cs,
     required this.isRtl,
     required this.isAdmin,
+    this.onEdit,
+    this.onToggle,
+    this.onDelete,
   });
 
   @override
@@ -887,6 +984,28 @@ class _AccessibleCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (isAdmin) ...[
+                      SizedBox(width: 8),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                        icon: Icon(Icons.edit, color: Colors.white, size: 20),
+                        onPressed: () => onEdit?.call(t),
+                      ),
+                      PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        constraints: BoxConstraints(),
+                        icon: Icon(Icons.more_vert, color: Colors.white, size: 22),
+                        onSelected: (v) {
+                          if (v == 'toggle' && onToggle != null) onToggle!(t);
+                          if (v == 'delete' && onDelete != null) onDelete!(t);
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(value: 'toggle', child: Row(children: [Icon(tActive ? Icons.lock_outline : Icons.lock_open, size: 18), SizedBox(width: 8), Text(tActive ? l.close : l.open)])),
+                          PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: cs.error), SizedBox(width: 8), Text(l.delete, style: TextStyle(color: cs.error))])),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
