@@ -22,7 +22,6 @@ class _GiftRevealCardState extends State<GiftRevealCard>
   late final AnimationController _mainController;
   late final AnimationController _confettiController;
   bool _revealed = false;
-  Size? _cardSize;
 
   @override
   void initState() {
@@ -78,52 +77,47 @@ class _GiftRevealCardState extends State<GiftRevealCard>
 
     final t = _mainController.value;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        _cardSize = Size(constraints.maxWidth, constraints.maxHeight);
-        return Stack(
-          children: [
-            Opacity(
-              opacity: 0,
-              child: widget.child,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        widget.child,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _GiftPainter(
+                openProgress: t,
+                confettiProgress: _confettiController.value,
+              ),
             ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _LuxuryGiftPainter(
-                    openProgress: t,
-                    confettiProgress: _confettiController.value,
-                  ),
+          ),
+        ),
+        if (t > 0.55)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: ((t - 0.55) / 0.45).clamp(0.0, 1.0),
+                child: Transform.scale(
+                  scale: 0.9 + ((t - 0.55) / 0.45).clamp(0.0, 1.0) * 0.1,
+                  child: widget.child,
                 ),
               ),
             ),
-            if (t > 0.55)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Opacity(
-                    opacity: ((t - 0.55) / 0.45).clamp(0.0, 1.0),
-                    child: Transform.scale(
-                      scale: 0.9 + ((t - 0.55) / 0.45).clamp(0.0, 1.0) * 0.1,
-                      child: widget.child,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
+          ),
+      ],
     );
   }
 }
 
-class _LuxuryGiftPainter extends CustomPainter {
+class _GiftPainter extends CustomPainter {
   final double openProgress;
   final double confettiProgress;
 
-  _LuxuryGiftPainter({
-    required this.openProgress,
-    required this.confettiProgress,
-  });
+  static const Color _red = Color(0xFFC62828);
+  static const Color _redLight = Color(0xFFEF5350);
+  static const Color _redDark = Color(0xFF8E0000);
+  static const Color _white = Colors.white;
+
+  _GiftPainter({required this.openProgress, required this.confettiProgress});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -133,14 +127,20 @@ class _LuxuryGiftPainter extends CustomPainter {
     final cx = w / 2;
     final cy = h / 2;
 
+    final bgOpacity = t < 0.92 ? 1.0 : (1.0 - (t - 0.92) / 0.08).clamp(0.0, 1.0);
+    if (bgOpacity > 0) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, w, h),
+        Paint()..color = _red.withOpacity(bgOpacity),
+      );
+    }
+
     _drawConfetti(canvas, size, cx, cy, confettiProgress);
 
-    if (t >= 0.95) return;
+    if (t >= 0.92) return;
 
     final appear = Curves.easeOutBack.transform((t * 5).clamp(0.0, 1.0));
-    final lidOpen = ((t - 0.3) / 0.35).clamp(0.0, 1.0);
-    final lidCurve = Curves.easeOutBack.transform(lidOpen);
-    final fadeOut = ((t - 0.6) / 0.35).clamp(0.0, 1.0);
+    final fadeOut = ((t - 0.6) / 0.32).clamp(0.0, 1.0);
 
     canvas.save();
     canvas.translate(cx, cy);
@@ -149,26 +149,13 @@ class _LuxuryGiftPainter extends CustomPainter {
 
     _drawShadow(canvas, w, h, fadeOut);
 
-    final radius = 12.0;
-    final lidH = h * 0.22;
-    final bodyTop = lidH;
-    final bodyH = h - lidH;
-
-    _drawBoxBody(canvas, 0, bodyTop, w, bodyH, radius, fadeOut);
-
-    _drawVerticalRibbon(canvas, 0, bodyTop, w, bodyH, fadeOut);
-    _drawHorizontalRibbon(canvas, 0, bodyTop, w, bodyH, fadeOut);
-
-    _drawWhitePattern(canvas, 0, bodyTop, w, bodyH, fadeOut);
-
-    if (fadeOut < 1.0) {
-      _drawLid(canvas, 0, 0, w, lidH, radius, lidCurve, fadeOut);
-      _drawLidRibbon(canvas, 0, 0, w, lidH, lidCurve, fadeOut);
-      _drawBow(canvas, cx, lidH * 0.75, lidCurve, fadeOut, w);
-    }
+    final radius = 16.0;
+    _drawBoxBody(canvas, 0, 0, w, h, radius, fadeOut);
+    _drawVerticalRibbon(canvas, 0, 0, w, h, radius, fadeOut);
+    _drawHorizontalRibbon(canvas, 0, 0, w, h, fadeOut);
+    _drawBow(canvas, cx, cy - h * 0.08, w, fadeOut);
 
     _drawGlow(canvas, w, h, cx, cy, t);
-
     _drawSparkles(canvas, cx, cy, w, h, t);
 
     canvas.restore();
@@ -177,12 +164,12 @@ class _LuxuryGiftPainter extends CustomPainter {
   void _drawShadow(Canvas canvas, double w, double h, double fadeOut) {
     final opacity = (1.0 - fadeOut).clamp(0.0, 1.0);
     final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.2 * opacity)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+      ..color = Colors.black.withOpacity(0.18 * opacity)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(4, 6, w, h),
-        const Radius.circular(12),
+        Rect.fromLTWH(3, 5, w, h),
+        const Radius.circular(16),
       ),
       shadowPaint,
     );
@@ -196,276 +183,182 @@ class _LuxuryGiftPainter extends CustomPainter {
     );
 
     final bodyPaint = Paint()
-      ..color = Color(0xFFB71C1C).withValues(alpha: opacity)
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          _redLight.withOpacity(opacity),
+          _red.withOpacity(opacity),
+          _redDark.withOpacity(opacity * 0.8),
+        ],
+        stops: const [0.0, 0.4, 1.0],
+      ).createShader(Rect.fromLTWH(left, top, w, h))
       ..style = PaintingStyle.fill;
     canvas.drawRRect(rrect, bodyPaint);
 
-    final glossPaint = Paint()
+    final gloss = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.15 * opacity),
+          _white.withOpacity(0.1 * opacity),
+          _white.withOpacity(0.02 * opacity),
           Colors.transparent,
-          Colors.black.withValues(alpha: 0.1 * opacity),
         ],
       ).createShader(Rect.fromLTWH(left, top, w, h));
-    canvas.drawRRect(rrect, glossPaint);
-
-    final innerGloss = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFFD32F2F).withValues(alpha: opacity),
-          Color(0xFFB71C1C).withValues(alpha: opacity),
-        ],
-      ).createShader(Rect.fromLTWH(left, top, w, h));
-    canvas.drawRRect(rrect, innerGloss);
+    canvas.drawRRect(rrect, gloss);
 
     final borderPaint = Paint()
-      ..color = Color(0xFF8E0000).withValues(alpha: opacity * 0.6)
+      ..color = _redDark.withOpacity(opacity * 0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+      ..strokeWidth = 0.8;
     canvas.drawRRect(rrect, borderPaint);
   }
 
-  void _drawVerticalRibbon(Canvas canvas, double left, double top, double w, double h, double fadeOut) {
+  void _drawVerticalRibbon(Canvas canvas, double left, double top, double w, double h, double radius, double fadeOut) {
     final opacity = (1.0 - fadeOut).clamp(0.0, 1.0);
-    final rw = math.max(w * 0.08, 14.0);
+    final rw = math.max(w * 0.09, 14.0);
     final ribbonLeft = left + w / 2 - rw / 2;
 
-    final ribbonPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.92 * opacity)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(
-      Rect.fromLTWH(ribbonLeft, top, rw, h),
-      ribbonPaint,
-    );
+    final ribbonPath = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(ribbonLeft, top, rw, h),
+        Radius.circular(rw * 0.25),
+      ));
 
-    final stripePaint = Paint()
-      ..color = Color(0xFFFFD700).withValues(alpha: 0.7 * opacity)
+    final ribbonPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          _white.withOpacity(0.7 * opacity),
+          _white.withOpacity(0.95 * opacity),
+          _white.withOpacity(0.7 * opacity),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromLTWH(ribbonLeft, top, rw, h))
       ..style = PaintingStyle.fill;
-    final stripeW = rw * 0.2;
-    canvas.drawRect(
-      Rect.fromLTWH(ribbonLeft + rw / 2 - stripeW / 2, top, stripeW, h),
-      stripePaint,
-    );
+    canvas.drawPath(ribbonPath, ribbonPaint);
   }
 
   void _drawHorizontalRibbon(Canvas canvas, double left, double top, double w, double h, double fadeOut) {
     final opacity = (1.0 - fadeOut).clamp(0.0, 1.0);
-    final rh = math.max(h * 0.08, 14.0);
+    final rh = math.max(h * 0.08, 12.0);
     final ribbonTop = top + h * 0.42 - rh / 2;
 
-    final ribbonPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.92 * opacity)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(
-      Rect.fromLTWH(left, ribbonTop, w, rh),
-      ribbonPaint,
-    );
+    final ribbonPath = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, ribbonTop, w, rh),
+        Radius.circular(rh * 0.25),
+      ));
 
-    final stripePaint = Paint()
-      ..color = Color(0xFFFFD700).withValues(alpha: 0.7 * opacity)
+    final ribbonPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          _white.withOpacity(0.7 * opacity),
+          _white.withOpacity(0.95 * opacity),
+          _white.withOpacity(0.7 * opacity),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromLTWH(left, ribbonTop, w, rh))
       ..style = PaintingStyle.fill;
-    final stripeH = rh * 0.2;
-    canvas.drawRect(
-      Rect.fromLTWH(left, ribbonTop + rh / 2 - stripeH / 2, w, stripeH),
-      stripePaint,
-    );
+    canvas.drawPath(ribbonPath, ribbonPaint);
   }
 
-  void _drawWhitePattern(Canvas canvas, double left, double top, double w, double h, double fadeOut) {
+  void _drawBow(Canvas canvas, double cx, double cy, double w, double fadeOut) {
     final opacity = (1.0 - fadeOut).clamp(0.0, 1.0);
     if (opacity <= 0) return;
 
-    final patternPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.06 * opacity)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.5;
-
-    final spacing = 20.0;
-    for (double x = left; x < left + w; x += spacing) {
-      for (double y = top; y < top + h; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 2, patternPaint);
-      }
-    }
-  }
-
-  void _drawLid(Canvas canvas, double left, double top, double w, double hLid, double radius, double lidCurve, double fadeOut) {
-    final opacity = (1.0 - fadeOut).clamp(0.0, 1.0);
-    final liftY = -lidCurve * hLid * 2.2;
-    final tiltAngle = lidCurve * 0.3;
-
-    canvas.save();
-    canvas.translate(left + w * 0.5, top + hLid);
-    canvas.rotate(-tiltAngle);
-    canvas.translate(-w * 0.5, -hLid);
-
-    final lidRect = Rect.fromLTWH(-3, liftY, w + 6, hLid + 4);
-    final lidRRect = RRect.fromRectAndRadius(lidRect, Radius.circular(radius));
-
-    final lidBasePaint = Paint()
-      ..color = Color(0xFFD32F2F).withValues(alpha: opacity)
+    final bowPaint = Paint()
+      ..color = _white.withOpacity(0.95 * opacity)
       ..style = PaintingStyle.fill;
-    canvas.drawRRect(lidRRect, lidBasePaint);
-
-    final lidGradPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFFE53935).withValues(alpha: opacity),
-          Color(0xFFC62828).withValues(alpha: opacity),
-        ],
-      ).createShader(lidRect);
-    canvas.drawRRect(lidRRect, lidGradPaint);
-
-    final lidHighlight = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.white.withValues(alpha: 0.25 * opacity),
-          Colors.white.withValues(alpha: 0.05 * opacity),
-          Colors.transparent,
-        ],
-        stops: [0.0, 0.3, 1.0],
-      ).createShader(lidRect);
-    canvas.drawRRect(lidRRect, lidHighlight);
-
-    final lidEdgePaint = Paint()
-      ..color = Color(0xFF8E0000).withValues(alpha: opacity * 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawRRect(lidRRect, lidEdgePaint);
-
-    final bottomEdgePaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.15 * opacity)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    final bottomY = liftY + hLid + 2;
-    canvas.drawLine(
-      Offset(left + 4 > -3 ? 4 : -3, bottomY),
-      Offset(w - 4 < w + 3 ? w - 4 : w + 3, bottomY),
-      bottomEdgePaint,
-    );
-
-    canvas.restore();
-  }
-
-  void _drawLidRibbon(Canvas canvas, double left, double top, double w, double hLid, double lidCurve, double fadeOut) {
-    final opacity = (1.0 - fadeOut).clamp(0.0, 1.0);
-    final liftY = -lidCurve * hLid * 2.2;
-    final tiltAngle = lidCurve * 0.3;
-    final rw = math.max(w * 0.08, 14.0);
-
-    canvas.save();
-    canvas.translate(left + w * 0.5, top + hLid);
-    canvas.rotate(-tiltAngle);
-    canvas.translate(-w * 0.5, -hLid);
-
-    final ribbonPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.92 * opacity)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(
-      Rect.fromLTWH(w / 2 - rw / 2, liftY, rw, hLid + 4),
-      ribbonPaint,
-    );
-
-    final rh = math.max(hLid * 0.3, 6.0);
-    canvas.drawRect(
-      Rect.fromLTWH(-3, liftY + hLid * 0.45, w + 6, rh),
-      ribbonPaint,
-    );
-
-    final goldPaint = Paint()
-      ..color = Color(0xFFFFD700).withValues(alpha: 0.7 * opacity)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(
-      Rect.fromLTWH(w / 2 - rw * 0.1, liftY, rw * 0.2, hLid + 4),
-      goldPaint,
-    );
-
-    canvas.restore();
-  }
-
-  void _drawBow(Canvas canvas, double cx, double cy, double lidCurve, double fadeOut, double w) {
-    final opacity = (1.0 - fadeOut).clamp(0.0, 1.0);
-    final liftY = -lidCurve * 2.2;
-    final bowCy = cy + liftY * 18;
-    final s = math.max(w * 0.06, 12.0);
 
     final bowShadow = Paint()
-      ..color = Colors.black.withValues(alpha: 0.15 * opacity)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-    final bowMain = Paint()
-      ..color = Colors.white.withValues(alpha: opacity)
+      ..color = Colors.black.withOpacity(0.08 * opacity)
       ..style = PaintingStyle.fill;
 
-    final bowGold = Paint()
-      ..color = Color(0xFFFFD700).withValues(alpha: opacity)
-      ..style = PaintingStyle.fill;
+    final loopW = w * 0.18;
+    final loopH = w * 0.14;
 
     final leftLoop = Path()
-      ..moveTo(cx, bowCy + 3)
-      ..cubicTo(cx - s * 1.5, bowCy - s * 0.5, cx - s * 2.5, bowCy - s * 3, cx - s * 1.0, bowCy - s * 2.0)
-      ..cubicTo(cx - s * 0.3, bowCy - s * 1.2, cx, bowCy - s * 0.3, cx, bowCy + 3);
-    canvas.drawPath(leftLoop.shift(const Offset(1, 2)), bowShadow);
-    canvas.drawPath(leftLoop, bowMain);
+      ..moveTo(cx, cy)
+      ..cubicTo(
+        cx - loopW * 0.3, cy - loopH * 1.2,
+        cx - loopW * 1.1, cy - loopH * 1.1,
+        cx - loopW * 0.8, cy - loopH * 0.1,
+      )
+      ..cubicTo(
+        cx - loopW * 0.6, cy + loopH * 0.15,
+        cx - loopW * 0.1, cy + loopH * 0.1,
+        cx, cy,
+      );
 
     final rightLoop = Path()
-      ..moveTo(cx, bowCy + 3)
-      ..cubicTo(cx + s * 1.5, bowCy - s * 0.5, cx + s * 2.5, bowCy - s * 3, cx + s * 1.0, bowCy - s * 2.0)
-      ..cubicTo(cx + s * 0.3, bowCy - s * 1.2, cx, bowCy - s * 0.3, cx, bowCy + 3);
-    canvas.drawPath(rightLoop.shift(const Offset(1, 2)), bowShadow);
-    canvas.drawPath(rightLoop, bowMain);
+      ..moveTo(cx, cy)
+      ..cubicTo(
+        cx + loopW * 0.3, cy - loopH * 1.2,
+        cx + loopW * 1.1, cy - loopH * 1.1,
+        cx + loopW * 0.8, cy - loopH * 0.1,
+      )
+      ..cubicTo(
+        cx + loopW * 0.6, cy + loopH * 0.15,
+        cx + loopW * 0.1, cy + loopH * 0.1,
+        cx, cy,
+      );
 
-    final centerHighlight = Paint()
-      ..color = Color(0xFFFFF9C4).withValues(alpha: opacity * 0.8)
+    canvas.drawPath(leftLoop.shift(const Offset(0, 2)), bowShadow);
+    canvas.drawPath(rightLoop.shift(const Offset(0, 2)), bowShadow);
+
+    canvas.drawPath(leftLoop, bowPaint);
+    canvas.drawPath(rightLoop, bowPaint);
+
+    final knotPaint = Paint()
+      ..color = _white.withOpacity(opacity)
       ..style = PaintingStyle.fill;
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, bowCy), width: s * 0.9, height: s * 0.7),
-      centerHighlight,
+      Rect.fromCenter(center: Offset(cx, cy), width: loopW * 0.45, height: loopH * 0.5),
+      knotPaint,
     );
 
-    final centerDot = Paint()
-      ..color = Color(0xFFFFD700).withValues(alpha: opacity)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(cx, bowCy), s * 0.25, centerDot);
-
-    final tailPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.8 * opacity)
+    final ribbonTailPaint = Paint()
+      ..color = _white.withOpacity(0.8 * opacity)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = w * 0.025
       ..strokeCap = StrokeCap.round;
 
     final leftTail = Path()
-      ..moveTo(cx - 1, bowCy + s * 0.3)
-      ..cubicTo(cx - s * 0.5, bowCy + s * 1.5, cx - s * 1.0, bowCy + s * 2.0, cx - s * 1.3, bowCy + s * 2.8);
-    canvas.drawPath(leftTail, tailPaint);
+      ..moveTo(cx - loopW * 0.15, cy + loopH * 0.1)
+      ..cubicTo(
+        cx - loopW * 0.4, cy + loopH * 0.8,
+        cx - loopW * 0.7, cy + loopH * 1.3,
+        cx - loopW * 0.5, cy + loopH * 1.6,
+      );
+    canvas.drawPath(leftTail, ribbonTailPaint);
 
     final rightTail = Path()
-      ..moveTo(cx + 1, bowCy + s * 0.3)
-      ..cubicTo(cx + s * 0.5, bowCy + s * 1.5, cx + s * 1.0, bowCy + s * 2.0, cx + s * 1.3, bowCy + s * 2.8);
-    canvas.drawPath(rightTail, tailPaint);
+      ..moveTo(cx + loopW * 0.15, cy + loopH * 0.1)
+      ..cubicTo(
+        cx + loopW * 0.4, cy + loopH * 0.8,
+        cx + loopW * 0.7, cy + loopH * 1.3,
+        cx + loopW * 0.5, cy + loopH * 1.6,
+      );
+    canvas.drawPath(rightTail, ribbonTailPaint);
   }
 
   void _drawGlow(Canvas canvas, double w, double h, double cx, double cy, double t) {
-    if (t < 0.25 || t > 0.85) return;
-    final glowT = ((t - 0.25) / 0.6).clamp(0.0, 1.0);
+    if (t < 0.2 || t > 0.85) return;
+    final glowT = ((t - 0.2) / 0.65).clamp(0.0, 1.0);
     final glowOpacity = (glowT < 0.5 ? glowT * 2 : (1.0 - glowT) * 2).clamp(0.0, 1.0);
-
     final glowPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          Color(0xFFFFD700).withValues(alpha: 0.3 * glowOpacity),
-          Color(0xFFFFA000).withValues(alpha: 0.1 * glowOpacity),
+          _white.withOpacity(0.12 * glowOpacity),
+          _white.withOpacity(0.04 * glowOpacity),
           Colors.transparent,
         ],
-      ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: math.max(w, h) * 0.6));
+      ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: math.max(w, h) * 0.5));
     canvas.drawRect(Rect.fromLTWH(0, 0, w, h), glowPaint);
   }
 
@@ -473,28 +366,26 @@ class _LuxuryGiftPainter extends CustomPainter {
     if (ct <= 0) return;
     final rng = math.Random(7);
     final colors = [
-      Color(0xFFFFD700),
-      Color(0xFFFF6B6B),
-      Color(0xFF4FC3F7),
-      Color(0xFF81C784),
-      Color(0xFFFFB74D),
-      Color(0xFFBA68C8),
-      Color(0xFFE53935),
-      Colors.white,
+      _white,
+      _redLight,
+      Color(0xFFFFCDD2),
+      Color(0xFFFFEBEE),
+      Color(0xFFFFAB91),
+      Color(0xFFFFC107),
     ];
     final confettiPaint = Paint()..style = PaintingStyle.fill;
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 45; i++) {
       final angle = rng.nextDouble() * math.pi * 2;
-      final speed = 100.0 + rng.nextDouble() * 200.0;
-      final gravBend = (rng.nextDouble() - 0.5) * 80.0;
-      final rotSpeed = (rng.nextDouble() - 0.5) * 14.0;
+      final speed = 80.0 + rng.nextDouble() * 180.0;
+      final gravBend = (rng.nextDouble() - 0.5) * 70.0;
+      final rotSpeed = (rng.nextDouble() - 0.5) * 12.0;
       final x = cx + math.cos(angle) * speed * ct + gravBend * ct * ct;
-      final y = cy + math.sin(angle) * speed * ct - 80 * ct + 250 * ct * ct;
+      final y = cy + math.sin(angle) * speed * ct - 60 * ct + 220 * ct * ct;
       final rot = ct * rotSpeed;
-      final cw = 3.0 + rng.nextDouble() * 6.0;
-      final ch = 2.0 + rng.nextDouble() * 4.0;
-      final confettiOpacity = (1.0 - ct * 0.4).clamp(0.0, 1.0);
-      confettiPaint.color = colors[i % colors.length].withValues(alpha: confettiOpacity);
+      final cw = 3.0 + rng.nextDouble() * 5.0;
+      final ch = 2.0 + rng.nextDouble() * 3.0;
+      final confettiOpacity = (1.0 - ct * 0.5).clamp(0.0, 1.0);
+      confettiPaint.color = colors[i % colors.length].withOpacity(confettiOpacity);
       canvas.save();
       canvas.translate(x, y);
       canvas.rotate(rot);
@@ -515,15 +406,14 @@ class _LuxuryGiftPainter extends CustomPainter {
     final sparkleOpacity = (sparkT < 0.5 ? sparkT * 2 : (1.0 - sparkT) * 2).clamp(0.0, 1.0);
     final rng = math.Random(99);
     final sparklePaint = Paint()..style = PaintingStyle.fill;
-
-    for (int i = 0; i < 16; i++) {
-      final angle = (i / 16) * math.pi * 2 + t * math.pi * 0.8;
+    for (int i = 0; i < 14; i++) {
+      final angle = (i / 14) * math.pi * 2 + t * math.pi * 0.8;
       final dist = (boxW * 0.3 + rng.nextDouble() * boxW * 0.4) * sparkT;
       final sx = cx + math.cos(angle) * dist;
       final sy = cy + math.sin(angle) * dist * 0.7;
-      final sr = (1.5 + rng.nextDouble() * 2.5) * sparkleOpacity;
-      final sparkleColors = [Color(0xFFFFD700), Colors.white, Color(0xFFFFF176)];
-      sparklePaint.color = sparkleColors[i % sparkleColors.length].withValues(alpha: sparkleOpacity * 0.9);
+      final sr = (1.5 + rng.nextDouble() * 2.0) * sparkleOpacity;
+      final sparkleColors = [_white, Color(0xFFFFF176), Color(0xFFFFD700)];
+      sparklePaint.color = sparkleColors[i % sparkleColors.length].withOpacity(sparkleOpacity * 0.85);
       _drawStar(canvas, sx, sy, sr, sparklePaint);
     }
   }
@@ -549,6 +439,6 @@ class _LuxuryGiftPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LuxuryGiftPainter old) =>
+  bool shouldRepaint(_GiftPainter old) =>
       old.openProgress != openProgress || old.confettiProgress != confettiProgress;
 }

@@ -681,11 +681,12 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             }
           });
           final auth = Provider.of<AuthService>(context, listen: false);
+          final uid = auth.currentUser?.uid;
           if (!auth.isAdmin && !_isEditing) {
-            OnboardingOverlay.shouldShow('eval_onboarding_step3').then((should) {
+            OnboardingOverlay.shouldShow('eval_onboarding_step3', userId: uid).then((should) {
               if (should && mounted) {
                 _onboardingKey.currentState?.showStep(2);
-                OnboardingOverlay.markSeen('eval_onboarding_step3');
+                OnboardingOverlay.markSeen('eval_onboarding_step3', userId: uid);
               }
             });
           }
@@ -1750,6 +1751,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final isRtl = l.localeName == 'ar';
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final userId = auth.currentUser?.uid;
     return Stack(
       children: [
         PopScope(
@@ -2361,6 +2364,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         OnboardingOverlay(
           key: _onboardingKey,
           storageKey: 'eval_onboarding_v3',
+          userId: userId,
           steps: [
             OnboardingStep(
               targetKey: _rangeTypeKey,

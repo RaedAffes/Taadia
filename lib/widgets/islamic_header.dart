@@ -266,13 +266,14 @@ class _IslamicHeaderState extends State<IslamicHeader>
                     ),
                   ),
                 ),
-                for (final popup in _popups)
+                if (height > 100)
+                  for (final popup in _popups)
                   Positioned(
-                    left: (popup.position.dx - 70).clamp(0.0, size.width - 160),
+                    left: (popup.position.dx - 70).clamp(0.0, math.max(0.0, size.width - 160)),
                     top: (popup.position.dy < size.height * 0.4
                             ? popup.position.dy + 10
                             : popup.position.dy - 55)
-                        .clamp(0.0, size.height - 80),
+                        .clamp(0.0, math.max(0.0, size.height - 80)),
                     width: 160,
                     child: AnimatedSlide(
                       offset: popup.visible ? Offset.zero : const Offset(0, -0.4),

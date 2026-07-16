@@ -22,6 +22,7 @@ class OnboardingStep {
 class OnboardingOverlay extends StatefulWidget {
   final List<OnboardingStep> steps;
   final String storageKey;
+  final String? userId;
   final VoidCallback? onComplete;
   final bool autoShow;
 
@@ -29,18 +30,23 @@ class OnboardingOverlay extends StatefulWidget {
     super.key,
     required this.steps,
     required this.storageKey,
+    this.userId,
     this.onComplete,
     this.autoShow = true,
   });
 
-  static Future<bool> shouldShow(String storageKey) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(storageKey) != true;
+  static String _userKey(String storageKey, String? userId) {
+    return userId != null ? '${storageKey}_$userId' : storageKey;
   }
 
-  static Future<void> markSeen(String storageKey) async {
+  static Future<bool> shouldShow(String storageKey, {String? userId}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(storageKey, true);
+    return prefs.getBool(_userKey(storageKey, userId)) != true;
+  }
+
+  static Future<void> markSeen(String storageKey, {String? userId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_userKey(storageKey, userId), true);
   }
 
   @override
@@ -73,7 +79,7 @@ class OnboardingOverlayState extends State<OnboardingOverlay>
 
   Future<void> _autoShow() async {
     if (!mounted) return;
-    final should = await OnboardingOverlay.shouldShow(widget.storageKey);
+    final should = await OnboardingOverlay.shouldShow(widget.storageKey, userId: widget.userId);
     if (!should || !mounted) return;
     await Future.delayed(Duration(milliseconds: 600));
     if (!mounted) return;
@@ -104,7 +110,7 @@ class OnboardingOverlayState extends State<OnboardingOverlay>
     _fadeController.reverse().then((_) {
       if (mounted) {
         setState(() => _visible = false);
-        OnboardingOverlay.markSeen(widget.storageKey);
+        OnboardingOverlay.markSeen(widget.storageKey, userId: widget.userId);
         widget.onComplete?.call();
       }
     });
@@ -163,6 +169,7 @@ class OnboardingOverlayState extends State<OnboardingOverlay>
     final renderObject = key.currentContext?.findRenderObject();
     if (renderObject == null || !renderObject.attached) return null;
     final box = renderObject as RenderBox;
+    if (!box.hasSize) return null;
     final pos = box.localToGlobal(Offset.zero);
     return Rect.fromLTWH(
       pos.dx - 8,
