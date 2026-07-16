@@ -55,7 +55,7 @@ class _AppScaffoldState extends State<AppScaffold> {
 
     return Scaffold(
       appBar: IslamicHeader(
-        key: ValueKey(headerHeight.round()),
+        key: const ValueKey('islamic_header'),
         title: widget.title ?? '',
         subtitle: widget.subtitle,
         height: headerHeight,

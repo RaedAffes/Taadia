@@ -53,6 +53,7 @@ class OnboardingOverlayState extends State<OnboardingOverlay>
   bool _visible = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  Timer? _scrollTrackingTimer;
 
   @override
   void initState() {
@@ -136,11 +137,13 @@ class OnboardingOverlayState extends State<OnboardingOverlay>
   }
 
   void _startScrollTracking() {
+    _scrollTrackingTimer?.cancel();
     int ticks = 0;
-    Timer.periodic(Duration(milliseconds: 30), (timer) {
+    _scrollTrackingTimer = Timer.periodic(Duration(milliseconds: 30), (timer) {
       ticks++;
       if (!mounted || ticks > 20) {
         timer.cancel();
+        _scrollTrackingTimer = null;
         if (mounted) setState(() {});
         return;
       }
@@ -150,6 +153,7 @@ class OnboardingOverlayState extends State<OnboardingOverlay>
 
   @override
   void dispose() {
+    _scrollTrackingTimer?.cancel();
     _fadeController.dispose();
     super.dispose();
   }

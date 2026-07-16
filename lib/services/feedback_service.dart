@@ -48,10 +48,12 @@ class FeedbackService extends ChangeNotifier {
         .snapshots()
         .listen(
           (snap) {
-            _items = snap.docs
-                .map((d) => FeedbackItem.fromFirestore(d.id, d.data()))
-                .toList();
-            _mergePendingLocalFeedback();
+            try {
+              _items = snap.docs
+                  .map((d) => FeedbackItem.fromFirestore(d.id, d.data()))
+                  .toList();
+              _mergePendingLocalFeedback();
+            } catch (_) {}
             _loading = false;
             notifyListeners();
           },
@@ -89,10 +91,12 @@ class FeedbackService extends ChangeNotifier {
         .snapshots()
         .listen(
           (snap) {
-            _myItems = snap.docs
-                .map((d) => FeedbackItem.fromFirestore(d.id, d.data()))
-                .toList();
-            _mergePendingLocalFeedback();
+            try {
+              _myItems = snap.docs
+                  .map((d) => FeedbackItem.fromFirestore(d.id, d.data()))
+                  .toList();
+              _mergePendingLocalFeedback();
+            } catch (_) {}
             _myLoading = false;
             notifyListeners();
           },
@@ -112,7 +116,7 @@ class FeedbackService extends ChangeNotifier {
       'userId': userId,
       'userName': userName,
       'message': message,
-      'createdAt': DateTime.now().toIso8601String(),
+      'createdAt': FieldValue.serverTimestamp(),
     };
 
     final localId = 'offline_fb_${DateTime.now().millisecondsSinceEpoch}';
@@ -169,7 +173,7 @@ class FeedbackService extends ChangeNotifier {
       'senderId': senderId,
       'senderName': senderName,
       'isAdmin': isAdmin,
-      'createdAt': DateTime.now().toIso8601String(),
+      'createdAt': FieldValue.serverTimestamp(),
     };
 
     if (_connectivityService.isOffline) {

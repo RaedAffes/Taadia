@@ -1,3 +1,14 @@
+DateTime _parseCreatedAt(dynamic value) {
+  if (value == null) return DateTime.now();
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+  try {
+    return (value as dynamic).toDate();
+  } catch (_) {
+    return DateTime.now();
+  }
+}
+
 class FeedbackReply {
   final String id;
   final String message;
@@ -22,7 +33,7 @@ class FeedbackReply {
       senderId: data['senderId'] ?? '',
       senderName: data['senderName'] ?? '',
       isAdmin: data['isAdmin'] ?? false,
-      createdAt: (data['createdAt'] as dynamic)?.toDate() ?? DateTime.now(),
+      createdAt: _parseCreatedAt(data['createdAt']),
     );
   }
 }
@@ -48,7 +59,7 @@ class FeedbackItem {
       userId: data['userId'] ?? '',
       userName: data['userName'] ?? '',
       message: data['message'] ?? '',
-      createdAt: (data['createdAt'] as dynamic)?.toDate() ?? DateTime.now(),
+      createdAt: _parseCreatedAt(data['createdAt']),
     );
   }
 

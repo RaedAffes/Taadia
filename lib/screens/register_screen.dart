@@ -92,19 +92,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.createAccount),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: cs.onSurface,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, textDirection: TextDirection.ltr),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
       body: TaadiaBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -112,12 +99,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, textDirection: TextDirection.ltr),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
                 SizedBox(height: 8),
                 TaadiaHeader(
                   title: l.joinTaadia,
                   subtitle: l.signUpSubtitle,
                 ),
-                SizedBox(height: 28),
+                SizedBox(height: 32),
                 TaadiaFormCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

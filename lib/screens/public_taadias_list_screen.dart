@@ -15,6 +15,7 @@ import 'package:ta3dia/screens/admin_taadia_results.dart';
 import 'package:ta3dia/screens/user_taadia_results.dart';
 import 'package:ta3dia/screens/user_evaluate.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
+import 'package:ta3dia/widgets/gift_reveal_card.dart';
 
 class PublicTaadiasListScreen extends StatefulWidget {
   @override
@@ -739,7 +740,7 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
     final live = taadiaService.taadias.where((t) => t.id == taadia.id);
     final isActive = live.isNotEmpty ? live.first.status == 'active' : taadia.active;
     final liveDescription = live.isNotEmpty ? live.first.description : taadia.description;
-    return Card(
+    final card = Card(
       elevation: 1,
       margin: EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
@@ -903,9 +904,13 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
         ),
       ),
     );
+    return GiftRevealCard(
+      showGift: _justAccessedId == taadia.id,
+      child: card,
+    );
   }
-}
 
+}
 class _CodeEntryDialog extends StatefulWidget {
   final bool isRtl;
   final AppLocalizations l;

@@ -213,6 +213,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   final _noteController = TextEditingController();
 
   final _addRangeKey = GlobalKey();
+  final _rangeTypeKey = GlobalKey();
   final _generateKey = GlobalKey();
   final _quranButtonKey = GlobalKey();
   final _onboardingKey = GlobalKey<OnboardingOverlayState>();
@@ -335,10 +336,6 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final auth = Provider.of<AuthService>(context, listen: false);
-      if (!auth.isAdmin && !_isEditing) {
-        _onboardingKey.currentState?.show();
-      }
     });
   }
 
@@ -685,8 +682,11 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           });
           final auth = Provider.of<AuthService>(context, listen: false);
           if (!auth.isAdmin && !_isEditing) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _onboardingKey.currentState?.showStep(2);
+            OnboardingOverlay.shouldShow('eval_onboarding_step3').then((should) {
+              if (should && mounted) {
+                _onboardingKey.currentState?.showStep(2);
+                OnboardingOverlay.markSeen('eval_onboarding_step3');
+              }
             });
           }
         }
@@ -768,24 +768,10 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                   : cs.outlineVariant.withValues(alpha: 0.3),
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: enabled ? cs.primary : cs.outlineVariant,
-              ),
-              SizedBox(width: 4),
-              Text(
-                tooltip,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: enabled ? cs.primary : cs.outlineVariant,
-                ),
-              ),
-            ],
+          child: Icon(
+            icon,
+            size: 18,
+            color: enabled ? cs.primary : cs.outlineVariant,
           ),
         ),
       ),
@@ -1416,6 +1402,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                 child: _dropdownWrapper(
                   cs: cs,
                   child: DropdownButton<QuestionRangeType>(
+                    key: _rangeTypeKey,
                     value: c.type,
                     isExpanded: true,
                     isDense: true,
@@ -2373,24 +2360,32 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         ),
         OnboardingOverlay(
           key: _onboardingKey,
-          storageKey: 'eval_onboarding_v2',
+          storageKey: 'eval_onboarding_v3',
           steps: [
             OnboardingStep(
-              targetKey: _addRangeKey,
-              title: isRtl ? 'تحديد النطاق' : 'Select Range',
+              targetKey: _rangeTypeKey,
+              title: isRtl ? 'اختر مقدار الحفظ' : 'Choose Memorization Amount',
               description: isRtl
-                  ? 'أضف أحزاباً أو سوراً أو أرباعاً لتخصيص أسئلتك'
-                  : 'Add ahzab, surahs, or quarters to customize your questions',
-              icon: Icons.tune,
+                  ? 'اختر مقدار الحفظ من هنا'
+                  : 'Choose the memorization amount from here',
+              icon: Icons.menu_book_outlined,
             ),
             OnboardingStep(
               targetKey: _generateKey,
               title: isRtl ? 'توليد الأسئلة' : 'Generate Questions',
               description: isRtl
-                  ? 'اضغط هنا لتوليد الأسئلة بناءً على النطاق المحدد (اختياري - للمساعدة)'
-                  : 'Tap here to generate questions based on your selected range (optional - just to help)',
+                  ? 'اضغط هنا لتوليد الأسئلة بناءً على النطاق المحدد'
+                  : 'Tap here to generate questions based on your selected range',
               icon: Icons.auto_awesome,
               isLast: true,
+            ),
+            OnboardingStep(
+              targetKey: _quranButtonKey,
+              title: isRtl ? 'فتح في القرآن' : 'Open in Quran',
+              description: isRtl
+                  ? 'اضغط هنا لفتح الآية في القرآن بعد توليد السؤال'
+                  : 'Tap here to open the verse in Quran after question is generated',
+              icon: Icons.menu_book,
             ),
           ],
         ),
