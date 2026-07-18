@@ -415,7 +415,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get other => 'آخر';
 
   @override
-  String get students => '  : عدد الطلاب';
+  String get students => 'عدد الطلاب';
 
   @override
   String get waitingForTeachers => 'بانتظار ارسال العارضين لتعدياتهم';

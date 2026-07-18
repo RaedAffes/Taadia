@@ -148,7 +148,7 @@ class _UserTaadiaResultsState extends State<UserTaadiaResults> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${_filter(evalService.evaluations).length} ${l.students}',
+                                  '${_filter(evalService.evaluations).length} : ${l.students}',
                                   style: TextStyle(
                                     color: cs.onSurfaceVariant,
                                     fontSize: 14,

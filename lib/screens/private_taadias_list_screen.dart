@@ -227,18 +227,7 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
         child: Icon(Icons.add),
         tooltip: l.evaluate,
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          final ts = Provider.of<TaadiaService>(context, listen: false);
-          await ts.loadUserPrivateTaadias();
-          final taadias = ts.userPrivateTaadias;
-          if (taadias.isNotEmpty) {
-            _selectTaadia(taadias.first.id);
-          } else {
-            setState(() => _currentTaadiaId = null);
-          }
-        },
-        child: _currentTaadiaId == null && myPrivateTaadias.isEmpty
+      body: _currentTaadiaId == null && myPrivateTaadias.isEmpty
             ? ListView(
                 children: [
                   SizedBox(height: MediaQuery.of(context).size.height * 0.3),
@@ -629,7 +618,6 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
                   );
                 },
               ),
-      ),
     );
   }
 

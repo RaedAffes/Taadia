@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -78,13 +79,21 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
   bool _loading = true;
   final _failedPages = <int>{};
   final _loadingPages = <int>{};
-  final _svgCache = <int, String>{};
+  final LinkedHashMap<int, String> _svgCache = LinkedHashMap();
+  static const _maxSvgCache = 30;
   final _pageMeta = <int, _PageMeta>{};
   String? _highlightAyah;
 
   static const _totalPages = 604;
   static const _baseUrl =
       'https://raw.githubusercontent.com/quranpedia/quran-svg/main/mushafs/qalon/kfqc/svg';
+
+  void _cacheSvg(int page, String svg) {
+    if (_svgCache.length >= _maxSvgCache) {
+      _svgCache.remove(_svgCache.keys.first);
+    }
+    _svgCache[page] = svg;
+  }
 
   @override
   void initState() {
@@ -167,7 +176,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
           }
         }
         if (svg != null) {
-          _svgCache[p] = svg;
+          _cacheSvg(p, svg);
           if (mounted) setState(() => _failedPages.remove(p));
         } else {
           if (mounted) setState(() => _failedPages.add(p));
@@ -210,7 +219,7 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
         }
       }
       if (svg != null) {
-        _svgCache[p] = svg;
+        _cacheSvg(p, svg);
         if (mounted) setState(() => _failedPages.remove(p));
       } else {
         if (mounted) setState(() => _failedPages.add(p));

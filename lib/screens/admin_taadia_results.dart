@@ -556,7 +556,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                                           ),
                                           SizedBox(height: 8),
                                           Text(
-                                            '${filtered.length} ${l.students}',
+                                            '${filtered.length} : ${l.students}',
                                             style: TextStyle(
                                               color: cs.onSurfaceVariant,
                                               fontSize: 14,

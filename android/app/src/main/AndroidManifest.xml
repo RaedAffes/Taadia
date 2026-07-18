@@ -43,6 +43,25 @@
             android:foregroundServiceType="dataSync"
             android:exported="false"
             tools:replace="android:exported"/>
+        <receiver
+            android:name="id.flutter.flutter_background_service.RestartReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
+        <provider
+            android:name="androidx.start.InitializationProvider"
+            android:authorities="${applicationId}.androidx-start-initializationprovider"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="workmanager-init"
+                android:value="androidx.start"
+                tools:node="remove"/>
+        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

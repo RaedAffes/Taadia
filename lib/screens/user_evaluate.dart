@@ -69,7 +69,8 @@ class _RangeCriterion {
         final name = surahNumbers.isNotEmpty
             ? (AiService.surahNameAr(surahNumbers.first) ?? '')
             : '';
-        return 'سورة $name ($ayaFrom-$ayaTo)';
+        if (ayaFrom != null && ayaTo != null && ayaFrom == ayaTo) return 'آيات من سورة $name ($ayaFrom)';
+        return 'آيات من سورة $name ($ayaFrom-$ayaTo)';
       }
       case QuestionRangeType.surahPages: {
         final name = surahNumbers.isNotEmpty
@@ -79,7 +80,11 @@ class _RangeCriterion {
         if (pr != null && pageFrom != null && pageTo != null) {
           final normFrom = pageFrom! - pr.$1 + 1;
           final normTo = pageTo! - pr.$1 + 1;
+          if (normFrom == normTo) return 'صفحات من سورة $name ($normFrom)';
           return 'صفحات من سورة $name ($normFrom-$normTo)';
+        }
+        if (pageFrom != null && pageTo != null) {
+          if (pageFrom == pageTo) return 'صفحات من سورة $name ($pageFrom)';
         }
         return 'صفحات من سورة $name ($pageFrom-$pageTo)';
       }
@@ -100,9 +105,9 @@ class _RangeCriterion {
       case QuestionRangeType.surahs:
         return surahFrom != null;
       case QuestionRangeType.surahAyahRange:
-        return surahNumbers.isNotEmpty;
+        return surahNumbers.isNotEmpty && ayaFrom != null;
       case QuestionRangeType.surahPages:
-        return surahNumbers.isNotEmpty;
+        return surahNumbers.isNotEmpty && pageFrom != null;
       case QuestionRangeType.quarter:
         return quarterNumbers.isNotEmpty;
     }
@@ -232,6 +237,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
 
   bool _isGenerating = false;
   bool _generateEnabled = true;
+  bool _submitted = false;
   int _shortcutIndex = 0;
   final List<int> _questionVerseIndices = [];
   late final PageController _pageController;
@@ -310,6 +316,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     final eval = widget.editingEvaluation;
     if (eval?.evaluatorName.isNotEmpty == true) {
       _evaluatorNameController.text = eval!.evaluatorName;
+    } else {
+      _evaluatorNameController.clear();
     }
     final cached = _draftCache[_draftKey];
     if (cached == null) {
@@ -364,6 +372,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         'surahNumbers': List<int>.from(c.surahNumbers),
         'ayaFrom': c.ayaFrom,
         'ayaTo': c.ayaTo,
+        'pageFrom': c.pageFrom,
+        'pageTo': c.pageTo,
         'quarterNumbers': List<int>.from(c.quarterNumbers),
       }).toList(),
     };
@@ -411,6 +421,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           );
           c.ayaFrom = map['ayaFrom'] as int?;
           c.ayaTo = map['ayaTo'] as int?;
+          c.pageFrom = map['pageFrom'] as int?;
+          c.pageTo = map['pageTo'] as int?;
           final qn = map['quarterNumbers'];
           if (qn is List) {
             c.quarterNumbers.addAll(qn.cast<int>());
@@ -560,6 +572,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     if (mounted) {
       setState(() => _loading = false);
       if (ok) {
+        _submitted = true;
         _draftCache.remove(_draftKey);
         final msg = _isEditing
             ? l.updated(_studentNameController.text.trim())
@@ -716,11 +729,18 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         .map((c) => c.summary())
         .toList();
     if (parts.isEmpty) return '';
-    return parts.join('، ');
+    return parts.join(' + ');
   }
 
   void _initQuestions(int count) {
-    _questions = List.generate(count, (i) => QuestionItem(number: i + 1));
+    if (count > _questions.length) {
+      while (_questions.length < count) {
+        _questions.add(QuestionItem(number: _questions.length + 1));
+      }
+    } else if (count < _questions.length) {
+      _questions = _questions.sublist(0, count);
+    }
+    _renumberQuestions();
     _resetVerseIndices();
   }
 
@@ -1329,27 +1349,83 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               ),
             ),
           ],
-          TextField(
-            textAlign: TextAlign.right,
-            textDirection: TextDirection.rtl,
-            minLines: 2,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: l.enterNoteHint,
-              isDense: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+          _fieldContainer(
+            cs: cs,
+            child: TextField(
+              textAlign: TextAlign.right,
+              textDirection: TextDirection.rtl,
+              minLines: 2,
+              maxLines: 3,
+              decoration: _fieldInputDecoration(
+                cs: cs,
+                hintText: l.enterNoteHint,
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              style: TextStyle(fontSize: 12),
+              readOnly: q.isComplete,
+              onTap: q.isComplete ? () => _showUncheckMessage(context) : null,
+              onChanged: q.isComplete ? null : (v) => q.note = v,
             ),
-            style: TextStyle(fontSize: 12),
-            readOnly: q.isComplete,
-            onTap: q.isComplete ? () => _showUncheckMessage(context) : null,
-            onChanged: q.isComplete ? null : (v) => q.note = v,
           ),
         ],
         ),
       ),
+    );
+  }
+
+  Widget _fieldContainer({
+    required Widget child,
+    required ColorScheme cs,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            cs.surface,
+            cs.surfaceContainerHighest.withValues(alpha: 0.3),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: child,
+      ),
+    );
+  }
+
+  InputDecoration _fieldInputDecoration({
+    required ColorScheme cs,
+    String? labelText,
+    String? hintText,
+    IconData? prefixIcon,
+  }) {
+    return InputDecoration(
+      isDense: true,
+      labelText: labelText,
+      hintText: hintText,
+      hintStyle: TextStyle(fontSize: 13),
+      labelStyle: TextStyle(fontSize: 13),
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 17) : null,
+      filled: true,
+      fillColor: Colors.transparent,
+      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      errorBorder: InputBorder.none,
+      focusedErrorBorder: InputBorder.none,
     );
   }
 
@@ -1390,9 +1466,23 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: cs.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant),
+        gradient: LinearGradient(
+          colors: [
+            cs.surface,
+            cs.surfaceContainerHighest.withValues(alpha: 0.3),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1403,7 +1493,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                 child: _dropdownWrapper(
                   cs: cs,
                   child: DropdownButton<QuestionRangeType>(
-                    key: _rangeTypeKey,
+                    key: index == 0 ? _rangeTypeKey : ValueKey('range_type_$index'),
                     value: c.type,
                     isExpanded: true,
                     isDense: true,
@@ -1470,7 +1560,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     required ColorScheme cs,
   }) {
     return Container(
-      height: 46,
+      height: 40,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         gradient: LinearGradient(
@@ -1576,7 +1666,15 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                       child: _pageDropdown(
                         cs,
                         c.pageFrom != null ? c.pageFrom! - pageRange.$1 + 1 : null,
-                        (v) => setState(() => c.pageFrom = v != null ? v + pageRange.$1 - 1 : null),
+                        (v) {
+                          setState(() {
+                            final absPage = v != null ? v + pageRange.$1 - 1 : null;
+                            c.pageFrom = absPage;
+                            if (c.pageTo == null || c.pageTo == c.pageFrom) {
+                              c.pageTo = absPage;
+                            }
+                          });
+                        },
                         label: l.fromPage,
                         count: pageRange.$2 - pageRange.$1 + 1,
                       ),
@@ -1615,7 +1713,12 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: _verseDropdown(cs, c.ayaFrom, (v) {
-                        setState(() => c.ayaFrom = v);
+                        setState(() {
+                          c.ayaFrom = v;
+                          if (c.ayaTo == null || c.ayaTo == c.ayaFrom) {
+                            c.ayaTo = v;
+                          }
+                        });
                       }, label: l.fromAyah, count: ayaCount),
                     ),
                   ],
@@ -1758,7 +1861,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         PopScope(
           canPop: true,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) return;
+            if (!didPop || _submitted) return;
             _draftCache[_draftKey] = _captureDraft();
           },
           child: AppScaffold(
@@ -1847,25 +1950,33 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                       );
                     }),
                     SizedBox(height: 8),
-                    TextFormField(
-                      controller: _evaluatorNameController,
-                      decoration: InputDecoration(
-                        labelText: l.evaluatorName,
-                        hintText: l.yourNameHint,
-                        prefixIcon: Icon(Icons.person_outline),
+                    _fieldContainer(
+                      cs: cs,
+                      child: TextFormField(
+                        controller: _evaluatorNameController,
+                        decoration: _fieldInputDecoration(
+                          cs: cs,
+                          labelText: l.evaluatorName,
+                          hintText: l.yourNameHint,
+                          prefixIcon: Icons.person_outline,
+                        ),
+                        textInputAction: TextInputAction.next,
                       ),
-                      textInputAction: TextInputAction.next,
                     ),
                     SizedBox(height: 16),
-                    TextFormField(
-                      controller: _studentNameController,
-                      decoration: InputDecoration(
-                        labelText: l.studentName,
-                        hintText: l.studentNameHint,
-                        prefixIcon: Icon(Icons.school_outlined),
+                    _fieldContainer(
+                      cs: cs,
+                      child: TextFormField(
+                        controller: _studentNameController,
+                        decoration: _fieldInputDecoration(
+                          cs: cs,
+                          labelText: l.studentName,
+                          hintText: l.studentNameHint,
+                          prefixIcon: Icons.school_outlined,
+                        ),
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
                       ),
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _submit(),
                     ),
                     if (widget.classifications.isNotEmpty) ...[
                       SizedBox(height: 16),
@@ -1876,54 +1987,44 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         final validValue = cfg.options.contains(savedValue) ? savedValue : null;
                         return Padding(
                           padding: EdgeInsets.only(bottom: 12),
-                          child: DropdownButtonFormField<String>(
-                            key: ValueKey('class_${cfg.name}'),
-                            initialValue: validValue,
-                            autovalidateMode: AutovalidateMode.disabled,
-                            validator: (val) {
-                              if (val == null || val.isEmpty) {
-                                return isRtl ? 'اختر كلمة' : 'Please select an option';
-                              }
-                              return null;
-                            },
-                            icon: Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: cs.primary.withValues(alpha: 0.8)),
-                            dropdownColor: cs.surface,
-                            elevation: 4,
-                            style: TextStyle(fontSize: 14, color: cs.onSurface),
-                            decoration: InputDecoration(
-                              labelText: cfg.name.isNotEmpty
-                                  ? cfg.name
-                                  : '${l.select} ${i + 1}',
-                              hintText: l.select,
-                              prefixIcon: Icon(Icons.label_outline),
-                              filled: true,
-                              fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: cs.primary, width: 1.5),
-                              ),
-                            ),
-                            items: cfg.options.map((opt) {
-                              return DropdownMenuItem(
-                                value: opt,
-                                child: Text(opt, style: TextStyle(color: cs.onSurface)),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              setState(() {
-                                if (val != null) {
-                                  _classificationValues[cfg.name] = val;
+                          child: _fieldContainer(
+                            cs: cs,
+                            child: DropdownButtonFormField<String>(
+                              key: ValueKey('class_${cfg.name}'),
+                              initialValue: validValue,
+                              autovalidateMode: AutovalidateMode.disabled,
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return isRtl ? 'اختر كلمة' : 'Please select an option';
                                 }
-                              });
-                            },
+                                return null;
+                              },
+                              icon: Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: cs.primary.withValues(alpha: 0.8)),
+                              dropdownColor: cs.surface,
+                              elevation: 4,
+                              style: TextStyle(fontSize: 14, color: cs.onSurface),
+                              decoration: _fieldInputDecoration(
+                                cs: cs,
+                                labelText: cfg.name.isNotEmpty
+                                    ? cfg.name
+                                    : '${l.select} ${i + 1}',
+                                hintText: l.select,
+                                prefixIcon: Icons.label_outline,
+                              ),
+                              items: cfg.options.map((opt) {
+                                return DropdownMenuItem(
+                                  value: opt,
+                                  child: Text(opt, style: TextStyle(color: cs.onSurface)),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  if (val != null) {
+                                    _classificationValues[cfg.name] = val;
+                                  }
+                                });
+                              },
+                            ),
                           ),
                         );
                       }),
@@ -1978,7 +2079,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                     ],
 
                     SizedBox(height: 16),
-                    _dropdownWrapper(
+                    _fieldContainer(
                       cs: cs,
                       child: DropdownButton<int>(
                         value: _numQuestions > 0 ? _numQuestions : null,
@@ -1986,22 +2087,23 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                           children: [
                             Icon(
                               Icons.quiz_outlined,
-                              size: 20,
+                              size: 17,
                               color: cs.primary,
                             ),
-                            SizedBox(width: 8),
+                            SizedBox(width: 6),
                             Text(
                               l.numberOfQuestions,
-                              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+                              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                             ),
                           ],
                         ),
                         isExpanded: true,
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: cs.primary.withValues(alpha: 0.8)),
                         dropdownColor: cs.surface,
                         elevation: 4,
-                        style: TextStyle(fontSize: 14, color: cs.onSurface),
+                        style: TextStyle(fontSize: 13, color: cs.onSurface),
+                        underline: const SizedBox.shrink(),
                         items: List.generate(60, (i) => i + 1).map((n) {
                           return DropdownMenuItem(
                             value: n,
@@ -2019,8 +2121,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                     ),
                     SizedBox(height: 16),
 
-                    // Old range info banner
-                    if (_oldAhzabText.isNotEmpty)
+                    // Range summary banner
+                    if (_oldAhzabText.isNotEmpty && _generateSummary().isNotEmpty)
                       Padding(
                         padding: EdgeInsets.only(bottom: 12),
                         child: Container(
@@ -2037,7 +2139,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                               SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  l.previousRange(_oldAhzabText),
+                                  l.previousRange(_generateSummary()),
                                   style: TextStyle(fontSize: 13, color: cs.onSurface),
                                 ),
                               ),
@@ -2130,7 +2232,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                                         child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
                                       )
                                     : Icon(Icons.auto_awesome, size: 18),
-                                label: Text(_isGenerating ? l.generating : l.generateQuestions),
+                                label: Text(l.generateQuestions),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: cs.primary,
                                   foregroundColor: cs.onPrimary,
@@ -2158,23 +2260,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         ],
                       ),
                     ),
-                    if (!_versesLoaded)
-                      Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 14, height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 1.5),
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'جاري تحميل الآيات...',
-                              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
+
                     SizedBox(height: 16),
                     if (_questions.isNotEmpty) ...[
                       Text(
@@ -2196,57 +2282,116 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                              OutlinedButton.icon(
-                                icon: Icon(Icons.add, size: 18),
-                                label: Text(l.add),
-                                style: OutlinedButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: cs.primary.withValues(alpha: 0.4),
+                                  width: 1.5,
                                 ),
-                                onPressed: _questions.length < 60
-                                   ? () {
-                                      final currentIdx = _pageController.page?.round() ?? 0;
-                                      setState(() {
-                                        _questions.add(QuestionItem(
-                                            number: _questions.length + 1));
-                                        _numQuestions = _questions.length;
-                                      });
-                                      _resetVerseIndices();
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                color: cs.primaryContainer.withValues(alpha: 0.2),
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: _questions.length < 60
+                                    ? () {
+                                        final currentIdx = _pageController.page?.round() ?? 0;
+                                        setState(() {
+                                          _questions.add(QuestionItem(
+                                              number: _questions.length + 1));
+                                          _numQuestions = _questions.length;
+                                        });
+                                        _resetVerseIndices();
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          _pageController.animateToPage(
+                                            currentIdx,
+                                            duration: Duration(milliseconds: 200),
+                                            curve: Curves.easeInOut,
+                                          );
+                                        });
+                                      }
+                                    : null,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: _questions.length < 60 ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.add, size: 12, color: _questions.length < 60 ? cs.onPrimary : cs.onSurfaceVariant),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        l.add,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                          color: _questions.length < 60 ? cs.primary : cs.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: cs.primary.withValues(alpha: 0.4),
+                                  width: 1.5,
+                                ),
+                                color: cs.primaryContainer.withValues(alpha: 0.2),
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: _questions.length > 1
+                                    ? () {
+                                        final curIdx = _pageController.page?.round() ?? 0;
+                                        setState(() {
+                                          _questions.removeLast();
+                                          _numQuestions = _questions.length;
+                                        });
+                                        _resetVerseIndices();
+                                        final newIdx = curIdx.clamp(0, _questions.length - 1);
                                         _pageController.animateToPage(
-                                          currentIdx,
+                                          newIdx,
                                           duration: Duration(milliseconds: 200),
                                           curve: Curves.easeInOut,
                                         );
-                                      });
-                                      if (!_isGenerating && _generateEnabled && _hasValidRange()) {
-                                        _generateQuestions(singleIndex: currentIdx);
                                       }
-                                    }
-                                   : null,
+                                    : null,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: _questions.length > 1 ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.remove, size: 12, color: _questions.length > 1 ? cs.onPrimary : cs.onSurfaceVariant),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        l.remove,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                          color: _questions.length > 1 ? cs.primary : cs.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              icon: Icon(Icons.remove, size: 18),
-                              label: Text(l.remove),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                              onPressed: _questions.length > 1
-                                  ? () {
-                                      final curIdx = _pageController.page?.round() ?? 0;
-                                      setState(() {
-                                        _questions.removeLast();
-                                        _numQuestions = _questions.length;
-                                      });
-                                      _resetVerseIndices();
-                                      final newIdx = curIdx.clamp(0, _questions.length - 1);
-                                      _pageController.animateToPage(
-                                        newIdx,
-                                        duration: Duration(milliseconds: 200),
-                                        curve: Curves.easeInOut,
-                                      );
-                                    }
-                                  : null,
                             ),
                           ],
                         ),
@@ -2262,10 +2407,16 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                       ),
                     ),
                     SizedBox(height: 8),
-                    TextFormField(
-                      controller: _noteController,
-                      maxLines: 3,
-                      decoration: InputDecoration(hintText: l.enterNoteHint),
+                    _fieldContainer(
+                      cs: cs,
+                      child: TextFormField(
+                        controller: _noteController,
+                        maxLines: 3,
+                        decoration: _fieldInputDecoration(
+                          cs: cs,
+                          hintText: l.enterNoteHint,
+                        ),
+                      ),
                     ),
                     if (_formError != null)
                       Padding(
@@ -2427,6 +2578,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   Widget _shortcutBody(ColorScheme cs, void Function(void Function()) setSheetState,
       ScrollController sc, BuildContext sheetCtx) {
     final q = _questions[_shortcutIndex];
+    final l = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       controller: sc,
       padding: EdgeInsets.all(16),
@@ -2669,20 +2821,19 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             ),
             SizedBox(height: 8),
           ],
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Enter a note...',
-              isDense: true,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          _fieldContainer(
+            cs: cs,
+            child: TextField(
+              decoration: _fieldInputDecoration(
+                cs: cs,
+                hintText: l.enterNoteHint,
+              ),
+              style: TextStyle(fontSize: 13),
+              onChanged: (v) {
+                q.note = v;
+                setSheetState(() {});
+              },
             ),
-            style: TextStyle(fontSize: 13),
-            onChanged: (v) {
-              q.note = v;
-              setSheetState(() {});
-            },
           ),
         ],
       ),

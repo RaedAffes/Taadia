@@ -38,6 +38,15 @@ android {
         versionName = flutter.versionName
     }
 
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
+        }
+    }
+
     signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String?

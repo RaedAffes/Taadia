@@ -90,6 +90,12 @@ class _DotInfo {
     y += vy;
     if (x < 0 || x > maxX) { vx = -vx * 0.5; x = x.clamp(0.0, maxX); }
     if (y < 0 || y > maxY) { vy = -vy * 0.5; y = y.clamp(0.0, maxY); }
+    if (x < 80 && y < 60) {
+      vx = (rng.nextDouble() * 0.04).abs();
+      vy = (rng.nextDouble() * 0.04).abs();
+      x = 80;
+      y = 60;
+    }
   }
 }
 
@@ -110,7 +116,7 @@ class IslamicHeader extends StatefulWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => Size.fromHeight(height);
+  Size get preferredSize => const Size.fromHeight(200);
 
   @override
   State<IslamicHeader> createState() => _IslamicHeaderState();
@@ -137,9 +143,14 @@ class _IslamicHeaderState extends State<IslamicHeader>
 
   void _initDots(Size size) {
     _dots = List.generate(_dotCount, (_) {
+      double x, y;
+      do {
+        x = _rng.nextDouble() * size.width;
+        y = _rng.nextDouble() * size.height;
+      } while (x < 80 && y < 60);
       return _DotInfo(
-        x: _rng.nextDouble() * size.width,
-        y: _rng.nextDouble() * size.height,
+        x: x,
+        y: y,
         radius: _rng.nextDouble() * 2.5 + 0.8,
         vx: (_rng.nextDouble() - 0.5) * 0.08,
         vy: (_rng.nextDouble() - 0.5) * 0.06,
@@ -179,7 +190,8 @@ class _IslamicHeaderState extends State<IslamicHeader>
 
     for (final dot in _dots!) {
       final dist = (tapPos - _getDotPosition(dot, size)).distance;
-      if (dist < closestDist) {
+      final effectiveRadius = (dot.x < 80 && dot.y < 60) ? 0.0 : _hitRadius;
+      if (dist < effectiveRadius) {
         closestDist = dist;
         closest = dot;
       }
@@ -234,25 +246,30 @@ class _IslamicHeaderState extends State<IslamicHeader>
           dot.maxY = size.height;
         }
 
-        return Container(
-          height: height,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [cs.surface, cs.primary.withValues(alpha: 0.3), cs.primary]
-                  : [cs.primary, const Color(0xFF6B5D4F), const Color(0xFF4A3F35)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: cs.shadow.withValues(alpha: 0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+        return ClipRect(
+          clipBehavior: Clip.hardEdge,
+          child: SizedBox(
+            height: height,
+            width: double.infinity,
+            child: Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [cs.surface, cs.primary.withValues(alpha: 0.3), cs.primary]
+                      : [cs.primary, const Color(0xFF6B5D4F), const Color(0xFF4A3F35)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.shadow.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-            ],
-          ),
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTapDown: (d) => _onTapDown(d, size),
@@ -391,7 +408,9 @@ class _IslamicHeaderState extends State<IslamicHeader>
               ],
             ),
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }

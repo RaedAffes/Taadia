@@ -18,6 +18,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
   List<AppUser> _users = [];
   final _searchController = TextEditingController();
   bool _loading = true;
+  AuthService? _authService;
 
   @override
   void initState() {
@@ -25,15 +26,14 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.analytics.logScreenView(screenName: 'manage_users_screen');
     });
-    final authService = Provider.of<AuthService>(context, listen: false);
-    authService.addListener(_onAuthChange);
+    _authService = Provider.of<AuthService>(context, listen: false);
+    _authService!.addListener(_onAuthChange);
     _loadUsers();
   }
 
   @override
   void dispose() {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    authService.removeListener(_onAuthChange);
+    _authService?.removeListener(_onAuthChange);
     _searchController.dispose();
     super.dispose();
   }

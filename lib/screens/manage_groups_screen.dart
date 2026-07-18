@@ -467,64 +467,61 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                     ],
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: () => groupService.loadGroups(),
-                  child: ListView.builder(
-                    padding: EdgeInsets.all(16),
-                    itemCount: groupService.groups.length,
-                    itemBuilder: (context, index) {
-                      final g = groupService.groups[index];
-                      return Card(
-                        elevation: 1,
-                        margin: EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+              : ListView.builder(
+                  padding: EdgeInsets.all(16),
+                  itemCount: groupService.groups.length,
+                  itemBuilder: (context, index) {
+                    final g = groupService.groups[index];
+                    return Card(
+                      elevation: 1,
+                      margin: EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        onTap: () => _showManageMembers(g),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                        child: ListTile(
-                          onTap: () => _showManageMembers(g),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: cs.secondaryContainer,
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          leading: Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: cs.secondaryContainer,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.group,
-                              color: cs.onSecondaryContainer,
-                            ),
-                          ),
-                          title: Text(
-                            g.name,
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text(
-                            l.groupMemberCount(g.memberCount),
-                            style: TextStyle(color: cs.onSurfaceVariant),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.edit, size: 20),
-                                tooltip: l.renameGroup,
-                                onPressed: () => _showRenameDialog(g),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete, size: 20),
-                                tooltip: l.deleteGroup,
-                                color: cs.error,
-                                onPressed: () => _showDeleteConfirm(g),
-                              ),
-                            ],
+                          child: Icon(
+                            Icons.group,
+                            color: cs.onSecondaryContainer,
                           ),
                         ),
-                      );
-                    },
-                  ),
+                        title: Text(
+                          g.name,
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          l.groupMemberCount(g.memberCount),
+                          style: TextStyle(color: cs.onSurfaceVariant),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit, size: 20),
+                              tooltip: l.renameGroup,
+                              onPressed: () => _showRenameDialog(g),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete, size: 20),
+                              tooltip: l.deleteGroup,
+                              color: cs.error,
+                              onPressed: () => _showDeleteConfirm(g),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateDialog,

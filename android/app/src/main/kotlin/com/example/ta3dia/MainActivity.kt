@@ -16,6 +16,8 @@ class MainActivity : FlutterActivity() {
             ).apply {
                 description = "Downloading Quran pages"
                 setShowBadge(false)
+                enableVibration(false)
+                enableLights(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)

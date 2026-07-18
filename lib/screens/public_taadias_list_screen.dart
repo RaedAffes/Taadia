@@ -117,33 +117,47 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
     final cs = Theme.of(context).colorScheme;
     final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l.editTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleCtrl,
-              textDirection: l.localeName == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-              decoration: InputDecoration(labelText: l.assessmentTitle, hintText: t.title),
-              autofocus: true,
+      builder: (ctx) => Dialog(
+        clipBehavior: Clip.none,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 400),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(l.editTitle, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                SizedBox(height: 20),
+                TextField(
+                  controller: titleCtrl,
+                  textDirection: l.localeName == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                  decoration: InputDecoration(labelText: l.assessmentTitle, hintText: t.title),
+                  autofocus: true,
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  controller: descCtrl,
+                  textDirection: l.localeName == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                  decoration: InputDecoration(labelText: l.descriptionOptional, hintText: l.descriptionHint),
+                  maxLines: 5,
+                  minLines: 3,
+                ),
+                SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
+                    SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, {'title': titleCtrl.text.trim(), 'description': descCtrl.text.trim()}),
+                      child: Text(l.save),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-            TextField(
-              controller: descCtrl,
-              textDirection: l.localeName == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-              decoration: InputDecoration(labelText: l.descriptionOptional, hintText: l.descriptionHint),
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.cancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, {'title': titleCtrl.text.trim(), 'description': descCtrl.text.trim()}),
-            child: Text(l.save),
           ),
-        ],
+        ),
       ),
     );
     if (result != null) {
@@ -312,11 +326,12 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
         ? taadiaService.taadias.where((t) => t.visibility != 'private').toList()
         : taadiaService.getAccessibleTaadias(userId, userGroupIds);
 
+    final liveTaadiaIds = taadiaService.taadias.map((t) => t.id).toSet();
     final pendingEntries = codeLookup.allEntries
         .where((e) => e.value.id.startsWith('pending_'))
         .toList();
     final resolvedEntries = codeLookup.allEntries
-        .where((e) => !e.value.id.startsWith('pending_'))
+        .where((e) => !e.value.id.startsWith('pending_') && liveTaadiaIds.contains(e.value.id))
         .toList();
     final resolvedTaadiaIds = resolvedEntries.map((e) => e.value.id).toSet();
     final filteredAccessibleTaadias = accessibleTaadias
@@ -974,24 +989,19 @@ class _AccessibleCard extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              if (t.description.isNotEmpty) ...[
-                                SizedBox(width: 10),
-                                Expanded(child: Text(t.description, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
-                                  textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr)),
-                              ],
                             ],
                           ),
+                          if (t.description.isNotEmpty) ...[
+                            SizedBox(height: 8),
+                            Text(t.description, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
+                              softWrap: true,
+                              textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr),
+                          ],
                         ],
                       ),
                     ),
                     if (isAdmin) ...[
                       SizedBox(width: 8),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
-                        icon: Icon(Icons.edit, color: Colors.white, size: 20),
-                        onPressed: () => onEdit?.call(t),
-                      ),
                       PopupMenuButton<String>(
                         padding: EdgeInsets.zero,
                         constraints: BoxConstraints(),
@@ -1018,9 +1028,22 @@ class _AccessibleCard extends StatelessWidget {
                         Icon(Icons.vpn_key, size: 14, color: cs.tertiary),
                         SizedBox(width: 8),
                         Text(t.accessCode, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.tertiary, letterSpacing: 2)),
-                        Spacer(),
-                      ] else
-                        Spacer(),
+                      ],
+                      Spacer(),
+                      if (isAdmin && onEdit != null)
+                        GestureDetector(
+                          onTap: () => onEdit!(t),
+                          child: Container(
+                            margin: EdgeInsets.only(left: 16),
+                            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: cs.tertiary.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: cs.tertiary.withOpacity(0.3)),
+                            ),
+                            child: Text(l.editTitle, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.tertiary)),
+                          ),
+                        ),
                     ],
                   ),
                 ),

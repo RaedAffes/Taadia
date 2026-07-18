@@ -39,7 +39,13 @@ class AppScaffold extends StatefulWidget {
 }
 
 class _AppScaffoldState extends State<AppScaffold> {
-  double _scrollOffset = 0;
+  final _scrollNotifier = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _scrollNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,36 +55,43 @@ class _AppScaffoldState extends State<AppScaffold> {
     final isAdmin = auth.isAdmin;
     final cs = Theme.of(context).colorScheme;
 
-    final rawProgress = (_scrollOffset / 250).clamp(0.0, 1.0);
-    final progress = Curves.easeOutCubic.transform(rawProgress);
-    final headerHeight = 200.0 - progress * 136;
-
     return Scaffold(
-      appBar: IslamicHeader(
-        key: const ValueKey('islamic_header'),
-        title: widget.title ?? '',
-        subtitle: widget.subtitle,
-        height: headerHeight,
-        leading: Builder(
-          builder: (ctx) {
-            final isFirst = ModalRoute.of(ctx)?.isFirst ?? true;
-            return IconButton(
-              icon: Icon(
-                isFirst ? Icons.menu : Icons.arrow_back,
-                color: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(200),
+        child: ValueListenableBuilder<double>(
+          valueListenable: _scrollNotifier,
+          builder: (context, offset, _) {
+            final rawProgress = (offset / 250).clamp(0.0, 1.0);
+            final progress = Curves.easeOutCubic.transform(rawProgress);
+            final headerHeight = 200.0 - progress * 136;
+
+            return IslamicHeader(
+              title: widget.title ?? '',
+              subtitle: widget.subtitle,
+              height: headerHeight,
+              leading: Builder(
+                builder: (ctx) {
+                  final isFirst = ModalRoute.of(ctx)?.isFirst ?? true;
+                  return IconButton(
+                    icon: Icon(
+                      isFirst ? Icons.menu : Icons.arrow_back,
+                      color: Colors.white,
+                    ),
+                    tooltip: isFirst ? null : l.goBack,
+                    onPressed: () {
+                      if (isFirst) {
+                        Scaffold.of(ctx).openEndDrawer();
+                      } else {
+                        Navigator.of(ctx).pop();
+                      }
+                    },
+                  );
+                },
               ),
-              tooltip: isFirst ? null : l.goBack,
-              onPressed: () {
-                if (isFirst) {
-                  Scaffold.of(ctx).openEndDrawer();
-                } else {
-                  Navigator.of(ctx).pop();
-                }
-              },
+              actions: widget.actions,
             );
           },
         ),
-        actions: widget.actions,
       ),
       endDrawer: Drawer(
         child: Column(
@@ -204,8 +217,9 @@ class _AppScaffoldState extends State<AppScaffold> {
                 },
               ),
             Spacer(),
-            _logoutTile(context, auth),
             SizedBox(height: 16),
+            _logoutTile(context, auth),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 45),
           ],
         ),
       ),
@@ -215,8 +229,10 @@ class _AppScaffoldState extends State<AppScaffold> {
           Expanded(
             child: NotificationListener<ScrollNotification>(
               onNotification: (notification) {
-                if (notification is ScrollUpdateNotification) {
-                  setState(() => _scrollOffset = notification.metrics.pixels);
+                if (notification is ScrollUpdateNotification ||
+                    notification is ScrollEndNotification) {
+                  final pos = notification.metrics.pixels;
+                  _scrollNotifier.value = pos.clamp(0.0, 200.0);
                 }
                 return false;
               },

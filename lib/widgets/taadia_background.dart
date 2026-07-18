@@ -20,34 +20,25 @@ class TaadiaBackground extends StatelessWidget {
       valueListenable: PexelsBackgroundService.instance.imageUrlNotifier,
       builder: (context, pexelsUrl, _) {
         if (pexelsUrl != null) {
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Image.network(
-                    pexelsUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(color: cs.surface),
-                  ),
-                ),
-                Positioned.fill(
-                  child: Container(
-                    color: isDark
-                        ? const Color(0xFF3E3A36).withValues(alpha: 0.75)
-                        : const Color(0xFFF5F0EB).withValues(alpha: 0.80),
-                  ),
-                ),
-                Positioned.fill(child: child),
-              ],
-            ),
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                pexelsUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(color: cs.surface),
+              ),
+              Container(
+                color: isDark
+                    ? const Color(0xFF3E3A36).withValues(alpha: 0.75)
+                    : const Color(0xFFF5F0EB).withValues(alpha: 0.80),
+              ),
+              child,
+            ],
           );
         }
 
-        return Container(
-          width: double.infinity,
-          height: double.infinity,
+        return ColoredBox(
           color: isDark ? const Color(0xFF3E3A36) : const Color(0xFFF5F0EB),
           child: child,
         );

@@ -22,9 +22,22 @@ import 'package:ta3dia/services/connectivity_service.dart';
 import 'package:ta3dia/services/offline_queue_service.dart';
 import 'package:ta3dia/services/pexels_background_service.dart';
 import 'package:ta3dia/services/quran_download_service.dart';
+import 'package:ta3dia/services/quran_workmanager.dart';
 import 'package:ta3dia/widgets/offline_observer.dart';
 
 import 'firebase_options.dart';
+
+class NoOverscrollBehavior extends ScrollBehavior {
+  const NoOverscrollBehavior();
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const ClampingScrollPhysics();
+  }
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+    return child;
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,10 +49,10 @@ void main() async {
   );
   final quranService = QuranDownloadService.instance;
   await quranService.init();
-  if (kIsWeb) {
-    quranService.startBackgroundDownload();
-  } else {
+  quranService.startBackgroundDownload();
+  if (!kIsWeb) {
     BackgroundDownloadService.instance.init();
+    initQuranWorkManager();
   }
   PexelsBackgroundService.instance.init();
   runApp(MyApp());
@@ -106,6 +119,7 @@ class _AppBody extends StatelessWidget {
       child: Consumer<AppState>(
         builder: (context, state, _) => MaterialApp(
             title: 'Taadia',
+            scrollBehavior: const NoOverscrollBehavior(),
             debugShowCheckedModeBanner: false,
             themeMode: state.themeMode,
             themeAnimationDuration: Duration(milliseconds: 200),

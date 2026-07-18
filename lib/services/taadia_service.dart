@@ -42,26 +42,8 @@ class TaadiaService extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // Try to load from cache first with timeout
-    try {
-      final cacheSnapshot = await _firestore
-          .collection('taadia')
-          .get(const GetOptions(source: Source.cache))
-          .timeout(const Duration(seconds: 5));
-      _taadias = cacheSnapshot.docs
-          .map((doc) => Taadia.fromFirestore(doc.id, Map<String, dynamic>.from(doc.data() as Map)))
-          .toList();
-    } catch (_) {
-      // No cache yet — loading finishes, listener will populate when available
-    }
-    _mergePendingLocalTaadias();
-    _taadias.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    _isLoading = false;
-    notifyListeners();
-
     _taadiaSub = _firestore.collection('taadia').snapshots(includeMetadataChanges: true).listen(
           (snapshot) {
-            if (!_connectivityService.isOnline && snapshot.metadata.isFromCache) return;
             try {
               _taadias = snapshot.docs
                   .map((doc) => Taadia.fromFirestore(doc.id, Map<String, dynamic>.from(doc.data() as Map)))
