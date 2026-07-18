@@ -28,6 +28,7 @@ class AdminTaadiaResults extends StatefulWidget {
 class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
   String _searchQuery = '';
   final _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final Set<String> _categoryFilter = {};
   final Map<String, String> _classificationFilters = {};
   List<String> get _taadiaCategories => widget.taadia.categories ?? [];
@@ -56,6 +57,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -342,6 +344,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                       onRefresh: () =>
                           evalService.loadEvaluations(widget.taadia.id),
                       child: CustomScrollView(
+                        controller: _scrollController,
                         slivers: [
                           SliverToBoxAdapter(
                             child: Padding(
@@ -374,10 +377,14 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                                       ),
                                       isDense: true,
                                     ),
-                                    onChanged: (v) =>
-                                        setState(() => _searchQuery = v),
+                                    onChanged: (v) {
+                                      setState(() => _searchQuery = v);
+                                      if (_scrollController.hasClients) {
+                                        _scrollController.animateTo(0, duration: Duration(milliseconds: 200), curve: Curves.easeOut);
+                                      }
+                                    },
                                   ),
-                                  if (widget.taadia.accessCode.isNotEmpty)
+                                  if (_searchQuery.isEmpty && widget.taadia.accessCode.isNotEmpty)
                                     Padding(
                                       padding: EdgeInsets.only(top: 12),
                                       child: Container(
@@ -413,7 +420,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                                             InkWell(
                                               borderRadius: BorderRadius.circular(8),
                                               onTap: () {
-                                                final cb = Clipboard.setData(ClipboardData(text: widget.taadia.accessCode));
+                                                Clipboard.setData(ClipboardData(text: widget.taadia.accessCode));
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(content: Text(l.copied), duration: Duration(seconds: 1)),
                                                 );
@@ -427,315 +434,244 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                                         ),
                                       ),
                                     ),
-                                  Center(
-                                    child: Container(
-                                      width: double.infinity,
+                                  if (_searchQuery.isEmpty)
+                                    Center(
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: cs.tertiaryContainer.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: cs.tertiary.withValues(alpha: 0.25),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.functions, size: 16, color: cs.tertiary),
+                                                SizedBox(width: 8),
+                                                Flexible(
+                                                  child: Text(
+                                                    _formulaLabel(_currentFormula, l),
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: cs.onTertiaryContainer,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            SizedBox(height: 12),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: ElevatedButton.icon(
+                                                    icon: Icon(Icons.functions, size: 18),
+                                                    label: Text(l.formula, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: cs.secondaryContainer,
+                                                      foregroundColor: cs.onSecondaryContainer,
+                                                      padding: EdgeInsets.symmetric(vertical: 14),
+                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                    ),
+                                                    onPressed: _showFormulaDialog,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 10),
+                                                Expanded(
+                                                  child: ElevatedButton.icon(
+                                                    icon: Icon(
+                                                      _showClassement ? Icons.visibility_off : Icons.leaderboard,
+                                                      size: 18,
+                                                    ),
+                                                    label: Text(
+                                                      _showClassement ? l.hideClassement : l.showClassement,
+                                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                                    ),
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: _showClassement ? cs.tertiary : cs.primary,
+                                                      foregroundColor: _showClassement ? cs.onTertiary : cs.onPrimary,
+                                                      padding: EdgeInsets.symmetric(vertical: 14),
+                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                    ),
+                                                    onPressed: () => setState(() => _showClassement = !_showClassement),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            SizedBox(height: 8),
+                                            Text(
+                                              '${l.students} : ${filtered.length}',
+                                              style: TextStyle(
+                                                color: cs.onSurfaceVariant,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  if (_searchQuery.isEmpty) ...[
+                                    SizedBox(height: 10),
+                                    Container(
                                       padding: EdgeInsets.all(16),
                                       decoration: BoxDecoration(
-                                        color: cs.tertiaryContainer.withValues(
-                                          alpha: 0.15,
-                                        ),
+                                        color: cs.surfaceContainerHighest,
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
-                                          color: cs.tertiary.withValues(
-                                            alpha: 0.25,
-                                          ),
+                                          color: cs.outlineVariant.withValues(alpha: 0.3),
                                         ),
                                       ),
                                       child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
                                             children: [
-                                              Icon(
-                                                Icons.functions,
-                                                size: 16,
-                                                color: cs.tertiary,
-                                              ),
+                                              Icon(Icons.filter_alt, size: 18, color: cs.primary),
                                               SizedBox(width: 8),
-                                              Flexible(
-                                                child: Text(
-                                                  _formulaLabel(
-                                                    _currentFormula,
-                                                    l,
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        cs.onTertiaryContainer,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          SizedBox(height: 12),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: ElevatedButton.icon(
-                                                  icon: Icon(
-                                                    Icons.functions,
-                                                    size: 18,
-                                                  ),
-                                                  label: Text(
-                                                    l.formula,
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        cs.secondaryContainer,
-                                                    foregroundColor:
-                                                        cs.onSecondaryContainer,
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          vertical: 14,
-                                                        ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  onPressed: _showFormulaDialog,
-                                                ),
-                                              ),
-                                              SizedBox(width: 10),
-                                              Expanded(
-                                                child: ElevatedButton.icon(
-                                                  icon: Icon(
-                                                    _showClassement
-                                                        ? Icons.visibility_off
-                                                        : Icons.leaderboard,
-                                                    size: 18,
-                                                  ),
-                                                  label: Text(
-                                                    _showClassement
-                                                        ? l.hideClassement
-                                                        : l.showClassement,
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        _showClassement
-                                                        ? cs.tertiary
-                                                        : cs.primary,
-                                                    foregroundColor:
-                                                        _showClassement
-                                                        ? cs.onTertiary
-                                                        : cs.onPrimary,
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          vertical: 14,
-                                                        ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  onPressed: () => setState(
-                                                    () => _showClassement =
-                                                        !_showClassement,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          SizedBox(height: 8),
-                                          Text(
-                                            '${filtered.length} : ${l.students}',
-                                            style: TextStyle(
-                                              color: cs.onSurfaceVariant,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 10),
-                                  Container(
-                                    padding: EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: cs.surfaceContainerHighest,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: cs.outlineVariant.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.filter_alt,
-                                              size: 18,
-                                              color: cs.primary,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              l.filterBy,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w700,
-                                                color: cs.onSurface,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        if (_taadiaCategories.isNotEmpty) ...[
-                                          SizedBox(height: 14),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.category_outlined,
-                                                size: 16,
-                                                color: cs.onSurfaceVariant,
-                                              ),
-                                              SizedBox(width: 6),
                                               Text(
-                                                l.selectCategory,
+                                                l.filterBy,
                                                 style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: cs.onSurfaceVariant,
-                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: cs.onSurface,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                          SizedBox(height: 8),
-                                          Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
-                                            children: [
-                                              ..._taadiaCategories.map((cat) {
-                                                final selected = _categoryFilter.contains(cat);
-                                                return FilterChip(
-                                                  label: Text(cat, style: TextStyle(fontSize: 12)),
-                                                  selected: selected,
-                                                  selectedColor: cs.secondary.withValues(alpha: 0.2),
-                                                  checkmarkColor: cs.secondary,
-                                                  onSelected: (val) {
-                                                    setState(() {
-                                                      if (val) {
-                                                        _categoryFilter.add(cat);
-                                                      } else {
-                                                        _categoryFilter.remove(cat);
-                                                      }
-                                                    });
-                                                  },
-                                                );
-                                              }),
-                                        ],
-                                      ),
-                                    ],
-                                  if (_taadiaClassifications.isNotEmpty) ...[
-                                        SizedBox(height: 14),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.star_outline,
-                                              size: 16,
-                                              color: cs.onSurfaceVariant,
+                                          if (_taadiaCategories.isNotEmpty) ...[
+                                            SizedBox(height: 14),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.category_outlined, size: 16, color: cs.onSurfaceVariant),
+                                                SizedBox(width: 6),
+                                                Text(
+                                                  l.selectCategory,
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: cs.onSurfaceVariant,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            SizedBox(width: 6),
-                                            Text(
-                                              isRtl ? 'التصنيف' : 'Classification',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                color: cs.onSurfaceVariant,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                            SizedBox(height: 8),
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
+                                              children: [
+                                                ..._taadiaCategories.map((cat) {
+                                                  final selected = _categoryFilter.contains(cat);
+                                                  return FilterChip(
+                                                    label: Text(cat, style: TextStyle(fontSize: 12)),
+                                                    selected: selected,
+                                                    selectedColor: cs.secondary.withValues(alpha: 0.2),
+                                                    checkmarkColor: cs.secondary,
+                                                    onSelected: (val) {
+                                                      setState(() {
+                                                        if (val) {
+                                                          _categoryFilter.add(cat);
+                                                        } else {
+                                                          _categoryFilter.remove(cat);
+                                                        }
+                                                      });
+                                                    },
+                                                  );
+                                                }),
+                                              ],
                                             ),
                                           ],
-                                        ),
-                                        SizedBox(height: 8),
-                                        if (_taadiaClassifications.isNotEmpty)
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: _taadiaClassifications.map((cfg) {
-                                              final current = _classificationFilters[cfg.name];
-                                              return Padding(
-                                                padding: EdgeInsets.only(bottom: 6),
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      '${cfg.name}: ',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: cs.onSurfaceVariant,
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 4),
-                                                    Wrap(
-                                                      spacing: 4,
-                                                      runSpacing: 4,
-                                                      children: [
-                                                        ChoiceChip(
-                                                          label: Text(l.all, style: TextStyle(fontSize: 12)),
-                                                          selected: current == null,
-                                                          onSelected: (_) {
-                                                            setState(() {
-                                                              _classificationFilters.remove(cfg.name);
-                                                            });
-                                                          },
-                                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                          visualDensity: VisualDensity.compact,
+                                          if (_taadiaClassifications.isNotEmpty) ...[
+                                            SizedBox(height: 14),
+                                            Row(
+                                              children: [
+                                                Icon(Icons.star_outline, size: 16, color: cs.onSurfaceVariant),
+                                                SizedBox(width: 6),
+                                                Text(
+                                                  isRtl ? 'التصنيف' : 'Classification',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: cs.onSurfaceVariant,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            SizedBox(height: 8),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: _taadiaClassifications.map((cfg) {
+                                                final current = _classificationFilters[cfg.name];
+                                                return Padding(
+                                                  padding: EdgeInsets.only(bottom: 6),
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        '${cfg.name}: ',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w600,
+                                                          color: cs.onSurfaceVariant,
                                                         ),
-                                                        ...cfg.options.map((opt) {
-                                                          return ChoiceChip(
-                                                            label: Text(opt, style: TextStyle(fontSize: 12)),
-                                                            selected: current == opt,
+                                                      ),
+                                                      SizedBox(height: 4),
+                                                      Wrap(
+                                                        spacing: 4,
+                                                        runSpacing: 4,
+                                                        children: [
+                                                          ChoiceChip(
+                                                            label: Text(l.all, style: TextStyle(fontSize: 12)),
+                                                            selected: current == null,
                                                             onSelected: (_) {
                                                               setState(() {
-                                                                _classificationFilters[cfg.name] = opt;
+                                                                _classificationFilters.remove(cfg.name);
                                                               });
                                                             },
                                                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                             visualDensity: VisualDensity.compact,
-                                                          );
-                                                        }),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            }).toList(),
-                                          ),
-                                      ],
+                                                          ),
+                                                          ...cfg.options.map((opt) {
+                                                            return ChoiceChip(
+                                                              label: Text(opt, style: TextStyle(fontSize: 12)),
+                                                              selected: current == opt,
+                                                              onSelected: (_) {
+                                                                setState(() {
+                                                                  _classificationFilters[cfg.name] = opt;
+                                                                });
+                                                              },
+                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                              visualDensity: VisualDensity.compact,
+                                                            );
+                                                          }),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }).toList(),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                   SizedBox(height: 8),
                                 ],
+                              ),
                             ),
                           ),
+                          _studentSliverList(ranked),
+                          SliverToBoxAdapter(child: SizedBox(height: 24)),
                         ],
                       ),
-                    ),
-                  ),
-                  _studentSliverList(ranked),
-                    SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  ],
-                ),
-              );
+                    );
             },
           ),
         ],

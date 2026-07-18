@@ -144,7 +144,6 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
       newRole,
       promoterUid: newRole == 'admin' ? currentUid : null,
     );
-    if (ok) await _loadUsers();
   }
 
   Future<void> _deleteUser(AppUser user) async {
@@ -198,8 +197,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     );
     if (ok == true) {
       final authService = Provider.of<AuthService>(context, listen: false);
-      final deleted = await authService.deleteUser(user.uid);
-      if (deleted) await _loadUsers();
+      await authService.deleteUser(user.uid);
     }
   }
 
@@ -225,6 +223,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
             child: TextField(
               controller: _searchController,
               textInputAction: TextInputAction.search,
+              onChanged: (_) => _searchUser(),
               onSubmitted: (_) => _searchUser(),
               decoration: InputDecoration(
                 hintText: l.searchByName,

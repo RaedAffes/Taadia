@@ -36,6 +36,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters.clear()
+        }
     }
 
     splits {
@@ -46,6 +49,7 @@ android {
             isUniversalApk = false
         }
     }
+
 
     signingConfigs {
         create("release") {
@@ -65,4 +69,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+afterEvaluate {
+    android.defaultConfig.ndk.abiFilters.clear()
 }

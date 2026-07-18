@@ -12,6 +12,8 @@ import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/string_utils.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class CreateTaadiaScreen extends StatefulWidget {
   final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
@@ -41,9 +43,9 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final taadiaService = Provider.of<TaadiaService>(context, listen: false);
-      Provider.of<GroupService>(context, listen: false).loadGroups();
+      await Provider.of<GroupService>(context, listen: false).loadGroups();
       setState(() {
         _accessCode = taadiaService.generateAccessCode();
       });
@@ -699,6 +701,7 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
 
   List<MapEntry<String, AppUser>> _allUsers = [];
   List<MapEntry<String, AppUser>> _filteredUsers = [];
+  List<GroupModel> _adminGroups = [];
   bool _loaded = false;
 
   @override
@@ -712,7 +715,6 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
   Future<void> _loadData() async {
     final auth = Provider.of<AuthService>(context, listen: false);
     _currentUid = auth.currentUser?.uid;
-    Provider.of<GroupService>(context, listen: false).loadGroups();
     final users = await auth.getAllUsers();
     _allUsers = users
         .where((u) => !u.isAdmin)
@@ -720,6 +722,14 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
         .toList();
     _allUsers.sort((a, b) => b.value.createdAt.compareTo(a.value.createdAt));
     _filteredUsers = List.from(_allUsers);
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('groups').get();
+      _adminGroups = snapshot.docs
+          .map((doc) => GroupModel.fromFirestore(doc.id, doc.data()))
+          .toList();
+    } catch (_) {
+      _adminGroups = [];
+    }
     _loaded = true;
     if (mounted) setState(() {});
   }
@@ -826,10 +836,7 @@ class __UserPickerDialogState extends State<_UserPickerDialog> {
     final List<Widget> children = [];
     final isRtl = l.localeName == 'ar';
 
-    final groupService = context.watch<GroupService>();
-    final adminGroups = groupService.groups
-        .where((g) => g.createdBy == _currentUid)
-        .toList();
+    final adminGroups = _adminGroups;
 
     if (adminGroups.isNotEmpty) {
       children.add(
