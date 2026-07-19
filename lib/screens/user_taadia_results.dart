@@ -144,7 +144,7 @@ class _UserTaadiaResultsState extends State<UserTaadiaResults> {
                                     isDense: true,
                                   ),
                                   onChanged: (v) =>
-                                      setState(() => _searchQuery = v),
+                                      setState(() => _searchQuery = v ?? ''),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(

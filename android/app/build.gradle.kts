@@ -8,6 +8,7 @@ plugins {
 dependencies {
   implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
   implementation("com.google.firebase:firebase-analytics")
+  implementation("androidx.start:startup-runtime:1.2.0")
 }
 
 val keystorePropertiesFile = rootProject.file("key.properties")
@@ -36,16 +37,13 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        ndk {
-            abiFilters.clear()
-        }
     }
 
     splits {
         abi {
             isEnable = true
             reset()
-            include("arm64-v8a", "armeabi-v7a")
+            include("arm64-v8a")
             isUniversalApk = false
         }
     }
@@ -69,8 +67,4 @@ android {
 
 flutter {
     source = "../.."
-}
-
-afterEvaluate {
-    android.defaultConfig.ndk.abiFilters.clear()
 }

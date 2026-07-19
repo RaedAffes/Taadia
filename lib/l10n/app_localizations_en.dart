@@ -295,6 +295,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get numberOfQuestions => 'Number of Questions';
 
   @override
+  String get enterNumberOfQuestions => 'Enter number of questions';
+
+  @override
   String get numberOfAhzab => 'Number of Ahzab';
 
   @override
@@ -842,6 +845,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addRange => 'Add range';
+
+  @override
+  String get collapseAll => 'Collapse all';
+
+  @override
+  String get expandAll => 'Expand all';
 
   @override
   String get generateQuestions => 'Generate questions';

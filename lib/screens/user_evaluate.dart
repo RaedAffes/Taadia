@@ -29,64 +29,139 @@ class _RangeCriterion {
   int? pageTo;
   final List<int> quarterNumbers = [];
 
-  QuestionRange toQuestionRange() {
-    List<int>? suraNums;
-    if (type == QuestionRangeType.surahs && surahFrom != null) {
-      suraNums = [for (int i = surahFrom!; i <= (surahTo ?? surahFrom!); i++) i];
-    } else if (surahNumbers.isNotEmpty) {
-      suraNums = List<int>.from(surahNumbers);
+  final List<(int?, int?)> hizbSubRanges = [];
+  final List<(int?, int?)> surahSubRanges = [];
+  final List<(int?, int?, int?)> surahPageSubRanges = [];
+  final List<(int?, int?, int?)> surahAyahSubRanges = [];
+
+  List<QuestionRange> toQuestionRanges() {
+    final ranges = <QuestionRange>[];
+    switch (type) {
+      case QuestionRangeType.hizbRange:
+        if (hizbFrom != null) {
+          ranges.add(QuestionRange(type: type, hizbFrom: hizbFrom, hizbTo: hizbTo ?? hizbFrom));
+        }
+        for (final sub in hizbSubRanges) {
+          if (sub.$1 != null) {
+            ranges.add(QuestionRange(type: type, hizbFrom: sub.$1, hizbTo: sub.$2 ?? sub.$1));
+          }
+        }
+      case QuestionRangeType.surahs:
+        if (surahFrom != null) {
+          final nums = [for (int i = surahFrom!; i <= (surahTo ?? surahFrom!); i++) i];
+          ranges.add(QuestionRange(type: type, surahNumbers: nums));
+        }
+        for (final sub in surahSubRanges) {
+          if (sub.$1 != null) {
+            final nums = [for (int i = sub.$1!; i <= (sub.$2 ?? sub.$1!); i++) i];
+            ranges.add(QuestionRange(type: type, surahNumbers: nums));
+          }
+        }
+      case QuestionRangeType.surahAyahRange:
+        if (surahNumbers.isNotEmpty && ayaFrom != null) {
+          ranges.add(QuestionRange(type: type, surahNumbers: List<int>.from(surahNumbers), ayaFrom: ayaFrom, ayaTo: ayaTo ?? ayaFrom));
+        }
+        for (final sub in surahAyahSubRanges) {
+          if (sub.$1 != null && sub.$2 != null) {
+            ranges.add(QuestionRange(type: type, surahNumbers: [sub.$1!], ayaFrom: sub.$2, ayaTo: sub.$3 ?? sub.$2));
+          }
+        }
+      case QuestionRangeType.surahPages:
+        if (surahNumbers.isNotEmpty && pageFrom != null) {
+          ranges.add(QuestionRange(type: type, surahNumbers: List<int>.from(surahNumbers), pageFrom: pageFrom, pageTo: pageTo ?? pageFrom));
+        }
+        for (final sub in surahPageSubRanges) {
+          if (sub.$1 != null && sub.$2 != null) {
+            ranges.add(QuestionRange(type: type, surahNumbers: [sub.$1!], pageFrom: sub.$2, pageTo: sub.$3 ?? sub.$2));
+          }
+        }
+      case QuestionRangeType.quarter:
+        ranges.add(QuestionRange(type: type, quarterNumbers: quarterNumbers.isNotEmpty ? List<int>.from(quarterNumbers) : null));
+      case QuestionRangeType.allQuran:
+        ranges.add(QuestionRange(type: type, hizbFrom: 1, hizbTo: 60));
     }
-    return QuestionRange(
-      type: type,
-      hizbFrom: type == QuestionRangeType.allQuran ? 1 : hizbFrom,
-      hizbTo: type == QuestionRangeType.allQuran ? 60 : (hizbTo ?? hizbFrom),
-      surahNumbers: suraNums,
-      ayaFrom: ayaFrom,
-      ayaTo: ayaTo,
-      pageFrom: pageFrom,
-      pageTo: pageTo,
-      quarterNumbers: quarterNumbers.isNotEmpty ? List<int>.from(quarterNumbers) : null,
-    );
+    return ranges.isEmpty ? [QuestionRange(type: type)] : ranges;
+  }
+
+  QuestionRange toQuestionRange() {
+    return toQuestionRanges().first;
+  }
+
+  String _hizbLabel(int? from, int? to) {
+    if (from == null) return '';
+    if (to == null || to == from) return 'الحزب $from';
+    if (to - from == 1) return 'أحزاب $from-$to';
+    return 'من الحزب $from إلى $to';
+  }
+
+  String _surahLabel(int? from, int? to) {
+    if (from == null) return '';
+    final fromName = AiService.surahNameAr(from) ?? '$from';
+    if (to == null || to == from) return 'سورة $fromName';
+    final toName = AiService.surahNameAr(to) ?? '$to';
+    if (to - from == 1) return 'سور $fromName - $toName';
+    return 'من سورة $fromName إلى سورة $toName';
   }
 
   String summary() {
+    final parts = <String>[];
     switch (type) {
       case QuestionRangeType.allQuran:
         return 'كامل القرآن';
       case QuestionRangeType.hizbRange:
-        if (hizbTo == null || hizbTo == hizbFrom) return 'الحزب $hizbFrom';
-        if (hizbTo! - hizbFrom! == 1) return 'أحزاب $hizbFrom-$hizbTo';
-        return 'من الحزب $hizbFrom إلى $hizbTo';
-      case QuestionRangeType.surahs: {
-        if (surahFrom == null) return '';
-        final fromName = AiService.surahNameAr(surahFrom!) ?? '$surahFrom';
-        if (surahTo == null || surahTo == surahFrom) return 'سورة $fromName';
-        final toName = AiService.surahNameAr(surahTo!) ?? '$surahTo';
-        if (surahTo! - surahFrom! == 1) return 'سور $fromName - $toName';
-        return 'من سورة $fromName إلى سورة $toName';
-      }
+        if (hizbFrom != null) parts.add(_hizbLabel(hizbFrom, hizbTo));
+        for (final sub in hizbSubRanges) {
+          final l = _hizbLabel(sub.$1, sub.$2);
+          if (l.isNotEmpty) parts.add(l);
+        }
+        return parts.isEmpty ? '' : parts.join(' + ');
+      case QuestionRangeType.surahs:
+        if (surahFrom != null) parts.add(_surahLabel(surahFrom, surahTo));
+        for (final sub in surahSubRanges) {
+          final l = _surahLabel(sub.$1, sub.$2);
+          if (l.isNotEmpty) parts.add(l);
+        }
+        return parts.isEmpty ? '' : parts.join(' + ');
       case QuestionRangeType.surahAyahRange: {
-        final name = surahNumbers.isNotEmpty
-            ? (AiService.surahNameAr(surahNumbers.first) ?? '')
-            : '';
-        if (ayaFrom != null && ayaTo != null && ayaFrom == ayaTo) return 'آيات من سورة $name ($ayaFrom)';
-        return 'آيات من سورة $name ($ayaFrom-$ayaTo)';
+        if (surahNumbers.isNotEmpty && ayaFrom != null) {
+          final name = AiService.surahNameAr(surahNumbers.first) ?? '';
+          parts.add('آيات من سورة $name (${ayaFrom!}${ayaTo != null && ayaTo != ayaFrom ? "-$ayaTo" : ""})');
+        }
+        for (final sub in surahAyahSubRanges) {
+          if (sub.$1 != null && sub.$2 != null) {
+            final name = AiService.surahNameAr(sub.$1!) ?? '';
+            parts.add('آيات من سورة $name (${sub.$2!}${sub.$3 != null && sub.$3 != sub.$2 ? "-${sub.$3}" : ""})');
+          }
+        }
+        return parts.isEmpty ? '' : parts.join(' + ');
       }
       case QuestionRangeType.surahPages: {
-        final name = surahNumbers.isNotEmpty
-            ? (AiService.surahNameAr(surahNumbers.first) ?? '')
-            : '';
-        final pr = surahNumbers.isNotEmpty ? AiService.surahPageRange(surahNumbers.first) : null;
-        if (pr != null && pageFrom != null && pageTo != null) {
-          final normFrom = pageFrom! - pr.$1 + 1;
-          final normTo = pageTo! - pr.$1 + 1;
-          if (normFrom == normTo) return 'صفحات من سورة $name ($normFrom)';
-          return 'صفحات من سورة $name ($normFrom-$normTo)';
+        if (surahNumbers.isNotEmpty && pageFrom != null) {
+          final name = AiService.surahNameAr(surahNumbers.first) ?? '';
+          final pr = AiService.surahPageRange(surahNumbers.first);
+          if (pr != null && pageTo != null) {
+            final normFrom = pageFrom! - pr.$1 + 1;
+            final normTo = pageTo! - pr.$1 + 1;
+            parts.add(normFrom == normTo ? 'صفحات من سورة $name ($normFrom)' : 'صفحات من سورة $name ($normFrom-$normTo)');
+          } else {
+            parts.add(pageFrom == pageTo ? 'صفحات من سورة $name ($pageFrom)' : 'صفحات من سورة $name ($pageFrom-$pageTo)');
+          }
         }
-        if (pageFrom != null && pageTo != null) {
-          if (pageFrom == pageTo) return 'صفحات من سورة $name ($pageFrom)';
+        for (final sub in surahPageSubRanges) {
+          if (sub.$1 != null && sub.$2 != null) {
+            final name = AiService.surahNameAr(sub.$1!) ?? '';
+            final pr = AiService.surahPageRange(sub.$1!);
+            if (pr != null && sub.$3 != null) {
+              final normFrom = sub.$2! - pr.$1 + 1;
+              final normTo = sub.$3! - pr.$1 + 1;
+              parts.add(normFrom == normTo ? 'صفحات من سورة $name ($normFrom)' : 'صفحات من سورة $name ($normFrom-$normTo)');
+            } else {
+              final to = sub.$3 ?? sub.$2;
+              parts.add(sub.$2 == to ? 'صفحات من سورة $name (${sub.$2!})' : 'صفحات من سورة $name (${sub.$2!}-$to)');
+            }
+          }
         }
-        return 'صفحات من سورة $name ($pageFrom-$pageTo)';
+        return parts.isEmpty ? '' : parts.join(' + ');
       }
       case QuestionRangeType.quarter: {
         const labels = ['الأول', 'الثاني', 'الثالث', 'الرابع'];
@@ -101,13 +176,15 @@ class _RangeCriterion {
       case QuestionRangeType.allQuran:
         return true;
       case QuestionRangeType.hizbRange:
-        return hizbFrom != null;
+        return hizbFrom != null || hizbSubRanges.any((s) => s.$1 != null);
       case QuestionRangeType.surahs:
-        return surahFrom != null;
+        return surahFrom != null || surahSubRanges.any((s) => s.$1 != null);
       case QuestionRangeType.surahAyahRange:
-        return surahNumbers.isNotEmpty && ayaFrom != null;
+        return (surahNumbers.isNotEmpty && ayaFrom != null) ||
+            surahAyahSubRanges.any((s) => s.$1 != null && s.$2 != null);
       case QuestionRangeType.surahPages:
-        return surahNumbers.isNotEmpty && pageFrom != null;
+        return (surahNumbers.isNotEmpty && pageFrom != null) ||
+            surahPageSubRanges.any((s) => s.$1 != null && s.$2 != null);
       case QuestionRangeType.quarter:
         return quarterNumbers.isNotEmpty;
     }
@@ -126,6 +203,10 @@ class _RangeCriterion {
       'pageFrom': pageFrom,
       'pageTo': pageTo,
       'quarterNumbers': List<int>.from(quarterNumbers),
+      'hizbSubRanges': hizbSubRanges.map((r) => [r.$1, r.$2]).toList(),
+      'surahSubRanges': surahSubRanges.map((r) => [r.$1, r.$2]).toList(),
+      'surahPageSubRanges': surahPageSubRanges.map((r) => [r.$1, r.$2, r.$3]).toList(),
+      'surahAyahSubRanges': surahAyahSubRanges.map((r) => [r.$1, r.$2, r.$3]).toList(),
     };
   }
 
@@ -143,6 +224,22 @@ class _RangeCriterion {
     c.pageTo = map['pageTo'] as int?;
     c.quarterNumbers
         .addAll((map['quarterNumbers'] as List?)?.cast<int>() ?? []);
+    for (final r in (map['hizbSubRanges'] as List?) ?? []) {
+      final l = (r as List).cast<dynamic>();
+      c.hizbSubRanges.add((l[0] as int?, l[1] as int?));
+    }
+    for (final r in (map['surahSubRanges'] as List?) ?? []) {
+      final l = (r as List).cast<dynamic>();
+      c.surahSubRanges.add((l[0] as int?, l[1] as int?));
+    }
+    for (final r in (map['surahPageSubRanges'] as List?) ?? []) {
+      final l = (r as List).cast<dynamic>();
+      c.surahPageSubRanges.add((l[0] as int?, l[1] as int?, l[2] as int?));
+    }
+    for (final r in (map['surahAyahSubRanges'] as List?) ?? []) {
+      final l = (r as List).cast<dynamic>();
+      c.surahAyahSubRanges.add((l[0] as int?, l[1] as int?, l[2] as int?));
+    }
     return c;
   }
 }
@@ -243,6 +340,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   late final PageController _pageController;
 
   final List<_RangeCriterion> _rangeCriteria = [_RangeCriterion()];
+  final Set<int> _expandedCriteria = {0};
   String _oldAhzabText = '';
   bool _versesLoaded = false;
 
@@ -297,6 +395,9 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               ? eval.rangeCriteria.map((m) => _RangeCriterion.fromMap(m))
               : [_RangeCriterion()],
         );
+      _expandedCriteria
+        ..clear()
+        ..add(0);
       if (eval.questions.isNotEmpty) {
         _questions = eval.questions
             .map((q) => QuestionItem(
@@ -431,6 +532,9 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           }
           return c;
         }));
+      _expandedCriteria
+        ..clear()
+        ..add(0);
     }
   }
 
@@ -494,13 +598,29 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       errors.add(l.enterStudentName);
     }
     if (_numQuestions == 0) {
-      errors.add(l.numberOfQuestions);
+      errors.add(l.enterNumberOfQuestions);
     }
     if (_taadiaCategories.isNotEmpty && _category.isEmpty) {
       errors.add(l.selectCategory);
     }
-    if (_rangeCriteria.every((c) => !c.isValid())) {
-      errors.add(l.enterAhzabRange);
+    for (final c in _rangeCriteria) {
+      if (!c.isValid()) {
+        final isRtl = l.localeName == 'ar';
+        switch (c.type) {
+          case QuestionRangeType.quarter:
+            errors.add(isRtl ? 'يجب اختيار ربع واحد على الأقل' : 'Select at least one quarter');
+          case QuestionRangeType.surahs:
+            errors.add(isRtl ? 'أدخل نطاق السور' : 'Enter surah range');
+          case QuestionRangeType.surahPages:
+            errors.add(isRtl ? 'أدخل نطاق الصفحات' : 'Enter page range');
+          case QuestionRangeType.surahAyahRange:
+            errors.add(isRtl ? 'أدخل نطاق الآيات' : 'Enter ayah range');
+          case QuestionRangeType.hizbRange:
+            errors.add(isRtl ? 'أدخل نطاق الأحزاب' : 'Enter hizb range');
+          case QuestionRangeType.allQuran:
+            break;
+        }
+      }
     }
     if (widget.classifications.isNotEmpty) {
       for (final cfg in widget.classifications) {
@@ -660,7 +780,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           ? _questionVerseIndices[singleIndex]
           : null;
       final (questions, indices) = await AiService.generateDetailed(
-        ranges: _rangeCriteria.map((c) => c.toQuestionRange()).toList(),
+        ranges: _rangeCriteria.expand((c) => c.toQuestionRanges()).toList(),
         count: count,
         nearVerseIndex: currentVerseIdx,
       );
@@ -873,6 +993,9 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       _oldAhzabText = '';
       _rangeCriteria.clear();
       _rangeCriteria.add(_RangeCriterion());
+      _expandedCriteria
+        ..clear()
+        ..add(0);
     });
     _resetVerseIndices();
   }
@@ -1462,6 +1585,110 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   Widget _buildCriterionCard(int index, ColorScheme cs) {
     final l = AppLocalizations.of(context)!;
     final c = _rangeCriteria[index];
+    final isExpanded = _expandedCriteria.contains(index);
+
+    if (!isExpanded) {
+      final sum = c.summary();
+      final typeLabels = {
+        QuestionRangeType.allQuran: l.rangeAllQuran,
+        QuestionRangeType.quarter: l.rangeQuarter,
+        QuestionRangeType.hizbRange: l.rangeHizbRange,
+        QuestionRangeType.surahs: l.rangeSurahs,
+        QuestionRangeType.surahPages: l.rangeSurahPages,
+        QuestionRangeType.surahAyahRange: l.rangeSurahAyahRange,
+      };
+      return InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => setState(() => _expandedCriteria.add(index)),
+        child: Container(
+        margin: EdgeInsets.only(bottom: 6),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+        height: 40,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [
+              cs.surface,
+              cs.surfaceContainerHighest.withValues(alpha: 0.3),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: cs.primary.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(width: 4),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                typeLabels[c.type] ?? '',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: cs.primary),
+              ),
+            ),
+            SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                sum.isNotEmpty ? sum : '—',
+                style: TextStyle(fontSize: 12, color: cs.onSurface),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary),
+            ),
+            SizedBox(width: 12),
+            if (_rangeCriteria.length > 1)
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Color(0xFFD4686E).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.close, size: 16, color: Color(0xFFC0545E)),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () {
+                    setState(() {
+                      _rangeCriteria.removeAt(index);
+                      _expandedCriteria.remove(index);
+                      final shifted = <int>{};
+                      for (final e in _expandedCriteria) {
+                        shifted.add(e > index ? e - 1 : e);
+                      }
+                      _expandedCriteria
+                        ..clear()
+                        ..addAll(shifted);
+                    });
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      );
+    }
+
     final card = Container(
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(12),
@@ -1537,13 +1764,50 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                   ),
                 ),
               ),
-              if (_rangeCriteria.length > 1)
-                IconButton(
-                  icon: Icon(Icons.close, size: 18, color: cs.error),
+              SizedBox(width: 12),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.keyboard_arrow_up_rounded, size: 20, color: cs.primary),
                   visualDensity: VisualDensity.compact,
-                  onPressed: () {
-                    setState(() => _rangeCriteria.removeAt(index));
-                  },
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () => setState(() => _expandedCriteria.remove(index)),
+                ),
+              ),
+              SizedBox(width: 12),
+              if (_rangeCriteria.length > 1)
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFD4686E).withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.close, size: 16, color: Color(0xFFC0545E)),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: () {
+                      setState(() {
+                        _rangeCriteria.removeAt(index);
+                        _expandedCriteria.remove(index);
+                        final shifted = <int>{};
+                        for (final e in _expandedCriteria) {
+                          shifted.add(e > index ? e - 1 : e);
+                        }
+                        _expandedCriteria
+                          ..clear()
+                          ..addAll(shifted);
+                      });
+                    },
+                  ),
                 ),
             ],
           ),
@@ -1597,43 +1861,107 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         return const SizedBox.shrink();
 
       case QuestionRangeType.hizbRange:
-        return Directionality(
-          textDirection: TextDirection.ltr,
-          child: Row(
-            children: [
-              Expanded(child: _hizbDropdown(cs, c.hizbTo, (v) {
-                setState(() => c.hizbTo = v);
-              }, label: l.to)),
-              SizedBox(width: 8),
-              Expanded(child: _hizbDropdown(cs, c.hizbFrom, (v) {
-                setState(() {
-                  c.hizbFrom = v;
-                  if (c.hizbTo == null || c.hizbTo == c.hizbFrom) {
-                    c.hizbTo = v;
-                  }
-                });
-              }, label: l.from)),
-            ],
-          ),
+        return Column(
+          children: [
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Row(
+                children: [
+                  Expanded(child: _hizbDropdown(cs, c.hizbTo, (v) {
+                    setState(() => c.hizbTo = v);
+                  }, label: l.to)),
+                  SizedBox(width: 8),
+                  Expanded(child: _hizbDropdown(cs, c.hizbFrom, (v) {
+                    setState(() {
+                      c.hizbFrom = v;
+                      if (c.hizbTo == null || c.hizbTo == c.hizbFrom) {
+                        c.hizbTo = v;
+                      }
+                    });
+                  }, label: l.from)),
+                ],
+              ),
+            ),
+            ...List.generate(c.hizbSubRanges.length, (i) {
+              final sub = c.hizbSubRanges[i];
+              return Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(
+                    children: [
+                      Expanded(child: _hizbDropdown(cs, sub.$2, (v) {
+                        setState(() => c.hizbSubRanges[i] = (sub.$1, v));
+                      }, label: l.to)),
+                      SizedBox(width: 8),
+                      Expanded(child: _hizbDropdown(cs, sub.$1, (v) {
+                        setState(() {
+                          c.hizbSubRanges[i] = (v, (sub.$2 == null || sub.$2 == sub.$1) ? v : sub.$2);
+                        });
+                      }, label: l.from)),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            SizedBox(height: 8),
+            _subRangeButtons(cs,
+              onAdd: () => setState(() => c.hizbSubRanges.add((null, null))),
+              onRemove: c.hizbSubRanges.isNotEmpty
+                  ? () => setState(() => c.hizbSubRanges.removeLast())
+                  : () {},
+            ),
+          ],
         );
 
       case QuestionRangeType.surahs:
-        return Directionality(
-          textDirection: TextDirection.ltr,
-          child: Row(
-            children: [
-              Expanded(child: _surahDropdown(cs, c.surahTo ?? c.surahFrom, (v) {
-                setState(() => c.surahTo = v);
-              }, hintText: l.to)),
-              SizedBox(width: 8),
-              Expanded(child: _surahDropdown(cs, c.surahFrom, (v) {
-                setState(() => c.surahFrom = v);
-              }, hintText: l.from)),
-            ],
-          ),
+        return Column(
+          children: [
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Row(
+                children: [
+                  Expanded(child: _surahDropdown(cs, c.surahTo ?? c.surahFrom, (v) {
+                    setState(() => c.surahTo = v);
+                  }, hintText: l.to)),
+                  SizedBox(width: 8),
+                  Expanded(child: _surahDropdown(cs, c.surahFrom, (v) {
+                    setState(() => c.surahFrom = v);
+                  }, hintText: l.from)),
+                ],
+              ),
+            ),
+            ...List.generate(c.surahSubRanges.length, (i) {
+              final sub = c.surahSubRanges[i];
+              return Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(
+                    children: [
+                      Expanded(child: _surahDropdown(cs, sub.$2 ?? sub.$1, (v) {
+                        setState(() => c.surahSubRanges[i] = (sub.$1, v));
+                      }, hintText: l.to)),
+                      SizedBox(width: 8),
+                      Expanded(child: _surahDropdown(cs, sub.$1, (v) {
+                        setState(() => c.surahSubRanges[i] = (v, sub.$2));
+                      }, hintText: l.from)),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            SizedBox(height: 8),
+            _subRangeButtons(cs,
+              onAdd: () => setState(() => c.surahSubRanges.add((null, null))),
+              onRemove: c.surahSubRanges.isNotEmpty
+                  ? () => setState(() => c.surahSubRanges.removeLast())
+                  : () {},
+            ),
+          ],
         );
 
-      case QuestionRangeType.surahPages:
+      case QuestionRangeType.surahPages: {
         final suraNo = c.surahNumbers.isNotEmpty ? c.surahNumbers.first : null;
         final pageRange = suraNo != null ? AiService.surahPageRange(suraNo) : null;
         return Column(
@@ -1670,9 +1998,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                           setState(() {
                             final absPage = v != null ? v + pageRange.$1 - 1 : null;
                             c.pageFrom = absPage;
-                            if (c.pageTo == null || c.pageTo == c.pageFrom) {
-                              c.pageTo = absPage;
-                            }
+                            c.pageTo = absPage;
                           });
                         },
                         label: l.fromPage,
@@ -1683,10 +2009,67 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                 ),
               ),
             ],
+            ...List.generate(c.surahPageSubRanges.length, (i) {
+              final sub = c.surahPageSubRanges[i];
+              final subSuraNo = sub.$1;
+              final subPr = subSuraNo != null ? AiService.surahPageRange(subSuraNo) : null;
+              return Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Column(
+                  children: [
+                    _surahDropdown(cs, subSuraNo, (v) {
+                      setState(() => c.surahPageSubRanges[i] = (v, null, null));
+                    }, hintText: l.selectSurah),
+                    if (subSuraNo != null && subPr != null) ...[
+                      SizedBox(height: 8),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _pageDropdown(
+                                cs,
+                                sub.$3 != null ? sub.$3! - subPr.$1 + 1 : null,
+                                (v) => setState(() => c.surahPageSubRanges[i] = (sub.$1, sub.$2, v != null ? v + subPr.$1 - 1 : null)),
+                                label: l.toPage,
+                                count: subPr.$2 - subPr.$1 + 1,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: _pageDropdown(
+                                cs,
+                                sub.$2 != null ? sub.$2! - subPr.$1 + 1 : null,
+                                (v) {
+                                  setState(() {
+                                    final absPage = v != null ? v + subPr.$1 - 1 : null;
+                                    c.surahPageSubRanges[i] = (sub.$1, absPage, absPage);
+                                  });
+                                },
+                                label: l.fromPage,
+                                count: subPr.$2 - subPr.$1 + 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+            SizedBox(height: 8),
+            _subRangeButtons(cs,
+              onAdd: () => setState(() => c.surahPageSubRanges.add((null, null, null))),
+              onRemove: c.surahPageSubRanges.isNotEmpty
+                  ? () => setState(() => c.surahPageSubRanges.removeLast())
+                  : () {},
+            ),
           ],
         );
+      }
 
-      case QuestionRangeType.surahAyahRange:
+      case QuestionRangeType.surahAyahRange: {
         final suraNo = c.surahNumbers.isNotEmpty ? c.surahNumbers.first : null;
         final ayaCount = suraNo != null ? (AiService.surahAyaCount(suraNo) ?? 0) : 0;
         return Column(
@@ -1725,12 +2108,89 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                 ),
               ),
             ],
+            ...List.generate(c.surahAyahSubRanges.length, (i) {
+              final sub = c.surahAyahSubRanges[i];
+              final subSuraNo = sub.$1;
+              final subAyaCount = subSuraNo != null ? (AiService.surahAyaCount(subSuraNo) ?? 0) : 0;
+              return Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Column(
+                  children: [
+                    _surahDropdown(cs, subSuraNo, (v) {
+                      setState(() => c.surahAyahSubRanges[i] = (v, null, null));
+                    }, hintText: l.selectSurah),
+                    if (subSuraNo != null && subAyaCount > 0) ...[
+                      SizedBox(height: 8),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _verseDropdown(cs, sub.$3, (v) {
+                                setState(() => c.surahAyahSubRanges[i] = (sub.$1, sub.$2, v));
+                              }, label: l.toAyah, count: subAyaCount),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: _verseDropdown(cs, sub.$2, (v) {
+                                setState(() {
+                                  c.surahAyahSubRanges[i] = (sub.$1, v, v);
+                                });
+                              }, label: l.fromAyah, count: subAyaCount),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+            SizedBox(height: 8),
+            _subRangeButtons(cs,
+              onAdd: () => setState(() => c.surahAyahSubRanges.add((null, null, null))),
+              onRemove: c.surahAyahSubRanges.isNotEmpty
+                  ? () => setState(() => c.surahAyahSubRanges.removeLast())
+                  : () {},
+            ),
           ],
         );
+      }
 
       case QuestionRangeType.quarter:
         return _quarterSelector(cs, c);
     }
+  }
+
+  Widget _subRangeButtons(ColorScheme cs, {required VoidCallback onAdd, required VoidCallback onRemove}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onAdd,
+          child: Container(
+            padding: EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.add_circle_outline_rounded, size: 22, color: cs.primary),
+          ),
+        ),
+        SizedBox(width: 6),
+        GestureDetector(
+          onTap: onRemove,
+          child: Container(
+            padding: EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.remove_circle_outline_rounded, size: 22, color: cs.primary),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _hizbDropdown(ColorScheme cs, int? value, ValueChanged<int?> onChanged, {required String label}) {
@@ -1879,7 +2339,14 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       body: Directionality(
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
         child: _taadiaActive
-          ? SingleChildScrollView(
+          ? GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                if (_expandedCriteria.isNotEmpty) {
+                  setState(() => _expandedCriteria.clear());
+                }
+              },
+              child: SingleChildScrollView(
               padding: EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
@@ -2153,7 +2620,6 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                         ),
                       ),
 
-                    // Range criteria cards
                     ...List.generate(_rangeCriteria.length, (i) =>
                         _buildCriterionCard(i, cs)),
 
@@ -2175,7 +2641,12 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                             child: InkWell(
                               borderRadius: BorderRadius.circular(14),
                               onTap: () {
-                                setState(() => _rangeCriteria.add(_RangeCriterion()));
+                                setState(() {
+                                  _rangeCriteria.add(_RangeCriterion());
+                                  _expandedCriteria
+                                    ..clear()
+                                    ..add(_rangeCriteria.length - 1);
+                                });
                               },
                               child: Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -2490,6 +2961,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                   ],
                 ),
               ),
+            )
             )
           : Center(
               child: Column(

@@ -650,6 +650,12 @@ abstract class AppLocalizations {
   /// **'Number of Questions'**
   String get numberOfQuestions;
 
+  /// No description provided for @enterNumberOfQuestions.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter number of questions'**
+  String get enterNumberOfQuestions;
+
   /// No description provided for @numberOfAhzab.
   ///
   /// In en, this message translates to:
@@ -1681,6 +1687,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add range'**
   String get addRange;
+
+  /// No description provided for @collapseAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse all'**
+  String get collapseAll;
+
+  /// No description provided for @expandAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand all'**
+  String get expandAll;
 
   /// No description provided for @generateQuestions.
   ///

@@ -295,6 +295,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get numberOfQuestions => 'عدد الأسئلة';
 
   @override
+  String get enterNumberOfQuestions => 'أدخل عدد الأسئلة';
+
+  @override
   String get numberOfAhzab => 'عدد الأحزاب';
 
   @override
@@ -837,6 +840,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get addRange => 'إضافة أحزاب أو سور';
+
+  @override
+  String get collapseAll => 'طي الكل';
+
+  @override
+  String get expandAll => 'توسيع الكل';
 
   @override
   String get generateQuestions => 'إنشاء الأسئلة';
