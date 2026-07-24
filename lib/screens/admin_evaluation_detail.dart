@@ -15,42 +15,94 @@ class _RangeCriterionDisplay {
 
   _RangeCriterionDisplay._(this.label);
 
+  static String _hizbLabel(int? from, int? to) {
+    if (from == null) return '';
+    if (to == null || to == from) return 'الحزب $from';
+    if (to - from == 1) return 'أحزاب $from-$to';
+    return 'من الحزب $from إلى $to';
+  }
+
+  static String _surahLabel(int? from, int? to) {
+    if (from == null) return '';
+    final fromName = AiService.surahNameAr(from) ?? 'السورة $from';
+    if (to == null || to == from) return 'سورة $fromName';
+    final toName = AiService.surahNameAr(to) ?? 'السورة $to';
+    if (to - from == 1) return 'سور $fromName - $toName';
+    return 'من سورة $fromName إلى سورة $toName';
+  }
+
   factory _RangeCriterionDisplay.fromMap(Map<String, dynamic> map) {
     final type = map['type'] as int;
+    final parts = <String>[];
     switch (QuestionRangeType.values[type]) {
       case QuestionRangeType.allQuran:
         return _RangeCriterionDisplay._('كامل القرآن');
       case QuestionRangeType.hizbRange:
-        final hFrom = map['hizbFrom'] as int? ?? 1;
-        final hTo = map['hizbTo'] as int? ?? 60;
-        if (hTo == hFrom) return _RangeCriterionDisplay._('الحزب $hFrom');
-        if (hTo - hFrom == 1) return _RangeCriterionDisplay._('أحزاب $hFrom-$hTo');
-        return _RangeCriterionDisplay._('من الحزب $hFrom إلى $hTo');
+        final hFrom = map['hizbFrom'] as int?;
+        final hTo = map['hizbTo'] as int?;
+        if (hFrom != null) parts.add(_hizbLabel(hFrom, hTo));
+        for (final r in (map['hizbSubRanges'] as List?) ?? []) {
+          final l = (r as List).cast<dynamic>();
+          final subLabel = _hizbLabel(l[0] as int?, l[1] as int?);
+          if (subLabel.isNotEmpty) parts.add(subLabel);
+        }
+        return _RangeCriterionDisplay._(parts.isEmpty ? '' : parts.join(' + '));
       case QuestionRangeType.surahs:
         final sFrom = map['surahFrom'] as int?;
         final sTo = map['surahTo'] as int?;
-        if (sFrom == null) return _RangeCriterionDisplay._('');
-        final fromName = AiService.surahNameAr(sFrom) ?? 'السورة $sFrom';
-        if (sTo == null || sTo == sFrom) {
-          return _RangeCriterionDisplay._('سورة $fromName');
+        if (sFrom != null) parts.add(_surahLabel(sFrom, sTo));
+        for (final r in (map['surahSubRanges'] as List?) ?? []) {
+          final l = (r as List).cast<dynamic>();
+          final subLabel = _surahLabel(l[0] as int?, l[1] as int?);
+          if (subLabel.isNotEmpty) parts.add(subLabel);
         }
-        final toName = AiService.surahNameAr(sTo) ?? 'السورة $sTo';
-        if (sTo - sFrom == 1) return _RangeCriterionDisplay._('سور $fromName - $toName');
-        return _RangeCriterionDisplay._('من سورة $fromName إلى سورة $toName');
+        return _RangeCriterionDisplay._(parts.isEmpty ? '' : parts.join(' + '));
       case QuestionRangeType.surahAyahRange:
-        final nums = map['surahNumbers'] as List? ?? [];
-        final aFrom = map['ayaFrom'] as int?;
-        final aTo = map['ayaTo'] as int?;
-        if (nums.isEmpty) return _RangeCriterionDisplay._('');
-        final name = AiService.surahNameAr(nums.first as int) ?? 'السورة ${nums.first}';
-        return _RangeCriterionDisplay._('سورة $name ($aFrom-$aTo)');
+        for (final r in (map['surahAyahSubRanges'] as List?) ?? []) {
+          final l = (r as List).cast<dynamic>();
+          final suraNo = l[0] as int?;
+          final aFrom = l[1] as int?;
+          final aTo = l[2] as int?;
+          if (suraNo != null && aFrom != null) {
+            final name = AiService.surahNameAr(suraNo) ?? 'السورة $suraNo';
+            final range = aTo != null && aTo != aFrom ? '$aFrom-$aTo' : '$aFrom';
+            parts.add('آيات من سورة $name ($range)');
+          }
+        }
+        if (parts.isEmpty) {
+          final nums = map['surahNumbers'] as List? ?? [];
+          final aFrom = map['ayaFrom'] as int?;
+          final aTo = map['ayaTo'] as int?;
+          if (nums.isNotEmpty && aFrom != null) {
+            final name = AiService.surahNameAr(nums.first as int) ?? 'السورة ${nums.first}';
+            final range = aTo != null && aTo != aFrom ? '$aFrom-$aTo' : '$aFrom';
+            parts.add('آيات من سورة $name ($range)');
+          }
+        }
+        return _RangeCriterionDisplay._(parts.isEmpty ? '' : parts.join(' + '));
       case QuestionRangeType.surahPages:
-        final nums = map['surahNumbers'] as List? ?? [];
-        final pFrom = map['pageFrom'] as int?;
-        final pTo = map['pageTo'] as int?;
-        if (nums.isEmpty) return _RangeCriterionDisplay._('');
-        final name = AiService.surahNameAr(nums.first as int) ?? 'السورة ${nums.first}';
-        return _RangeCriterionDisplay._('صفحات من سورة $name ($pFrom-$pTo)');
+        for (final r in (map['surahPageSubRanges'] as List?) ?? []) {
+          final l = (r as List).cast<dynamic>();
+          final suraNo = l[0] as int?;
+          final pFrom = l[1] as int?;
+          final pTo = l[2] as int?;
+          if (suraNo != null && pFrom != null) {
+            final name = AiService.surahNameAr(suraNo) ?? 'السورة $suraNo';
+            final range = pTo != null && pTo != pFrom ? '$pFrom-$pTo' : '$pFrom';
+            parts.add('صفحات من سورة $name ($range)');
+          }
+        }
+        if (parts.isEmpty) {
+          final nums = map['surahNumbers'] as List? ?? [];
+          final pFrom = map['pageFrom'] as int?;
+          final pTo = map['pageTo'] as int?;
+          if (nums.isNotEmpty && pFrom != null) {
+            final name = AiService.surahNameAr(nums.first as int) ?? 'السورة ${nums.first}';
+            final range = pTo != null && pTo != pFrom ? '$pFrom-$pTo' : '$pFrom';
+            parts.add('صفحات من سورة $name ($range)');
+          }
+        }
+        return _RangeCriterionDisplay._(parts.isEmpty ? '' : parts.join(' + '));
       case QuestionRangeType.quarter:
         final qs = (map['quarterNumbers'] as List?)?.cast<int>() ?? <int>[];
         const labels = ['الأول', 'الثاني', 'الثالث', 'الرابع'];

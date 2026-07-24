@@ -45,9 +45,10 @@ class FeedbackService extends ChangeNotifier {
     _sub = _firestore
         .collection('feedback')
         .orderBy('createdAt', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .listen(
           (snap) {
+            if (!_connectivityService.isOnline && snap.metadata.isFromCache) return;
             try {
               _items = snap.docs
                   .map((d) => FeedbackItem.fromFirestore(d.id, d.data()))
@@ -88,9 +89,10 @@ class FeedbackService extends ChangeNotifier {
         .collection('feedback')
         .where('userId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .listen(
           (snap) {
+            if (!_connectivityService.isOnline && snap.metadata.isFromCache) return;
             try {
               _myItems = snap.docs
                   .map((d) => FeedbackItem.fromFirestore(d.id, d.data()))
@@ -153,7 +155,7 @@ class FeedbackService extends ChangeNotifier {
         .doc(feedbackId)
         .collection('replies')
         .orderBy('createdAt', descending: false)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map(
           (snap) => snap.docs
               .map((d) => FeedbackReply.fromFirestore(d.id, d.data()))

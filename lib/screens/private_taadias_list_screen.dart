@@ -215,7 +215,7 @@ class _PrivateTaadiasListScreenState extends State<PrivateTaadiasListScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) =>
-                    EvaluateScreen(taadiaId: taadiaId, taadiaTitle: ''),
+                    EvaluateScreen(taadiaId: taadiaId, taadiaTitle: '', active: true),
               ),
             );
             if (mounted) {

@@ -100,15 +100,22 @@ class OfflineQueueService extends ChangeNotifier {
     _isProcessing = true;
     notifyListeners();
 
-    if (_queue.isNotEmpty) {
-      final ops = List<PendingOperation>.from(_queue);
-      for (final op in ops) {
-        try {
-          await _processOperation(op);
-          await dequeue(op.id);
-        } catch (_) {
-          // Don't block other operations on failure
+    int consecutiveFails = 0;
+
+    while (_queue.isNotEmpty && _connectivityService.isOnline) {
+      final op = _queue.first;
+      try {
+        await _processOperation(op);
+        await dequeue(op.id);
+        consecutiveFails = 0;
+      } catch (e) {
+        debugPrint('OfflineQueue: operation ${op.type} failed: $e');
+        consecutiveFails++;
+        if (consecutiveFails >= _queue.length) {
+          break;
         }
+        _queue.add(_queue.removeAt(0));
+        await _saveQueue();
       }
     }
 
@@ -147,9 +154,12 @@ class OfflineQueueService extends ChangeNotifier {
   Future<void> _processOperation(PendingOperation op) async {
     switch (op.type) {
       case 'createTaadia':
-        await _firestore.collection('taadia').add(
-          Map<String, dynamic>.from(op.data),
-        );
+        final taadiaData = Map<String, dynamic>.from(op.data);
+        taadiaData.remove('_offlineId');
+        if (taadiaData['createdAt'] is String) {
+          taadiaData['createdAt'] = DateTime.tryParse(taadiaData['createdAt'] as String) ?? DateTime.now();
+        }
+        await _firestore.collection('taadia').add(taadiaData);
         break;
       case 'updateTaadia':
         await _firestore.collection('taadia').doc(
@@ -199,7 +209,6 @@ class OfflineQueueService extends ChangeNotifier {
         if (evalId != null && evalId.isNotEmpty && !evalId.startsWith('pending_') && !evalId.startsWith('code_')) {
           await _firestore.collection('evaluations').doc(evalId).set(
             evalData,
-            SetOptions(merge: true),
           );
         } else {
           await _firestore.collection('evaluations').add(evalData);
@@ -236,6 +245,11 @@ class OfflineQueueService extends ChangeNotifier {
         await _firestore.collection('groups').doc(
           op.data['groupId'] as String,
         ).update({'members.${op.data['userId']}': FieldValue.delete()});
+        break;
+      case 'revokeAccess':
+        await _firestore.collection('taadia').doc(
+          op.data['taadiaId'] as String,
+        ).update({'accessUsers.${op.data['userId']}': FieldValue.delete()});
         break;
       case 'submitFeedback':
         await _firestore.collection('feedback').add(

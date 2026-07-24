@@ -58,6 +58,16 @@ Future<void> _processOfflineQueue() async {
                 DateTime.tryParse(evalData['createdAt'] as String) ??
                     DateTime.now();
           }
+          final accessCode = data['accessCode'] as String?;
+          if (accessCode != null && accessCode.isNotEmpty) {
+            evalData['accessCode'] = accessCode;
+            final resolvedId = await _resolveTaadiaIdByCode(firestore, accessCode);
+            if (resolvedId != null) {
+              evalData['taadiaId'] = resolvedId;
+            } else {
+              throw Exception('Unresolved code: $accessCode');
+            }
+          }
           final evalId = data['evalId'] as String?;
           if (evalId != null &&
               evalId.isNotEmpty &&
@@ -136,6 +146,21 @@ Future<void> _processOfflineQueue() async {
   debugPrint('WorkManager: ${queue.length - remaining.length}/${queue.length} operations synced');
 }
 
+Future<String?> _resolveTaadiaIdByCode(FirebaseFirestore firestore, String accessCode) async {
+  try {
+    final snapshot = await firestore
+        .collection('taadia')
+        .where('accessCode', isEqualTo: accessCode)
+        .where('status', isEqualTo: 'active')
+        .limit(1)
+        .get();
+    if (snapshot.docs.isNotEmpty) {
+      return snapshot.docs.first.id;
+    }
+  } catch (_) {}
+  return null;
+}
+
 @pragma('vm:entry-point')
 void workmanagerCallbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
@@ -200,7 +225,7 @@ void workmanagerCallbackDispatcher() {
               if (response.statusCode == 200) {
                 final file = File(
                     '${cacheDir.path}/${page.toString().padLeft(3, '0')}.svg');
-                await file.writeAsString(response.body);
+                await file.writeAsBytes(gzip.encode(utf8.encode(response.body)));
                 debugPrint('WorkManager: page $page saved');
                 return;
               }

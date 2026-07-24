@@ -473,6 +473,7 @@ class _ManageGroupsScreenState extends State<ManageGroupsScreen> {
                   itemBuilder: (context, index) {
                     final g = groupService.groups[index];
                     return Card(
+                      color: cs.surfaceContainerHighest,
                       elevation: 1,
                       margin: EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(

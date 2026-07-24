@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -112,7 +113,7 @@ class BackgroundDownloadService {
               final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
               if (response.statusCode == 200) {
                 final file = File('${cacheDir.path}/${page.toString().padLeft(3, '0')}.svg');
-                await file.writeAsString(response.body);
+                await file.writeAsBytes(gzip.encode(utf8.encode(response.body)));
                 downloaded++;
                 _controller.add(downloaded);
 

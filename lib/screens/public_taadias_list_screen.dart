@@ -186,10 +186,14 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
   Future<void> _onDeleteTaadia(Taadia t) async {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final isAdmin = auth.isAdmin;
+    final userId = auth.currentUser?.uid ?? '';
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l.deleteConfirm(t.title)),
+        title: Text(isAdmin ? l.deleteConfirm(t.title) : l.deleteConfirm(t.title)),
         content: Text(l.areYouSure),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel)),
@@ -199,7 +203,13 @@ class _PublicTaadiasListScreenState extends State<PublicTaadiasListScreen> {
     );
     if (confirmed == true) {
       final taadiaService = Provider.of<TaadiaService>(context, listen: false);
-      await taadiaService.deleteTaadia(t.id);
+      final codeLookup = Provider.of<CodeLookupService>(context, listen: false);
+      if (isAdmin) {
+        await taadiaService.deleteTaadia(t.id);
+      } else {
+        await taadiaService.revokeAccess(t.id, userId);
+        await codeLookup.removeByTaadiaId(t.id);
+      }
     }
   }
 
@@ -542,6 +552,7 @@ class _LazyList extends StatelessWidget {
                     cs: cs,
                     isRtl: isRtl,
                     showGift: justAccessedId == item.cachedTaadia!.id,
+                    onDelete: onDeleteTaadia,
                   );
                 case _ItemType.accessible:
                   return _AccessibleCard(
@@ -743,6 +754,7 @@ class _ResolvedCard extends StatelessWidget {
   final ColorScheme cs;
   final bool isRtl;
   final bool showGift;
+  final Future<void> Function(Taadia t)? onDelete;
 
   const _ResolvedCard({
     super.key,
@@ -752,6 +764,7 @@ class _ResolvedCard extends StatelessWidget {
     required this.cs,
     required this.isRtl,
     this.showGift = false,
+    this.onDelete,
   });
 
   @override
@@ -776,112 +789,160 @@ class _ResolvedCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            if (!isActive) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.taadiaClosed), backgroundColor: Colors.red));
-              return;
-            }
-            if (isAdmin) {
-              if (live.isNotEmpty) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => AdminTaadiaResults(taadia: live.first)));
-              }
-            } else {
-              if (live.isNotEmpty) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => UserTaadiaResults(taadia: live.first)));
-              } else {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => EvaluateScreen(
-                    taadiaId: taadia.id,
-                    taadiaTitle: taadia.title,
-                    taadiaDescription: taadia.description,
-                    classifications: taadia.classifications.map((m) => ClassificationConfig.fromMap(m)).toList(),
-                    active: isActive,
-                  ),
-                ));
-              }
-            }
-          },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [cs.primary, cs.primary.withOpacity(0.8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              GestureDetector(
+                onTap: () {
+                  if (!isActive) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.taadiaClosed), backgroundColor: Colors.red));
+                    return;
+                  }
+                  if (isAdmin) {
+                    if (live.isNotEmpty) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => AdminTaadiaResults(taadia: live.first)));
+                    }
+                  } else {
+                    if (live.isNotEmpty) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => UserTaadiaResults(taadia: live.first)));
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => EvaluateScreen(
+                          taadiaId: taadia.id,
+                          taadiaTitle: taadia.title,
+                          taadiaDescription: taadia.description,
+                          classifications: taadia.classifications.map((m) => ClassificationConfig.fromMap(m)).toList(),
+                          active: isActive,
+                        ),
+                      ));
+                    }
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [cs.primary, cs.primary.withOpacity(0.8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
-                      child: Image.asset('assets/images/quran image.png', height: 28, fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Icon(Icons.auto_stories, color: Colors.white, size: 28)),
-                    ),
-                    SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(taadia.title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: Colors.white),
-                            textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr),
-                          SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isActive ? Colors.white.withOpacity(0.25) : Colors.white.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(width: 7, height: 7, decoration: BoxDecoration(color: isActive ? Color(0xFF00A86B) : Colors.white54, shape: BoxShape.circle)),
-                                    SizedBox(width: 6),
-                                    Text(isActive ? l.open : l.close, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-                                  ],
-                                ),
-                              ),
-                              if (liveDescription.isNotEmpty) ...[
-                                SizedBox(width: 10),
-                                Expanded(child: Text(liveDescription, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
-                                  textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr)),
-                              ],
-                            ],
-                          ),
-                        ],
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
+                        child: Image.asset('assets/images/quran image.png', height: 28, fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Icon(Icons.auto_stories, color: Colors.white, size: 28)),
                       ),
-                    ),
-                  ],
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(taadia.title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: Colors.white),
+                              textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr),
+                            SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isActive ? Colors.white.withOpacity(0.25) : Colors.white.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(width: 7, height: 7, decoration: BoxDecoration(color: isActive ? Color(0xFF00A86B) : Colors.white54, shape: BoxShape.circle)),
+                                      SizedBox(width: 6),
+                                      Text(isActive ? l.open : l.close, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                                if (liveDescription.isNotEmpty) ...[
+                                  SizedBox(width: 10),
+                                  Expanded(child: Text(liveDescription, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
+                                    textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr)),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!isAdmin && onDelete != null) ...[
+                        SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () async {
+                            final liveTaadia = live.isNotEmpty ? live.first : null;
+                            if (liveTaadia != null) {
+                              await onDelete!(liveTaadia);
+                            }
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.delete_outline, color: Colors.white.withOpacity(0.8), size: 20),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Icon(Icons.vpn_key, size: 14, color: cs.primary),
-                    SizedBox(width: 8),
-                    Text(code, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary, letterSpacing: 2)),
-                    Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(color: cs.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(20)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.play_arrow_rounded, size: 16, color: cs.primary),
-                          SizedBox(width: 4),
-                          Text(l.startTaadia, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary)),
-                        ],
+              GestureDetector(
+                onTap: () {
+                  if (!isActive) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.taadiaClosed), backgroundColor: Colors.red));
+                    return;
+                  }
+                  if (isAdmin) {
+                    if (live.isNotEmpty) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => AdminTaadiaResults(taadia: live.first)));
+                    }
+                  } else {
+                    if (live.isNotEmpty) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => UserTaadiaResults(taadia: live.first)));
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => EvaluateScreen(
+                          taadiaId: taadia.id,
+                          taadiaTitle: taadia.title,
+                          taadiaDescription: taadia.description,
+                          classifications: taadia.classifications.map((m) => ClassificationConfig.fromMap(m)).toList(),
+                          active: isActive,
+                        ),
+                      ));
+                    }
+                  }
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.vpn_key, size: 14, color: cs.primary),
+                      SizedBox(width: 8),
+                      Text(code, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.primary, letterSpacing: 2)),
+                      Spacer(),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(color: cs.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(20)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.play_arrow_rounded, size: 16, color: cs.primary),
+                            SizedBox(width: 4),
+                            Text(l.startTaadia, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary)),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -931,122 +992,151 @@ class _AccessibleCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            if (isAdmin) {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => AdminTaadiaResults(taadia: t)));
-            } else {
-              if (!tActive) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.taadiaClosed), backgroundColor: Colors.red));
-                return;
-              }
-              Navigator.push(context, MaterialPageRoute(builder: (_) => UserTaadiaResults(taadia: t)));
-            }
-          },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [cs.tertiary, cs.tertiary.withOpacity(0.8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              GestureDetector(
+                onTap: () {
+                  if (isAdmin) {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => AdminTaadiaResults(taadia: t)));
+                  } else {
+                    if (!tActive) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.taadiaClosed), backgroundColor: Colors.red));
+                      return;
+                    }
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => UserTaadiaResults(taadia: t)));
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [cs.tertiary, cs.tertiary.withOpacity(0.8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
-                      child: Image.asset('assets/images/quran image.png', height: 28, fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Icon(Icons.auto_stories, color: Colors.white, size: 28)),
-                    ),
-                    SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(t.title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: Colors.white),
-                            textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr),
-                          SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: tActive ? Colors.white.withOpacity(0.25) : Colors.white.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(width: 7, height: 7, decoration: BoxDecoration(color: tActive ? Color(0xFF00A86B) : Colors.white54, shape: BoxShape.circle)),
-                                    SizedBox(width: 6),
-                                    Text(tActive ? l.open : l.close, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (t.description.isNotEmpty) ...[
-                            SizedBox(height: 8),
-                            Text(t.description, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
-                              softWrap: true,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(14)),
+                        child: Image.asset('assets/images/quran image.png', height: 28, fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Icon(Icons.auto_stories, color: Colors.white, size: 28)),
+                      ),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(t.title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: Colors.white),
                               textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr),
+                            SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: tActive ? Colors.white.withOpacity(0.25) : Colors.white.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(width: 7, height: 7, decoration: BoxDecoration(color: tActive ? Color(0xFF00A86B) : Colors.white54, shape: BoxShape.circle)),
+                                      SizedBox(width: 6),
+                                      Text(tActive ? l.open : l.close, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (t.description.isNotEmpty) ...[
+                              SizedBox(height: 8),
+                              Text(t.description, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8)),
+                                softWrap: true,
+                                textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    if (isAdmin) ...[
-                      SizedBox(width: 8),
-                      PopupMenuButton<String>(
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
-                        icon: Icon(Icons.more_vert, color: Colors.white, size: 22),
-                        onSelected: (v) {
-                          if (v == 'toggle' && onToggle != null) onToggle!(t);
-                          if (v == 'delete' && onDelete != null) onDelete!(t);
-                        },
-                        itemBuilder: (_) => [
-                          PopupMenuItem(value: 'toggle', child: Row(children: [Icon(tActive ? Icons.lock_outline : Icons.lock_open, size: 18), SizedBox(width: 8), Text(tActive ? l.close : l.open)])),
-                          PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: cs.error), SizedBox(width: 8), Text(l.delete, style: TextStyle(color: cs.error))])),
-                        ],
-                      ),
+                      if (isAdmin) ...[
+                        SizedBox(width: 8),
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
+                          icon: Icon(Icons.more_vert, color: Colors.white, size: 22),
+                          onSelected: (v) {
+                            if (v == 'toggle' && onToggle != null) onToggle!(t);
+                            if (v == 'delete' && onDelete != null) onDelete!(t);
+                          },
+                          itemBuilder: (_) => [
+                            PopupMenuItem(value: 'toggle', child: Row(children: [Icon(tActive ? Icons.lock_outline : Icons.lock_open, size: 18), SizedBox(width: 8), Text(tActive ? l.close : l.open)])),
+                            PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: cs.error), SizedBox(width: 8), Text(l.delete, style: TextStyle(color: cs.error))])),
+                          ],
+                        ),
+                      ],
+                      if (!isAdmin && onDelete != null) ...[
+                        SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => onDelete!(t),
+                          child: Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.delete_outline, color: Colors.white.withOpacity(0.8), size: 20),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
               if (t.accessCode.isNotEmpty || isAdmin)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      if (t.accessCode.isNotEmpty) ...[
-                        Icon(Icons.vpn_key, size: 14, color: cs.tertiary),
-                        SizedBox(width: 8),
-                        Text(t.accessCode, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.tertiary, letterSpacing: 2)),
-                      ],
-                      Spacer(),
-                      if (isAdmin && onEdit != null)
-                        GestureDetector(
-                          onTap: () => onEdit!(t),
-                          child: Container(
-                            margin: EdgeInsets.only(left: 16),
-                            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: cs.tertiary.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: cs.tertiary.withOpacity(0.3)),
+                GestureDetector(
+                  onTap: () {
+                    if (isAdmin) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => AdminTaadiaResults(taadia: t)));
+                    } else {
+                      if (!tActive) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.taadiaClosed), backgroundColor: Colors.red));
+                        return;
+                      }
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => UserTaadiaResults(taadia: t)));
+                    }
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        if (t.accessCode.isNotEmpty) ...[
+                          Icon(Icons.vpn_key, size: 14, color: cs.tertiary),
+                          SizedBox(width: 8),
+                          Text(t.accessCode, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cs.tertiary, letterSpacing: 2)),
+                        ],
+                        Spacer(),
+                        if (isAdmin && onEdit != null)
+                          GestureDetector(
+                            onTap: () => onEdit!(t),
+                            child: Container(
+                              margin: EdgeInsets.only(left: 16),
+                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: cs.tertiary.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: cs.tertiary.withOpacity(0.3)),
+                              ),
+                              child: Text(l.editTitle, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.tertiary)),
                             ),
-                            child: Text(l.editTitle, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.tertiary)),
                           ),
-                        ),
-                    ],
+                      ],
                   ),
                 ),
+              ),
             ],
           ),
         ),

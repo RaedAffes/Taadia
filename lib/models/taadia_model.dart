@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'formula_config.dart';
 
 class ClassificationConfig {
@@ -105,7 +106,7 @@ class Taadia {
         title: data['title'] ?? '',
         description: data['description'] ?? '',
         createdBy: data['createdBy'] ?? '',
-        createdAt: (data['createdAt'] as dynamic)?.toDate() ?? DateTime.now(),
+        createdAt: _parseCreatedAt(data['createdAt']),
         status: data['status'] ?? 'active',
         formula: data['formula'] ?? 'ichaarat+taalakin',
         visibility: data['visibility'] ?? 'public',
@@ -116,7 +117,25 @@ class Taadia {
         classifications: classifications,
       );
     } catch (e) {
-      return Taadia(id: id, title: data['title'] ?? '', createdBy: data['createdBy'] ?? '', createdAt: DateTime.now());
+      return Taadia(
+        id: id,
+        title: data['title'] ?? '',
+        description: data['description'] ?? '',
+        createdBy: data['createdBy'] ?? '',
+        createdAt: _parseCreatedAt(data['createdAt']),
+        status: data['status'] ?? 'active',
+        formula: data['formula'] ?? 'ichaarat+taalakin',
+        visibility: data['visibility'] ?? 'public',
+        accessGroups: ((data['accessGroups'] as Map?)?.cast<String, dynamic>() ?? {})
+            .map((k, v) => MapEntry(k, v == true)),
+        accessUsers: ((data['accessUsers'] as Map?)?.cast<String, dynamic>() ?? {})
+            .map((k, v) => MapEntry(k, v == true)),
+        accessCode: data['accessCode'] ?? '',
+        categories: (data['categories'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [],
+      );
     }
   }
 
@@ -136,4 +155,16 @@ class Taadia {
       'classifications': classifications.map((c) => c.toMap()).toList(),
     };
   }
+}
+
+DateTime _parseCreatedAt(dynamic value) {
+  if (value == null) return DateTime.now();
+  if (value is DateTime) return value;
+  if (value is Timestamp) return value.toDate();
+  if (value is String) {
+    try {
+      return DateTime.parse(value);
+    } catch (_) {}
+  }
+  return DateTime.now();
 }

@@ -96,6 +96,13 @@ class CodeLookupService extends ChangeNotifier {
     _setupPendingWatcher();
   }
 
+  Future<void> removeByTaadiaId(String taadiaId) async {
+    _codeToTaadia.removeWhere((code, cached) => cached.id == taadiaId);
+    await _saveToPrefs();
+    notifyListeners();
+    _setupPendingWatcher();
+  }
+
   Future<void> clear() async {
     _codeToTaadia.clear();
     _pendingWatcher?.cancel();

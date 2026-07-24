@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -824,17 +825,35 @@ class _VerseSearchTabState extends State<_VerseSearchTab> {
   List<Map<String, dynamic>>? _results;
   bool _loading = false;
   static List? _cachedData;
+  Timer? _debounce;
+  int _searchToken = 0;
 
   @override
   void initState() {
     super.initState();
-    if (widget.query.isNotEmpty) _search();
+    if (widget.query.isNotEmpty) _scheduleSearch();
   }
 
   @override
   void didUpdateWidget(_VerseSearchTab old) {
     super.didUpdateWidget(old);
-    if (widget.query != old.query) _search();
+    if (widget.query != old.query) _scheduleSearch();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleSearch() {
+    _debounce?.cancel();
+    if (widget.query.trim().isEmpty) {
+      setState(() { _results = null; _loading = false; });
+      return;
+    }
+    setState(() => _loading = true);
+    _debounce = Timer(const Duration(milliseconds: 150), () => _search());
   }
 
   Future<List> _getData() async {
@@ -845,23 +864,87 @@ class _VerseSearchTabState extends State<_VerseSearchTab> {
   }
 
   Future<void> _search() async {
-    if (widget.query.isEmpty) {
+    final token = ++_searchToken;
+    final rawQuery = widget.query.trim();
+    final normalizedQuery = normalizeArabic(rawQuery);
+    if (normalizedQuery.isEmpty) {
       setState(() { _results = null; _loading = false; });
       return;
     }
-    setState(() => _loading = true);
-    final normalizedQuery = normalizeArabic(widget.query);
     final data = await _getData();
     final matches = <Map<String, dynamic>>[];
     for (final v in data) {
+      if (token != _searchToken) return;
       final text = (v['aya_text'] as String?) ?? '';
       final nText = normalizeArabic(text);
-      if (nText.split(' ').any((w) => w.contains(normalizedQuery))) {
+      if (nText.contains(normalizedQuery)) {
         matches.add(v as Map<String, dynamic>);
-        if (matches.length >= 50) break;
       }
     }
+    if (token != _searchToken) return;
     setState(() { _results = matches; _loading = false; });
+  }
+
+  List<TextSpan> _highlightText(String text, String query) {
+    if (query.isEmpty) return [TextSpan(text: text)];
+    final nQuery = normalizeArabic(query.trim());
+    if (nQuery.isEmpty) return [TextSpan(text: text)];
+    final runes = text.runes.toList();
+    final nRunes = <int>[];
+    final List<int> runeIndexMap = [];
+    for (int i = 0; i < runes.length; i++) {
+      final r = runes[i];
+      if (r >= 0x064B && r <= 0x065F) continue;
+      if (r >= 0x0610 && r <= 0x061A) continue;
+      if (r >= 0x06D6 && r <= 0x06E8) continue;
+      if (r >= 0x06EA && r <= 0x06ED) continue;
+      if (r >= 0x08D0 && r <= 0x08FF) continue;
+      if (r >= 0xFE70 && r <= 0xFEFF) continue;
+      int mapped = r;
+      if (r == 0x0622 || r == 0x0623 || r == 0x0625 || r == 0x0671) mapped = 0x0627;
+      else if (r == 0x0649) mapped = 0x064A;
+      else if (r == 0x0629) mapped = 0x0647;
+      else if (r == 0x0624) mapped = 0x0648;
+      else if (r == 0x0626) mapped = 0x064A;
+      else if (r == 0x0670) continue;
+      else if (r == 0x0640) continue;
+      nRunes.add(mapped);
+      runeIndexMap.add(i);
+    }
+    final nQueryRunes = nQuery.runes.toList();
+    if (nQueryRunes.isEmpty) return [TextSpan(text: text)];
+    final spans = <TextSpan>[];
+    int lastOrigEnd = 0;
+    int ni = 0;
+    while (ni <= nRunes.length - nQueryRunes.length) {
+      bool match = true;
+      for (int k = 0; k < nQueryRunes.length; k++) {
+        if (nRunes[ni + k] != nQueryRunes[k]) { match = false; break; }
+      }
+      if (match) {
+        final origStart = runeIndexMap[ni];
+        final origEnd = runeIndexMap[ni + nQueryRunes.length - 1] + 1;
+        if (origStart > lastOrigEnd) {
+          spans.add(TextSpan(text: String.fromCharCodes(runes.sublist(lastOrigEnd, origStart))));
+        }
+        spans.add(TextSpan(
+          text: String.fromCharCodes(runes.sublist(origStart, origEnd)),
+          style: const TextStyle(
+            backgroundColor: Color(0xFFD5BC7C),
+            color: Color(0xFF3E2C1A),
+            fontWeight: FontWeight.bold,
+          ),
+        ));
+        lastOrigEnd = origEnd;
+        ni += nQueryRunes.length;
+      } else {
+        ni++;
+      }
+    }
+    if (lastOrigEnd < runes.length) {
+      spans.add(TextSpan(text: String.fromCharCodes(runes.sublist(lastOrigEnd))));
+    }
+    return spans.isEmpty ? [TextSpan(text: text)] : spans;
   }
 
   @override
@@ -936,17 +1019,30 @@ class _VerseSearchTabState extends State<_VerseSearchTab> {
         final text = v['aya_text'] as String;
         final suraName = v['sura_name_ar'] as String;
         final highlightKey = '${suraNo.toString().padLeft(3, '0')}${ayaNo.toString().padLeft(3, '0')}';
-        return ListTile(
-          tileColor: i.isEven ? const Color(0xFFFDF8F0) : const Color(0xFFF8F0E0),
-          title: Text(text, style: const TextStyle(fontFamily: 'UthmanicQaloun', fontSize: 20),
-            maxLines: 2, overflow: TextOverflow.ellipsis,
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          color: i.isEven ? const Color(0xFFFDF8F0) : const Color(0xFFF8F0E0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            title: RichText(
+              text: TextSpan(
+                children: _highlightText(text, widget.query),
+                style: const TextStyle(fontFamily: 'UthmanicQaloun', fontSize: 20, color: Colors.black),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '$suraName - الآية ${_arabicNumeral(ayaNo)}',
+                style: const TextStyle(fontFamily: 'Amiri', color: Color(0xFF8B7D6B)),
+              ),
+            ),
+            trailing: const Icon(Icons.arrow_back, color: Color(0xFFD5BC7C)),
+            onTap: () => widget.onGoToPage(page, highlight: highlightKey),
           ),
-          subtitle: Text(
-            '$suraName - الآية ${_arabicNumeral(ayaNo)}',
-            style: const TextStyle(fontFamily: 'Amiri', color: Color(0xFF8B7D6B)),
-          ),
-          trailing: const Icon(Icons.arrow_back, color: Color(0xFFD5BC7C)),
-          onTap: () => widget.onGoToPage(page, highlight: highlightKey),
         );
       },
     );

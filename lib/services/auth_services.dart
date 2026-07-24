@@ -517,18 +517,28 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<List<AppUser>> getAllUsers() async {
-    _usersSub ??= _firestore.collection('users').snapshots().listen((snapshot) {
+    _usersSub ??= _firestore.collection('users').snapshots(includeMetadataChanges: true).listen((snapshot) {
       _allUsers = snapshot.docs
           .where((doc) => doc.data()['accountStatus'] != 'deleted')
           .map((doc) => AppUser.fromFirestore(Map<String, dynamic>.from(doc.data())))
           .toList();
       notifyListeners();
     });
-    final snapshot = await _firestore.collection('users').get();
-    _allUsers = snapshot.docs
-        .where((doc) => doc.data()['accountStatus'] != 'deleted')
-        .map((doc) => AppUser.fromFirestore(Map<String, dynamic>.from(doc.data())))
-        .toList();
+    try {
+      final snapshot = await _firestore.collection('users').get(const GetOptions(source: Source.cache));
+      _allUsers = snapshot.docs
+          .where((doc) => doc.data()['accountStatus'] != 'deleted')
+          .map((doc) => AppUser.fromFirestore(Map<String, dynamic>.from(doc.data())))
+          .toList();
+    } catch (_) {
+      try {
+        final snapshot = await _firestore.collection('users').get();
+        _allUsers = snapshot.docs
+            .where((doc) => doc.data()['accountStatus'] != 'deleted')
+            .map((doc) => AppUser.fromFirestore(Map<String, dynamic>.from(doc.data())))
+            .toList();
+      } catch (_) {}
+    }
     return _allUsers;
   }
 

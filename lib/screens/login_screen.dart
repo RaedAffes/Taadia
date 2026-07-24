@@ -389,18 +389,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                   children: [
                                     SizedBox(
                                       width: double.infinity,
-                                      height: 48,
                                       child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                        ),
                                         onPressed: authService.isLoading
                                             ? null
                                             : _signIn,
                                         child: authService.isLoading
-                                            ? SizedBox(
-                                                width: 24,
-                                                height: 24,
-                                                child: CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                  strokeWidth: 2.5,
+                                            ? Center(
+                                                child: SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: CircularProgressIndicator(
+                                                    color: Colors.white,
+                                                    strokeWidth: 2.5,
+                                                  ),
                                                 ),
                                               )
                                             : Text(

@@ -127,7 +127,7 @@ class EvaluationService extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
 
-    _evalSub = query.snapshots(includeMetadataChanges: true).listen(
+    _evalSub = query.snapshots(includeMetadataChanges: false).listen(
           (snapshot) {
             if (!_connectivityService.isOnline && snapshot.metadata.isFromCache) return;
             try {
@@ -245,7 +245,7 @@ class EvaluationService extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
 
-    _evalSub = query.snapshots(includeMetadataChanges: true).listen(
+    _evalSub = query.snapshots(includeMetadataChanges: false).listen(
           (snapshot) {
             if (!_connectivityService.isOnline && snapshot.metadata.isFromCache) return;
             try {
@@ -359,12 +359,6 @@ class EvaluationService extends ChangeNotifier {
       }
     }
 
-    if (_connectivityService.isOffline) {
-      await _offlineQueue.enqueue('saveEvaluation', _offlineSafeEval(data));
-      _errorMessage = null;
-      return true;
-    }
-
     try {
       await _firestoreWriteEvaluation(evalData, evaluation.id.isEmpty ? '' : evaluation.id);
       if (isPending && accessCode != null) {
@@ -385,8 +379,13 @@ class EvaluationService extends ChangeNotifier {
         }
       }
       _errorMessage = null;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('saveEvaluation Firestore write failed: $e');
+      _errorMessage = e.toString();
       await _offlineQueue.enqueue('saveEvaluation', _offlineSafeEval(data));
+      try { await _offlineQueue.processQueue(); } catch (_) {}
+      notifyListeners();
+      return false;
     }
     return true;
   }
@@ -411,7 +410,7 @@ class EvaluationService extends ChangeNotifier {
     if (evalId.isEmpty) {
       await _firestore.collection('evaluations').add(evalData);
     } else {
-      await _firestore.collection('evaluations').doc(evalId).set(evalData, SetOptions(merge: true));
+      await _firestore.collection('evaluations').doc(evalId).set(evalData);
     }
   }
 

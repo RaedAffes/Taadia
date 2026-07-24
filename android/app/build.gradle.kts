@@ -8,7 +8,6 @@ plugins {
 dependencies {
   implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
   implementation("com.google.firebase:firebase-analytics")
-  implementation("androidx.start:startup-runtime:1.2.0")
 }
 
 val keystorePropertiesFile = rootProject.file("key.properties")
@@ -20,7 +19,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.example.ta3dia"
     compileSdk = flutter.compileSdkVersion
-        ndkVersion = "28.2.13676358"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -37,15 +36,6 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-    }
-
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a")
-            isUniversalApk = false
-        }
     }
 
 

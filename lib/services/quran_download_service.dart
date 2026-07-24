@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -47,6 +48,12 @@ class QuranDownloadService {
         if (match != null) {
           final page = int.parse(match.group(1)!);
           _completed.add(page);
+          try {
+            final bytes = await file.readAsBytes();
+            if (bytes.length < 2 || bytes[0] != 0x1f || bytes[1] != 0x8b) {
+              await file.writeAsBytes(gzip.encode(bytes));
+            }
+          } catch (_) {}
         }
       }
       _downloadedCount = _completed.length;
@@ -64,7 +71,11 @@ class QuranDownloadService {
     final file = File('${_cacheDir!.path}/${page.toString().padLeft(3, '0')}.svg');
     if (await file.exists()) {
       try {
-        return await file.readAsString();
+        final bytes = await file.readAsBytes();
+        if (bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
+          return utf8.decode(gzip.decode(bytes));
+        }
+        return utf8.decode(bytes);
       } catch (e) {
         debugPrint('QuranDownloadService: failed to read page $page: $e');
       }
@@ -83,7 +94,7 @@ class QuranDownloadService {
     } else if (_cacheDir != null) {
       try {
         final file = File('${_cacheDir!.path}/${page.toString().padLeft(3, '0')}.svg');
-        await file.writeAsString(svgContent);
+        await file.writeAsBytes(gzip.encode(utf8.encode(svgContent)));
       } catch (e) {
         debugPrint('QuranDownloadService: failed to write page $page to disk: $e');
       }
@@ -108,7 +119,7 @@ class QuranDownloadService {
         } else if (_cacheDir != null) {
           try {
             final file = File('${_cacheDir!.path}/${page.toString().padLeft(3, '0')}.svg');
-            await file.writeAsString(response.body);
+            await file.writeAsBytes(gzip.encode(utf8.encode(response.body)));
           } catch (e) {
             debugPrint('QuranDownloadService: failed to write page $page to disk: $e');
           }

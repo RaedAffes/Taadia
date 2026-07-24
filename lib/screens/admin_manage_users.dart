@@ -62,7 +62,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
   Future<void> _loadUsers() async {
     setState(() => _loading = true);
     final authService = Provider.of<AuthService>(context, listen: false);
-    await authService.getAllUsers();
+    try {
+      await authService.getAllUsers();
+    } catch (_) {}
     if (mounted) {
       setState(() {
         _users = authService.allUsers;

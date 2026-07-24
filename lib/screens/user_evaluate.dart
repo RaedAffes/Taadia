@@ -203,42 +203,59 @@ class _RangeCriterion {
       'pageFrom': pageFrom,
       'pageTo': pageTo,
       'quarterNumbers': List<int>.from(quarterNumbers),
-      'hizbSubRanges': hizbSubRanges.map((r) => [r.$1, r.$2]).toList(),
-      'surahSubRanges': surahSubRanges.map((r) => [r.$1, r.$2]).toList(),
-      'surahPageSubRanges': surahPageSubRanges.map((r) => [r.$1, r.$2, r.$3]).toList(),
-      'surahAyahSubRanges': surahAyahSubRanges.map((r) => [r.$1, r.$2, r.$3]).toList(),
+      'hizbSubRanges': hizbSubRanges.map((r) => {'from': r.$1, 'to': r.$2}).toList(),
+      'surahSubRanges': surahSubRanges.map((r) => {'from': r.$1, 'to': r.$2}).toList(),
+      'surahPageSubRanges': surahPageSubRanges.map((r) => {'surah': r.$1, 'pageFrom': r.$2, 'pageTo': r.$3}).toList(),
+      'surahAyahSubRanges': surahAyahSubRanges.map((r) => {'surah': r.$1, 'ayaFrom': r.$2, 'ayaTo': r.$3}).toList(),
     };
   }
+
+  static int? _asInt(dynamic v) => v != null ? (v as num).toInt() : null;
 
   static _RangeCriterion fromMap(Map<String, dynamic> map) {
     final c = _RangeCriterion();
     c.type = QuestionRangeType.values[map['type'] as int];
-    c.hizbFrom = map['hizbFrom'] as int?;
-    c.hizbTo = map['hizbTo'] as int?;
-    c.surahFrom = map['surahFrom'] as int?;
-    c.surahTo = map['surahTo'] as int?;
-    c.surahNumbers.addAll((map['surahNumbers'] as List?)?.cast<int>() ?? []);
-    c.ayaFrom = map['ayaFrom'] as int?;
-    c.ayaTo = map['ayaTo'] as int?;
-    c.pageFrom = map['pageFrom'] as int?;
-    c.pageTo = map['pageTo'] as int?;
-    c.quarterNumbers
-        .addAll((map['quarterNumbers'] as List?)?.cast<int>() ?? []);
+    c.hizbFrom = _asInt(map['hizbFrom']);
+    c.hizbTo = _asInt(map['hizbTo']);
+    c.surahFrom = _asInt(map['surahFrom']);
+    c.surahTo = _asInt(map['surahTo']);
+    c.surahNumbers.addAll(
+      (map['surahNumbers'] as List?)?.map((e) => (e as num).toInt()).toList() ?? [],
+    );
+    c.ayaFrom = _asInt(map['ayaFrom']);
+    c.ayaTo = _asInt(map['ayaTo']);
+    c.pageFrom = _asInt(map['pageFrom']);
+    c.pageTo = _asInt(map['pageTo']);
+    c.quarterNumbers.addAll(
+      (map['quarterNumbers'] as List?)?.map((e) => (e as num).toInt()).toList() ?? [],
+    );
     for (final r in (map['hizbSubRanges'] as List?) ?? []) {
-      final l = (r as List).cast<dynamic>();
-      c.hizbSubRanges.add((l[0] as int?, l[1] as int?));
+      if (r is Map) {
+        c.hizbSubRanges.add((_asInt(r['from']), _asInt(r['to'])));
+      } else if (r is List) {
+        c.hizbSubRanges.add((_asInt(r[0]), _asInt(r[1])));
+      }
     }
     for (final r in (map['surahSubRanges'] as List?) ?? []) {
-      final l = (r as List).cast<dynamic>();
-      c.surahSubRanges.add((l[0] as int?, l[1] as int?));
+      if (r is Map) {
+        c.surahSubRanges.add((_asInt(r['from']), _asInt(r['to'])));
+      } else if (r is List) {
+        c.surahSubRanges.add((_asInt(r[0]), _asInt(r[1])));
+      }
     }
     for (final r in (map['surahPageSubRanges'] as List?) ?? []) {
-      final l = (r as List).cast<dynamic>();
-      c.surahPageSubRanges.add((l[0] as int?, l[1] as int?, l[2] as int?));
+      if (r is Map) {
+        c.surahPageSubRanges.add((_asInt(r['surah']), _asInt(r['pageFrom']), _asInt(r['pageTo'])));
+      } else if (r is List) {
+        c.surahPageSubRanges.add((_asInt(r[0]), _asInt(r[1]), _asInt(r[2])));
+      }
     }
     for (final r in (map['surahAyahSubRanges'] as List?) ?? []) {
-      final l = (r as List).cast<dynamic>();
-      c.surahAyahSubRanges.add((l[0] as int?, l[1] as int?, l[2] as int?));
+      if (r is Map) {
+        c.surahAyahSubRanges.add((_asInt(r['surah']), _asInt(r['ayaFrom']), _asInt(r['ayaTo'])));
+      } else if (r is List) {
+        c.surahAyahSubRanges.add((_asInt(r[0]), _asInt(r[1]), _asInt(r[2])));
+      }
     }
     return c;
   }
@@ -476,6 +493,10 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         'pageFrom': c.pageFrom,
         'pageTo': c.pageTo,
         'quarterNumbers': List<int>.from(c.quarterNumbers),
+        'hizbSubRanges': c.hizbSubRanges.map((r) => {'from': r.$1, 'to': r.$2}).toList(),
+        'surahSubRanges': c.surahSubRanges.map((r) => {'from': r.$1, 'to': r.$2}).toList(),
+        'surahPageSubRanges': c.surahPageSubRanges.map((r) => {'surah': r.$1, 'pageFrom': r.$2, 'pageTo': r.$3}).toList(),
+        'surahAyahSubRanges': c.surahAyahSubRanges.map((r) => {'surah': r.$1, 'ayaFrom': r.$2, 'ayaTo': r.$3}).toList(),
       }).toList(),
     };
   }
@@ -529,6 +550,35 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             c.quarterNumbers.addAll(qn.cast<int>());
           } else if (map['quarterNumber'] is int) {
             c.quarterNumbers.add(map['quarterNumber'] as int);
+          }
+          int? _safeInt(dynamic v) => v != null ? (v as num).toInt() : null;
+          for (final r in (map['hizbSubRanges'] as List?) ?? []) {
+            if (r is Map) {
+              c.hizbSubRanges.add((_safeInt(r['from']), _safeInt(r['to'])));
+            } else if (r is List) {
+              c.hizbSubRanges.add((_safeInt(r[0]), _safeInt(r[1])));
+            }
+          }
+          for (final r in (map['surahSubRanges'] as List?) ?? []) {
+            if (r is Map) {
+              c.surahSubRanges.add((_safeInt(r['from']), _safeInt(r['to'])));
+            } else if (r is List) {
+              c.surahSubRanges.add((_safeInt(r[0]), _safeInt(r[1])));
+            }
+          }
+          for (final r in (map['surahPageSubRanges'] as List?) ?? []) {
+            if (r is Map) {
+              c.surahPageSubRanges.add((_safeInt(r['surah']), _safeInt(r['pageFrom']), _safeInt(r['pageTo'])));
+            } else if (r is List) {
+              c.surahPageSubRanges.add((_safeInt(r[0]), _safeInt(r[1]), _safeInt(r[2])));
+            }
+          }
+          for (final r in (map['surahAyahSubRanges'] as List?) ?? []) {
+            if (r is Map) {
+              c.surahAyahSubRanges.add((_safeInt(r['surah']), _safeInt(r['ayaFrom']), _safeInt(r['ayaTo'])));
+            } else if (r is List) {
+              c.surahAyahSubRanges.add((_safeInt(r[0]), _safeInt(r[1]), _safeInt(r[2])));
+            }
           }
           return c;
         }));
@@ -739,6 +789,16 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           },
         );
         Navigator.pop(context, true);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l.localeName == 'ar' ? 'حدث خطأ أثناء الحفظ. حاول مرة أخرى.' : 'Save failed. Please try again.'),
+              backgroundColor: cs.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     }
   }
@@ -1603,7 +1663,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
         child: Container(
         margin: EdgeInsets.only(bottom: 6),
         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-        height: 40,
+        height: 48,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
@@ -1614,7 +1674,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.5), width: 1.2),
           boxShadow: [
             BoxShadow(
               color: cs.primary.withValues(alpha: 0.04),
@@ -1634,40 +1694,40 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
               ),
               child: Text(
                 typeLabels[c.type] ?? '',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: cs.primary),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary),
               ),
             ),
             SizedBox(width: 6),
             Expanded(
               child: Text(
                 sum.isNotEmpty ? sum : '—',
-                style: TextStyle(fontSize: 12, color: cs.onSurface),
+                style: TextStyle(fontSize: 14, color: cs.onSurface),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             Container(
-              width: 32,
-              height: 32,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: cs.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary),
+              child: Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: cs.primary),
             ),
             SizedBox(width: 12),
             if (_rangeCriteria.length > 1)
               Container(
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: Color(0xFFD4686E).withValues(alpha: 0.10),
+                    color: Color(0xFFD4686E).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.close, size: 16, color: Color(0xFFC0545E)),
+                  icon: Icon(Icons.close, size: 18, color: Color(0xFFD4686E)),
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: BoxConstraints(minWidth: 36, minHeight: 36),
                   onPressed: () {
                     setState(() {
                       _rangeCriteria.removeAt(index);
@@ -1702,7 +1762,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.5), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: cs.primary.withValues(alpha: 0.04),
@@ -1786,11 +1846,11 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: Color(0xFFD4686E).withValues(alpha: 0.10),
+                  color: Color(0xFFD4686E).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: Icon(Icons.close, size: 16, color: Color(0xFFC0545E)),
+                    icon: Icon(Icons.close, size: 16, color: Color(0xFFD4686E)),
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
                     constraints: BoxConstraints(minWidth: 32, minHeight: 32),
@@ -2199,15 +2259,14 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       child: DropdownButton<int>(
         value: value,
         isExpanded: true,
-        isDense: true,
-        padding: EdgeInsets.symmetric(horizontal: 12),
-        hint: Text(label, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: cs.primary.withValues(alpha: 0.8)),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        hint: Text(label, style: TextStyle(fontSize: 15, color: cs.onSurfaceVariant)),
+        icon: Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: cs.primary.withValues(alpha: 0.8)),
         dropdownColor: cs.surface,
         elevation: 4,
-        style: TextStyle(fontSize: 13, color: cs.onSurface),
+        style: TextStyle(fontSize: 15, color: cs.onSurface),
         items: List.generate(60, (i) => i + 1).map((n) {
-          return DropdownMenuItem(value: n, child: Text('$n', style: TextStyle(fontSize: 13)));
+          return DropdownMenuItem(value: n, child: Text('$n', style: TextStyle(fontSize: 15)));
         }).toList(),
         onChanged: onChanged,
       ),
@@ -2467,7 +2526,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                                 return null;
                               },
                               icon: Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: cs.primary.withValues(alpha: 0.8)),
-                              dropdownColor: cs.surface,
+                    dropdownColor: cs.surface,
                               elevation: 4,
                               style: TextStyle(fontSize: 14, color: cs.onSurface),
                               decoration: _fieldInputDecoration(
@@ -2526,7 +2585,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                                 return FilterChip(
                                   label: Text(cat),
                                   selected: selected,
-                                  selectedColor: cs.primary.withValues(alpha: 0.15),
+          selectedColor: cs.primary.withValues(alpha: 0.15),
                                   checkmarkColor: cs.primary,
                                   onSelected: (val) {
                                     setState(() {
@@ -2548,29 +2607,17 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                     SizedBox(height: 16),
                     _fieldContainer(
                       cs: cs,
-                      child: DropdownButton<int>(
+                      child: DropdownButtonFormField<int>(
                         value: _numQuestions > 0 ? _numQuestions : null,
-                        hint: Row(
-                          children: [
-                            Icon(
-                              Icons.quiz_outlined,
-                              size: 17,
-                              color: cs.primary,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              l.numberOfQuestions,
-                              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                        isExpanded: true,
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         icon: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: cs.primary.withValues(alpha: 0.8)),
                         dropdownColor: cs.surface,
                         elevation: 4,
                         style: TextStyle(fontSize: 13, color: cs.onSurface),
-                        underline: const SizedBox.shrink(),
+                        decoration: _fieldInputDecoration(
+                          cs: cs,
+                          labelText: l.numberOfQuestions,
+                          prefixIcon: Icons.quiz_outlined,
+                        ),
                         items: List.generate(60, (i) => i + 1).map((n) {
                           return DropdownMenuItem(
                             value: n,
@@ -2607,7 +2654,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                               Expanded(
                                 child: Text(
                                   l.previousRange(_generateSummary()),
-                                  style: TextStyle(fontSize: 13, color: cs.onSurface),
+                    style: TextStyle(fontSize: 13, color: cs.onSurface),
                                 ),
                               ),
                               IconButton(
@@ -2643,9 +2690,16 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                               onTap: () {
                                 setState(() {
                                   _rangeCriteria.add(_RangeCriterion());
-                                  _expandedCriteria
-                                    ..clear()
-                                    ..add(_rangeCriteria.length - 1);
+                                  final newLen = _rangeCriteria.length;
+                                  if (newLen >= 3) {
+                                    _expandedCriteria
+                                      ..clear()
+                                      ..add(newLen - 1);
+                                  } else {
+                                    _expandedCriteria
+                                      ..clear()
+                                      ..addAll(List.generate(newLen, (i) => i));
+                                  }
                                 });
                               },
                               child: Padding(

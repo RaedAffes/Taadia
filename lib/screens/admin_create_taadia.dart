@@ -161,7 +161,7 @@ class _CreateTaadiaScreenState extends State<CreateTaadiaScreen> {
           accessUsers: selectedUsers,
           accessCode: code,
           categories: List.from(_categories),
-          classifications: List.from(_classifications),
+          classifications: _classifications.where((c) => c.options.isNotEmpty).toList(),
         );
 
     if (mounted) {

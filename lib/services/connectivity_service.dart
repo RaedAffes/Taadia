@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class ConnectivityService extends ChangeNotifier {
@@ -15,6 +16,11 @@ class ConnectivityService extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    if (kIsWeb) {
+      _isOnline = true;
+      notifyListeners();
+      return;
+    }
     final result = await _connectivity.checkConnectivity();
     _updateStatus(result);
     _subscription = _connectivity.onConnectivityChanged.listen(_updateStatus);

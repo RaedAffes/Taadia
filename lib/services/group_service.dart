@@ -57,9 +57,10 @@ class GroupService extends ChangeNotifier {
 
     _groupsSub = _firestore
         .collection('groups')
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .listen(
           (snapshot) {
+            if (!_connectivityService.isOnline && snapshot.metadata.isFromCache) return;
             _groups = snapshot.docs
                 .map(
                   (doc) => GroupModel.fromFirestore(

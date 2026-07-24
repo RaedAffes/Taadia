@@ -54,14 +54,9 @@
         </receiver>
         <provider
             android:name="androidx.start.InitializationProvider"
-            android:authorities="${applicationId}.androidx-start-initializationprovider"
+            android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
-            tools:node="merge">
-            <meta-data
-                android:name="workmanager-init"
-                android:value="androidx.start"
-                tools:node="remove"/>
-        </provider>
+            tools:node="remove"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

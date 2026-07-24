@@ -337,6 +337,27 @@ class TaadiaService extends ChangeNotifier {
     }
   }
 
+  Future<bool> revokeAccess(String taadiaId, String userId) async {
+    if (_connectivityService.isOffline) {
+      await _offlineQueue.enqueue('revokeAccess', {'taadiaId': taadiaId, 'userId': userId});
+      _taadias.removeWhere((t) => t.id == taadiaId);
+      notifyListeners();
+      return true;
+    }
+    try {
+      await _firestore.collection('taadia').doc(taadiaId).update({
+        'accessUsers.$userId': FieldValue.delete(),
+      });
+      _taadias.removeWhere((t) => t.id == taadiaId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Error: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<List<Taadia>> getAvailableTaadias() async {
     try {
       final snapshot = await _firestore
@@ -392,11 +413,12 @@ class TaadiaService extends ChangeNotifier {
   }
 
   Future<bool> isTaadiaActive(String taadiaId) async {
+    if (taadiaId.startsWith('offline_')) return true;
     try {
       final doc = await _firestore.collection('taadia').doc(taadiaId).get();
       return doc.data()?['status'] == 'active';
     } catch (_) {
-      return false;
+      return true;
     }
   }
 
@@ -588,13 +610,25 @@ class TaadiaService extends ChangeNotifier {
     for (final op in pendingCreates) {
       final data = op.data;
       final localId = data['_offlineId'] as String? ?? 'offline_${op.timestamp.millisecondsSinceEpoch}';
-      final alreadyExists = _taadias.any((t) => t.id == localId);
+      final title = data['title'] ?? '';
+      final createdBy = data['createdBy'] ?? '';
+      final alreadyExists = _taadias.any((t) =>
+          t.id == localId ||
+          (t.title == title && t.createdBy == createdBy));
       if (alreadyExists) continue;
+      final classificationsRaw = data['classifications'] as List<dynamic>?;
+      final classifications = classificationsRaw != null
+          ? classificationsRaw
+              .map((e) => e is Map
+                  ? ClassificationConfig.fromMap(Map<String, dynamic>.from(e))
+                  : ClassificationConfig(name: e.toString()))
+              .toList()
+          : <ClassificationConfig>[];
       _taadias.add(Taadia(
         id: localId,
-        title: data['title'] ?? '',
+        title: title,
         description: data['description'] ?? '',
-        createdBy: data['createdBy'] ?? '',
+        createdBy: createdBy,
         createdAt: DateTime.tryParse(data['createdAt'] ?? '') ?? op.timestamp,
         status: data['status'] ?? 'active',
         formula: data['formula'] ?? 'mahalia',
@@ -605,7 +639,7 @@ class TaadiaService extends ChangeNotifier {
             (data['accessUsers'] as Map?)?.map((k, v) => MapEntry(k as String, v == true)) ?? {}),
         accessCode: data['accessCode'] ?? '',
         categories: (data['categories'] as List<dynamic>?)?.cast<String>() ?? [],
-        classifications: [],
+        classifications: classifications,
       ));
     }
   }
