@@ -14,6 +14,9 @@ class GroupService extends ChangeNotifier {
   StreamSubscription<QuerySnapshot>? _groupsSub;
   StreamSubscription<User?>? _authSub;
 
+  String? _currentOrgId;
+  String? get currentOrgId => _currentOrgId;
+
   List<GroupModel> _groups = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -26,6 +29,21 @@ class GroupService extends ChangeNotifier {
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user == null) clear();
     });
+  }
+
+  CollectionReference<Map<String, dynamic>> _col(String name) {
+    if (_currentOrgId != null) {
+      return _firestore
+          .collection('organizations')
+          .doc(_currentOrgId)
+          .collection(name);
+    }
+    return _firestore.collection(name);
+  }
+
+  void setCurrentOrg(String? orgId) {
+    _currentOrgId = orgId;
+    notifyListeners();
   }
 
   Future<void> loadGroups() async {
@@ -112,7 +130,7 @@ class GroupService extends ChangeNotifier {
 
     try {
       _errorMessage = null;
-      final docRef = await _firestore.collection('groups').add(data);
+      final docRef = await _col('groups').add(data);
       _groups = _groups.map((g) {
         if (g.id == localId) {
           return GroupModel(
@@ -158,7 +176,7 @@ class GroupService extends ChangeNotifier {
     }
 
     try {
-      await _firestore.collection('groups').doc(groupId).update({'name': name});
+      await _col('groups').doc(groupId).update({'name': name});
       return true;
     } catch (e) {
       await _offlineQueue.enqueue('updateGroup', {
@@ -179,7 +197,7 @@ class GroupService extends ChangeNotifier {
     }
 
     try {
-      await _firestore.collection('groups').doc(groupId).delete();
+      await _col('groups').doc(groupId).delete();
       return true;
     } catch (e) {
       await _offlineQueue.enqueue('deleteGroup', {'groupId': groupId});
@@ -213,7 +231,7 @@ class GroupService extends ChangeNotifier {
     }
 
     try {
-      await _firestore.collection('groups').doc(groupId).update({
+      await _col('groups').doc(groupId).update({
         'members.$userId': true,
       });
       return true;
@@ -252,7 +270,7 @@ class GroupService extends ChangeNotifier {
     }
 
     try {
-      await _firestore.collection('groups').doc(groupId).update({
+      await _col('groups').doc(groupId).update({
         'members.$userId': FieldValue.delete(),
       });
       return true;

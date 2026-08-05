@@ -1,58 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
-import 'package:ta3dia/screens/public_taadias_list_screen.dart';
-import 'package:ta3dia/screens/manage_org_screen.dart';
+import 'package:ta3dia/screens/home_screen.dart';
+import 'package:ta3dia/screens/create_organization_screen.dart';
+import 'package:ta3dia/screens/join_organization_screen.dart';
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/org_service.dart';
 import 'package:ta3dia/widgets/app_scaffold.dart';
 
-class HomeScreen extends StatefulWidget {
+class OrgGateScreen extends StatefulWidget {
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<OrgGateScreen> createState() => _OrgGateScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _OrgGateScreenState extends State<OrgGateScreen> {
   final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-  bool _isOrgAdmin = false;
-  String? _lastCheckedOrgId;
+  bool _checking = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkOrgs());
   }
 
-  Future<void> _init() async {
-    analytics.logScreenView(screenName: 'home_screen');
-    await _checkAdminRole();
-  }
-
-  @override
-  void didUpdateWidget(covariant HomeScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _lastCheckedOrgId = null;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAdminRole());
-  }
-
-  Future<void> _checkAdminRole() async {
+  Future<void> _checkOrgs() async {
     final auth = context.read<AuthService>();
     final orgService = context.read<OrgService>();
     final uid = auth.currentUser?.uid;
-    final orgId = orgService.currentOrgId;
-    if (uid == null || orgId == null) {
-      if (mounted) setState(() => _isOrgAdmin = false);
-      return;
-    }
-    if (_lastCheckedOrgId == orgId) return;
-    final role = await orgService.getMemberRole(orgId, uid);
-    if (mounted) {
-      setState(() {
-        _isOrgAdmin = role == 'admin';
-        _lastCheckedOrgId = orgId;
-      });
+    if (uid == null) return;
+
+    await orgService.loadMyOrgs(uid);
+    if (!mounted) return;
+
+    if (orgService.myOrgs.isNotEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen()),
+      );
+    } else {
+      setState(() => _checking = false);
     }
   }
 
@@ -60,13 +47,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final authService = context.watch<AuthService>();
-    final orgService = context.watch<OrgService>();
-    final org = orgService.currentOrg;
+    final auth = context.watch<AuthService>();
 
-    final orgId = org?.id;
-    if (orgId != null && _lastCheckedOrgId != orgId && _lastCheckedOrgId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkAdminRole());
+    if (_checking) {
+      return Scaffold(
+        backgroundColor: cs.surface,
+        body: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(cs.primary),
+          ),
+        ),
+      );
     }
 
     return PopScope(
@@ -91,60 +83,26 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
           if (exit == true) {
-            SystemNavigator.pop();
+            await auth.signOut();
           }
         }
       },
       child: AppScaffold(
-        title: l.startTaadia,
-        actions: [
-          if (org != null)
-            Padding(
-              padding: EdgeInsets.only(left: 8),
-              child: Center(
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.business, color: Colors.white, size: 14),
-                      SizedBox(width: 6),
-                      Text(
-                        org.name,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
+        title: l.joinOrCreateOrg,
         body: Padding(
           padding: EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (authService.currentUser != null)
+              if (auth.currentUser != null)
                 Text(
-                  authService.currentUser!.isAnonymous
+                  auth.currentUser!.isAnonymous
                       ? l.welcome
                       : l.welcomeUser(
-                          authService.currentUser!.displayName?.isNotEmpty ==
-                                  true
-                              ? authService.currentUser!.displayName!
-                              : (authService.currentUser!.email?.isNotEmpty ==
-                                      true
-                                  ? authService.currentUser!.email!
-                                      .split('@')
-                                      .first
+                          auth.currentUser!.displayName?.isNotEmpty == true
+                              ? auth.currentUser!.displayName!
+                              : (auth.currentUser!.email?.isNotEmpty == true
+                                  ? auth.currentUser!.email!.split('@').first
                                   : ''),
                         ),
                   style: TextStyle(
@@ -155,48 +113,48 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               SizedBox(height: 8),
               Text(
-                l.homeSubtitle,
+                l.orgGateSubtitle,
                 style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 32),
-              if (_isOrgAdmin) ...[
-                _card(
-                  context,
-                  icon: Icons.settings,
-                  title: l.manageOrganization,
-                  subtitle: l.manageOrgDesc,
-                  color: cs.tertiary,
-                  l: l,
-                  onTap: () {
-                    analytics.logEvent(name: 'manage_org_clicked');
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => ManageOrgScreen(orgId: orgService.currentOrgId)),
-                    );
-                  },
-                ),
-                SizedBox(height: 16),
-              ],
               _card(
                 context,
-                icon: Icons.public,
-                title: l.publicTaadias,
-                subtitle: l.joinTaadiaDesc,
+                icon: Icons.group_add,
+                title: l.joinOrgCardTitle,
+                subtitle: l.joinOrgCardDesc,
                 color: cs.primary,
                 l: l,
-                onTap: () {
-                  analytics.logEvent(
-                    name: 'public_taadias_clicked',
-                    parameters: {
-                      'user_id': authService.currentUser?.uid ?? '',
-                    },
-                  );
-                  Navigator.push(
+                onTap: () async {
+                  analytics.logEvent(name: 'join_org_clicked');
+                  final joined = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => PublicTaadiasListScreen()),
+                        builder: (_) => JoinOrganizationScreen()),
                   );
+                  if (joined == true && mounted) {
+                    _checkOrgs();
+                  }
+                },
+              ),
+              SizedBox(height: 16),
+              _card(
+                context,
+                icon: Icons.business,
+                title: l.createOrgCardTitle,
+                subtitle: l.createOrgCardDesc,
+                color: cs.tertiary,
+                l: l,
+                onTap: () async {
+                  analytics.logEvent(name: 'create_org_clicked');
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => CreateOrganizationScreen()),
+                  );
+                  if (created == true && mounted) {
+                    _checkOrgs();
+                  }
                 },
               ),
             ],
@@ -259,7 +217,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 30),
+                      child:
+                          Icon(icon, color: Colors.white, size: 30),
                     ),
                     SizedBox(width: 16),
                     Expanded(

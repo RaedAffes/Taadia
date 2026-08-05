@@ -1897,6 +1897,552 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skip'**
   String get wtSkip;
+
+  /// No description provided for @manageOrganizations.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Organizations'**
+  String get manageOrganizations;
+
+  /// No description provided for @createOrganization.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Organization'**
+  String get createOrganization;
+
+  /// No description provided for @joinOrganization.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Organization'**
+  String get joinOrganization;
+
+  /// No description provided for @organizationName.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization Name'**
+  String get organizationName;
+
+  /// No description provided for @organizationPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization Password'**
+  String get organizationPassword;
+
+  /// No description provided for @confirmOrganizationPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get confirmOrganizationPassword;
+
+  /// No description provided for @pendingApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending super admin approval'**
+  String get pendingApproval;
+
+  /// No description provided for @organizationApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization approved!'**
+  String get organizationApproved;
+
+  /// No description provided for @organizationRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization rejected'**
+  String get organizationRejected;
+
+  /// No description provided for @alreadyMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Already a member'**
+  String get alreadyMember;
+
+  /// No description provided for @incorrectPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect password'**
+  String get incorrectPassword;
+
+  /// No description provided for @noOrganizations.
+  ///
+  /// In en, this message translates to:
+  /// **'No organizations available'**
+  String get noOrganizations;
+
+  /// No description provided for @membersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} members'**
+  String membersCount(Object count);
+
+  /// No description provided for @approving.
+  ///
+  /// In en, this message translates to:
+  /// **'Approving...'**
+  String get approving;
+
+  /// No description provided for @rejecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejecting...'**
+  String get rejecting;
+
+  /// No description provided for @joinOrCreateOrg.
+  ///
+  /// In en, this message translates to:
+  /// **'Join or Create an Organization'**
+  String get joinOrCreateOrg;
+
+  /// No description provided for @orgGateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to join or create a جمعية to get started'**
+  String get orgGateSubtitle;
+
+  /// No description provided for @joinOrgCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join جمعية'**
+  String get joinOrgCardTitle;
+
+  /// No description provided for @joinOrgCardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Join an existing جمعية using a password'**
+  String get joinOrgCardDesc;
+
+  /// No description provided for @createOrgCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create جمعية'**
+  String get createOrgCardTitle;
+
+  /// No description provided for @createOrgCardDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a new جمعية and invite members'**
+  String get createOrgCardDesc;
+
+  /// No description provided for @manageOrganization.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage جمعية'**
+  String get manageOrganization;
+
+  /// No description provided for @manageOrgDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View and manage your جمعية details, members, and settings'**
+  String get manageOrgDesc;
+
+  /// No description provided for @orgDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization Details'**
+  String get orgDetails;
+
+  /// No description provided for @orgMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get orgMembers;
+
+  /// No description provided for @removeMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Member'**
+  String get removeMember;
+
+  /// No description provided for @removeMemberConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} from this جمعية?'**
+  String removeMemberConfirm(Object name);
+
+  /// No description provided for @memberRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Member removed'**
+  String get memberRemoved;
+
+  /// No description provided for @editOrgName.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Organization Name'**
+  String get editOrgName;
+
+  /// No description provided for @editOrgPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Organization Password'**
+  String get editOrgPassword;
+
+  /// No description provided for @orgNameUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization name updated'**
+  String get orgNameUpdated;
+
+  /// No description provided for @orgPasswordUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization password updated'**
+  String get orgPasswordUpdated;
+
+  /// No description provided for @noMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'No members yet'**
+  String get noMembers;
+
+  /// No description provided for @adminRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get adminRole;
+
+  /// No description provided for @userRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Member'**
+  String get userRole;
+
+  /// No description provided for @tapToReveal.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to reveal password'**
+  String get tapToReveal;
+
+  /// No description provided for @dangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get dangerZone;
+
+  /// No description provided for @dangerZoneDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently delete this organization and all its data'**
+  String get dangerZoneDesc;
+
+  /// No description provided for @createdOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Created on'**
+  String get createdOn;
+
+  /// No description provided for @joinCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Code'**
+  String get joinCode;
+
+  /// No description provided for @orgSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get orgSettings;
+
+  /// No description provided for @rename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get rename;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Password'**
+  String get changePassword;
+
+  /// No description provided for @adminBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get adminBadge;
+
+  /// No description provided for @youBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get youBadge;
+
+  /// No description provided for @noMembersYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No members have joined yet'**
+  String get noMembersYet;
+
+  /// No description provided for @ownerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get ownerLabel;
+
+  /// No description provided for @confirmPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get confirmPasswordLabel;
+
+  /// No description provided for @passwordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get passwordMismatch;
+
+  /// No description provided for @passwordUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated successfully'**
+  String get passwordUpdated;
+
+  /// No description provided for @myOrganizations.
+  ///
+  /// In en, this message translates to:
+  /// **'My Organizations'**
+  String get myOrganizations;
+
+  /// No description provided for @switchOrganization.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Organization'**
+  String get switchOrganization;
+
+  /// No description provided for @leaveOrganization.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Organization'**
+  String get leaveOrganization;
+
+  /// No description provided for @leave.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get leave;
+
+  /// No description provided for @leaveOrgConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave \"{name}\"?'**
+  String leaveOrgConfirm(Object name);
+
+  /// No description provided for @leaveOrgConsequence.
+  ///
+  /// In en, this message translates to:
+  /// **'You will lose access to this organization\'s taadias and groups. You can rejoin anytime with the password.'**
+  String get leaveOrgConsequence;
+
+  /// No description provided for @ownerLeaveWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'You are the owner of this organization. To leave, add another admin first or delete the organization.'**
+  String get ownerLeaveWarning;
+
+  /// No description provided for @switchToOrg.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch'**
+  String get switchToOrg;
+
+  /// No description provided for @manage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get manage;
+
+  /// No description provided for @currentOrg.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get currentOrg;
+
+  /// No description provided for @currentOrganization.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Organization'**
+  String get currentOrganization;
+
+  /// No description provided for @noOrganizationsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No organizations yet'**
+  String get noOrganizationsYet;
+
+  /// No description provided for @joinAnotherOrg.
+  ///
+  /// In en, this message translates to:
+  /// **'Join Another Organization'**
+  String get joinAnotherOrg;
+
+  /// No description provided for @pendingOrgs.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Approval'**
+  String get pendingOrgs;
+
+  /// No description provided for @approvedOrgs.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved Organizations'**
+  String get approvedOrgs;
+
+  /// No description provided for @rejectedOrgs.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejectedOrgs;
+
+  /// No description provided for @approve.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get approve;
+
+  /// No description provided for @reject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get reject;
+
+  /// No description provided for @pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pending;
+
+  /// No description provided for @approved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get approved;
+
+  /// No description provided for @rejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rejected;
+
+  /// No description provided for @membersTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get membersTab;
+
+  /// No description provided for @resetPasswordTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get resetPasswordTab;
+
+  /// No description provided for @promoteToAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote to Admin'**
+  String get promoteToAdmin;
+
+  /// No description provided for @demoteFromAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Demote from Admin'**
+  String get demoteFromAdmin;
+
+  /// No description provided for @removeFromOrg.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Organization'**
+  String get removeFromOrg;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// No description provided for @deleteOrganization.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Organization'**
+  String get deleteOrganization;
+
+  /// No description provided for @deleteOrgConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\" and all its data permanently?'**
+  String deleteOrgConfirm(Object name);
+
+  /// No description provided for @typeNameToConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Type the organization name to confirm'**
+  String get typeNameToConfirm;
+
+  /// No description provided for @taadiaCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} taadias'**
+  String taadiaCount(Object count);
+
+  /// No description provided for @member.
+  ///
+  /// In en, this message translates to:
+  /// **'Member'**
+  String get member;
+
+  /// No description provided for @createdBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Created by'**
+  String get createdBy;
+
+  /// No description provided for @you.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get you;
+
+  /// No description provided for @currentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Password'**
+  String get currentPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New Password'**
+  String get newPassword;
+
+  /// No description provided for @updatedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated successfully'**
+  String get updatedSuccess;
+
+  /// No description provided for @organizationDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization deleted'**
+  String get organizationDeleted;
+
+  /// No description provided for @searchMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Search members...'**
+  String get searchMembers;
+
+  /// No description provided for @info.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get info;
+
+  /// No description provided for @joinPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The join password is used to join this organization. Share it with new members.'**
+  String get joinPasswordHint;
 }
 
 class _AppLocalizationsDelegate

@@ -103,9 +103,37 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
 
   Future<void> _toggleRole(AppUser user) async {
     final l = AppLocalizations.of(context)!;
+    final isRtl = l.localeName == 'ar';
     final authService = Provider.of<AuthService>(context, listen: false);
     final currentUid = authService.currentUser?.uid ?? '';
-    if (user.isAdmin) {
+    final isCurrentSuperAdmin = authService.isSuperAdmin;
+
+    if (user.isSuperAdmin) {
+      if (!isCurrentSuperAdmin) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isRtl
+                  ? 'فقط المدير العام يمكنه تخفيض صلاحيات المدير العام'
+                  : 'Only the super admin can demote a super admin'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        return;
+      }
+      if (user.uid == currentUid) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l.cannotDemoteSelf),
+              backgroundColor: Colors.red,
+            ),
+          );
+        return;
+      }
+    }
+
+    if (user.isAdmin && !user.isSuperAdmin) {
       if (user.uid == currentUid) {
         if (mounted)
           ScaffoldMessenger.of(context).showSnackBar(
@@ -131,6 +159,7 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
         return;
       }
     }
+
     final newRole = user.isAdmin ? 'user' : 'admin';
     widget.analytics.logEvent(
       name: 'toggle_user_role',
@@ -146,6 +175,48 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
       newRole,
       promoterUid: newRole == 'admin' ? currentUid : null,
     );
+  }
+
+  Future<void> _promoteToSuperAdmin(AppUser user) async {
+    final l = AppLocalizations.of(context)!;
+    final isRtl = l.localeName == 'ar';
+    final authService = Provider.of<AuthService>(context, listen: false);
+    if (!authService.isSuperAdmin) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isRtl ? 'تعيين مدير عام' : 'Make Super Admin'),
+        content: Text(isRtl
+            ? 'تعيين "${user.displayName}" كمدير عام؟ سيكون لديه صلاحيات كاملة على جميع الجمعيات.'
+            : 'Make "${user.displayName}" a super admin? They will have full access to all organizations.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(isRtl ? 'تأكيد' : 'Confirm')),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await authService.setUserRole(user.uid, 'super_admin');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isRtl
+                ? 'تم تعيين "${user.displayName}" كمدير عام'
+                : '"${user.displayName}" is now a super admin'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _deleteUser(AppUser user) async {
@@ -207,6 +278,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
+    final authService = Provider.of<AuthService>(context);
+    final isCurrentSuperAdmin = authService.isSuperAdmin;
+    final isRtl = l.localeName == 'ar';
     return AppScaffold(
       title: l.manageUsers,
       actions: [
@@ -351,23 +425,38 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: user.isAdmin
-                                      ? cs.primaryContainer
-                                      : cs.surfaceContainerHighest,
+                                  color: user.isSuperAdmin
+                                      ? Colors.amber.shade100
+                                      : user.isAdmin
+                                          ? cs.primaryContainer
+                                          : cs.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  user.isAdmin ? l.admin : l.user,
+                                  user.isSuperAdmin
+                                      ? (isRtl ? 'مدير عام' : 'Super Admin')
+                                      : user.isAdmin
+                                          ? l.admin
+                                          : l.user,
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: user.isAdmin
-                                        ? cs.onPrimaryContainer
-                                        : cs.onSurfaceVariant,
+                                    color: user.isSuperAdmin
+                                        ? Colors.amber.shade900
+                                        : user.isAdmin
+                                            ? cs.onPrimaryContainer
+                                            : cs.onSurfaceVariant,
                                   ),
                                 ),
                               ),
                               SizedBox(width: 4),
+                              if (!user.isSuperAdmin && isCurrentSuperAdmin)
+                                _smallIconBtn(
+                                  Icons.shield_outlined,
+                                  isRtl ? 'تعيين مدير عام' : 'Make Super Admin',
+                                  () => _promoteToSuperAdmin(user),
+                                  cs,
+                                ),
                               _smallIconBtn(
                                 user.isAdmin
                                     ? Icons.person_remove

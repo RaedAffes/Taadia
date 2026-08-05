@@ -3,18 +3,18 @@
     "platforms": {
       "android": {
         "default": {
-          "projectId": "ta3dia",
-          "appId": "1:308482841964:android:0b662f4ca36121506b6749",
+          "projectId": "ta3dia2",
+          "appId": "1:943981493524:android:07045932fa2ce312529601",
           "fileOutput": "android/app/google-services.json"
         }
       },
       "dart": {
         "lib/firebase_options.dart": {
-          "projectId": "ta3dia",
+          "projectId": "ta3dia2",
           "configurations": {
-            "android": "1:308482841964:android:0b662f4ca36121506b6749",
-            "ios": "1:308482841964:ios:d06c3de79b237ead6b6749",
-            "web": "1:308482841964:web:048f8ac6b3678ef66b6749"
+            "android": "1:943981493524:android:07045932fa2ce312529601",
+            "ios": "1:943981493524:ios:placeholder",
+            "web": "1:943981493524:web:placeholder"
           }
         }
       }

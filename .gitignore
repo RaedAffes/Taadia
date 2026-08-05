@@ -60,3 +60,7 @@ functions/.env
 
 # Data files
 *.csv
+
+# Android gradle backup artifacts
+android/.gradle_backup/
+

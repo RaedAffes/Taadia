@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ta3dia/l10n/app_localizations.dart';
 import 'package:ta3dia/services/auth_services.dart';
+import 'package:ta3dia/services/taadia_service.dart';
+import 'package:ta3dia/services/evaluation_service.dart';
+import 'package:ta3dia/services/group_service.dart';
+import 'package:ta3dia/services/org_service.dart';
+import 'package:ta3dia/models/organization_model.dart';
 import 'package:ta3dia/screens/register_screen.dart';
 import 'package:ta3dia/screens/settings_screen.dart';
-import 'package:ta3dia/screens/admin_manage_users.dart';
-import 'package:ta3dia/screens/user_dashboard.dart';
 import 'package:ta3dia/widgets/taadia_background.dart';
 import 'package:ta3dia/widgets/islamic_header.dart';
-import 'package:ta3dia/services/feedback_service.dart';
-import 'package:ta3dia/screens/admin_feedback_screen.dart';
-import 'package:ta3dia/screens/user_feedback_screen.dart';
-import 'package:ta3dia/screens/private_taadias_list_screen.dart';
-import 'package:ta3dia/screens/home_screen.dart';
-import 'package:ta3dia/screens/admin_manage_taadia_screen.dart';
-import 'package:ta3dia/screens/manage_groups_screen.dart';
+import 'package:ta3dia/screens/my_organizations_screen.dart';
+import 'package:ta3dia/screens/org_gate_screen.dart';
+import 'package:ta3dia/screens/super_admin_orgs_dashboard.dart';
 import 'package:ta3dia/widgets/offline_banner.dart';
+import 'package:ta3dia/widgets/org/leave_org_dialog.dart';
+import 'package:ta3dia/widgets/org/org_switcher_sheet.dart';
 
 
 class AppScaffold extends StatefulWidget {
@@ -42,6 +43,21 @@ class _AppScaffoldState extends State<AppScaffold> {
   final _scrollNotifier = ValueNotifier<double>(0);
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      final uid = auth.currentUser?.uid;
+      if (uid != null) {
+        final orgService = Provider.of<OrgService>(context, listen: false);
+        orgService.loadMyOrgs(uid).then((_) {
+          _syncOrgToAllServices(context, orgService.currentOrg);
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _scrollNotifier.dispose();
     super.dispose();
@@ -52,7 +68,8 @@ class _AppScaffoldState extends State<AppScaffold> {
     final l = AppLocalizations.of(context)!;
     final auth = Provider.of<AuthService>(context);
     final isGuest = auth.appUser?.authProvider == 'anonymous';
-    final isAdmin = auth.isAdmin;
+    final isSuperAdmin = auth.isSuperAdmin;
+    final hasOrg = Provider.of<OrgService>(context).currentOrg != null;
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -88,7 +105,50 @@ class _AppScaffoldState extends State<AppScaffold> {
                   );
                 },
               ),
-              actions: widget.actions,
+              actions: [
+                Builder(
+                  builder: (ctx) {
+                    final orgService = Provider.of<OrgService>(ctx);
+                    final org = orgService.currentOrg;
+                    if (org == null) return const SizedBox.shrink();
+                    return GestureDetector(
+                      onTap: () => _openOrgSwitcher(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.business, color: Colors.white, size: 14),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                org.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textDirection: AppLocalizations.of(ctx)!.localeName == 'ar'
+                                    ? TextDirection.rtl
+                                    : TextDirection.ltr,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.swap_horiz_rounded, size: 14, color: Colors.white.withValues(alpha: 0.8)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                if (widget.actions != null) ...widget.actions!,
+              ],
             );
           },
         ),
@@ -123,6 +183,7 @@ class _AppScaffoldState extends State<AppScaffold> {
                     ),
               ),
             ),
+            // org removed from drawer
             ListTile(
               leading: Icon(Icons.person, color: cs.onSurface),
               title: Text(l.settings, style: TextStyle(color: cs.onSurface)),
@@ -134,46 +195,6 @@ class _AppScaffoldState extends State<AppScaffold> {
                 );
               },
             ),
-            if (!isAdmin)
-              ListTile(
-                leading: Icon(Icons.rocket_launch, color: cs.onSurface),
-                title: Text(l.startTaadia, style: TextStyle(color: cs.onSurface)),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-              ),
-            if (isAdmin) ...[
-              ListTile(
-                leading: Icon(Icons.people, color: cs.onSurface),
-                title: Text(
-                  l.manageUsers,
-                  style: TextStyle(color: cs.onSurface),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ManageUsersScreen()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.group_work, color: cs.onSurface),
-                title: Text(
-                  l.manageGroups,
-                  style: TextStyle(color: cs.onSurface),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => ManageGroupsScreen()),
-                  );
-                },
-              ),
-            ],
             if (isGuest)
               ListTile(
                 leading: Icon(Icons.person_add, color: cs.onSurface),
@@ -186,36 +207,50 @@ class _AppScaffoldState extends State<AppScaffold> {
                   );
                 },
               ),
-            if (isAdmin)
+            if (isSuperAdmin)
               ListTile(
-                leading: Icon(Icons.feedback, color: cs.onSurface),
+                leading: Icon(Icons.business_outlined, color: cs.primary),
                 title: Text(
-                  l.viewFeedback,
-                  style: TextStyle(color: cs.onSurface),
+                  l.manageOrganizations,
+                  style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600),
                 ),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => AdminFeedbackScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => SuperAdminOrgsDashboard()),
                   );
                 },
               ),
-            if (!isAdmin)
+            if (hasOrg) ...[
               ListTile(
-                leading: Icon(Icons.feedback, color: cs.onSurface),
-                title: Text(
-                  l.giveFeedback,
-                  style: TextStyle(color: cs.onSurface),
+                leading: Icon(Icons.apps, color: cs.primary),
+                title: Text(l.myOrganizations, style: TextStyle(color: cs.onSurface)),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: cs.onSurfaceVariant,
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => UserFeedbackScreen()),
-                  );
+                  _openMyOrganizations(context);
                 },
               ),
+              ListTile(
+                leading: Icon(Icons.logout, color: cs.error),
+                title: Text(l.leaveOrganization, style: TextStyle(color: cs.error)),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: cs.onSurfaceVariant,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _leaveCurrentOrg(context);
+                },
+              ),
+            ],
             Spacer(),
             SizedBox(height: 16),
             _logoutTile(context, auth),
@@ -245,6 +280,77 @@ class _AppScaffoldState extends State<AppScaffold> {
     );
   }
 
+  void _openOrgSwitcher(BuildContext ctx) {
+    showOrgSwitcherSheet(
+      ctx,
+      onOrganizationsTap: () => _openMyOrganizations(ctx),
+      onSelect: (org) => _switchOrg(ctx, org),
+    );
+  }
+
+  void _switchOrg(BuildContext ctx, Organization org) {
+    _syncOrgToAllServices(ctx, org);
+    Provider.of<TaadiaService>(ctx, listen: false).loadTaadias();
+    Provider.of<GroupService>(ctx, listen: false).loadGroups();
+  }
+
+  void _openMyOrganizations(BuildContext ctx) {
+    Navigator.of(ctx).push(
+      MaterialPageRoute(builder: (_) => const MyOrganizationsScreen()),
+    );
+  }
+
+  Future<void> _leaveCurrentOrg(BuildContext ctx) async {
+    final orgService = Provider.of<OrgService>(ctx, listen: false);
+    final auth = Provider.of<AuthService>(ctx, listen: false);
+    final org = orgService.currentOrg;
+    final uid = auth.currentUser?.uid;
+    if (org == null || uid == null) return;
+
+    final isOwner = org.createdBy == uid;
+    final confirmed = await showLeaveOrgDialog(
+      ctx,
+      orgName: org.name,
+      isOwner: isOwner,
+    );
+    if (confirmed != true || !ctx.mounted) return;
+
+    final ok = await orgService.leaveOrganization(org.id, uid);
+    if (!ctx.mounted) return;
+
+    if (!ok && orgService.errorMessage == 'owner_cannot_leave') {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(ctx)!.ownerLeaveWarning),
+          backgroundColor: Theme.of(ctx).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
+    _syncOrgToAllServices(ctx, orgService.currentOrg);
+    if (orgService.myOrgs.isEmpty) {
+      Navigator.of(ctx).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => OrgGateScreen()),
+        (route) => false,
+      );
+    }
+  }
+
+  void _syncOrgToAllServices(BuildContext context, Organization? org) {
+    final orgService = Provider.of<OrgService>(context, listen: false);
+    final taadiaService = Provider.of<TaadiaService>(context, listen: false);
+    final evalService = Provider.of<EvaluationService>(context, listen: false);
+    final groupService = Provider.of<GroupService>(context, listen: false);
+
+    orgService.setCurrentOrg(org);
+
+    final orgId = org?.id;
+    taadiaService.setCurrentOrg(orgId);
+    evalService.setCurrentOrg(orgId);
+    groupService.setCurrentOrg(orgId);
+  }
+
   Widget _logoutTile(BuildContext context, AuthService auth) {
     final l = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
@@ -264,10 +370,10 @@ class _AppScaffoldState extends State<AppScaffold> {
                 child: Text(l.cancel),
               ),
               TextButton(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(ctx);
                   Navigator.of(context).popUntil((route) => route.isFirst);
-                  auth.signOut();
+                  await auth.signOut();
                 },
                 child: Text(l.logout, style: TextStyle(color: cs.error)),
               ),

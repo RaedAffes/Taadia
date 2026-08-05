@@ -10,14 +10,17 @@ import 'package:ta3dia/providers/app_state.dart';
 import 'package:ta3dia/screens/admin_manage_taadia_screen.dart';
 import 'package:ta3dia/screens/home_screen.dart';
 import 'package:ta3dia/screens/login_screen.dart';
+import 'package:ta3dia/screens/org_gate_screen.dart';
 
 import 'package:ta3dia/services/auth_services.dart';
 import 'package:ta3dia/services/background_download_service.dart';
 import 'package:ta3dia/services/code_lookup_service.dart';
 import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/evaluation_service.dart';
-import 'package:ta3dia/services/feedback_service.dart';
+
 import 'package:ta3dia/services/group_service.dart';
+import 'package:ta3dia/services/super_admin_service.dart';
+import 'package:ta3dia/services/org_service.dart';
 import 'package:ta3dia/services/connectivity_service.dart';
 import 'package:ta3dia/services/offline_queue_service.dart';
 import 'package:ta3dia/services/pexels_background_service.dart';
@@ -92,7 +95,6 @@ class _AppBody extends StatelessWidget {
           create: (context) => TaadiaService(
             Provider.of<ConnectivityService>(context, listen: false),
             Provider.of<OfflineQueueService>(context, listen: false),
-            Provider.of<CodeLookupService>(context, listen: false),
           ),
         ),
         ChangeNotifierProvider(
@@ -103,18 +105,14 @@ class _AppBody extends StatelessWidget {
           ),
         ),
         ChangeNotifierProvider(
-          create: (context) => FeedbackService(
-            Provider.of<ConnectivityService>(context, listen: false),
-            Provider.of<OfflineQueueService>(context, listen: false),
-          ),
-        ),
-        ChangeNotifierProvider(
           create: (context) => GroupService(
             Provider.of<ConnectivityService>(context, listen: false),
             Provider.of<OfflineQueueService>(context, listen: false),
           ),
         ),
         ChangeNotifierProvider(create: (context) => AppState()),
+        ChangeNotifierProvider(create: (context) => SuperAdminService()),
+        ChangeNotifierProvider(create: (context) => OrgService()),
       ],
       child: Consumer<AppState>(
         builder: (context, state, _) => MaterialApp(
@@ -288,7 +286,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         final user = snapshot.data;
         if (user == null) {
-          analytics.logLogin();
           return LoginScreen();
         }
 
@@ -296,21 +293,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return _buildLoading();
         }
 
-        final isAdmin = authService.isAdmin;
-
-        if (isAdmin) {
-          analytics.setUserId(id: user.uid);
-          analytics.logEvent(name: 'admin_access', parameters: {
-            'user_id': user.uid,
-          });
-          return AdminManageTaadiaScreen();
-        }
+        final isSuperAdmin = authService.isSuperAdmin;
 
         analytics.setUserId(id: user.uid);
-        analytics.logEvent(name: 'user_access', parameters: {
+        analytics.logEvent(name: isSuperAdmin ? 'super_admin_access' : 'user_access', parameters: {
           'user_id': user.uid,
         });
-        return HomeScreen();
+        return _OrgGateOrHome(uid: user.uid);
       },
     );
   }
@@ -346,5 +335,54 @@ class _AuthWrapperState extends State<AuthWrapper> {
         },
       ),
     );
+  }
+}
+
+class _OrgGateOrHome extends StatefulWidget {
+  final String uid;
+  const _OrgGateOrHome({required this.uid});
+
+  @override
+  State<_OrgGateOrHome> createState() => _OrgGateOrHomeState();
+}
+
+class _OrgGateOrHomeState extends State<_OrgGateOrHome> {
+  bool _loading = true;
+  bool _hasOrgs = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOrgs();
+  }
+
+  Future<void> _checkOrgs() async {
+    final orgService = context.read<OrgService>();
+    await orgService.loadMyOrgs(widget.uid);
+    if (!mounted) return;
+    setState(() {
+      _hasOrgs = orgService.myOrgs.isNotEmpty;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F0EB),
+        body: Center(
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B7D6B)),
+            ),
+          ),
+        ),
+      );
+    }
+    return _hasOrgs ? HomeScreen() : OrgGateScreen();
   }
 }

@@ -41,48 +41,44 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAQCATdcyf15lQBwrrdSuD417zM6rMhmBg',
-    appId: '1:308482841964:web:048f8ac6b3678ef66b6749',
-    messagingSenderId: '308482841964',
-    projectId: 'ta3dia',
-    authDomain: 'ta3dia.firebaseapp.com',
-    storageBucket: 'ta3dia.firebasestorage.app',
-    measurementId: 'G-BMT930FJY2',
+    apiKey: 'AIzaSyAFiB2XWbBiE0lA3mRWC0d1dANIUcoOs6k',
+    appId: '1:943981493524:web:placeholder',
+    messagingSenderId: '943981493524',
+    projectId: 'ta3dia2',
+    authDomain: 'ta3dia2.firebaseapp.com',
+    storageBucket: 'ta3dia2.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB2zzvmEP77k3xQkojNozHFayYoYijtBCQ',
-    appId: '1:308482841964:android:0b662f4ca36121506b6749',
-    messagingSenderId: '308482841964',
-    projectId: 'ta3dia',
-    storageBucket: 'ta3dia.firebasestorage.app',
+    apiKey: 'AIzaSyAFiB2XWbBiE0lA3mRWC0d1dANIUcoOs6k',
+    appId: '1:943981493524:android:07045932fa2ce312529601',
+    messagingSenderId: '943981493524',
+    projectId: 'ta3dia2',
+    storageBucket: 'ta3dia2.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDMFoTQCqgXF5SKdnLcPw4KSkV-eperTXc',
-    appId: '1:308482841964:ios:d06c3de79b237ead6b6749',
-    messagingSenderId: '308482841964',
-    projectId: 'ta3dia',
-    storageBucket: 'ta3dia.firebasestorage.app',
-    iosClientId:
-        '308482841964-j6svl9c4tdan53noh65eahvg9fodhmvs.apps.googleusercontent.com',
-    iosBundleId: 'ta3dia.web.app',
+    apiKey: 'AIzaSyAFiB2XWbBiE0lA3mRWC0d1dANIUcoOs6k',
+    appId: '1:943981493524:ios:placeholder',
+    messagingSenderId: '943981493524',
+    projectId: 'ta3dia2',
+    storageBucket: 'ta3dia2.firebasestorage.app',
+    iosBundleId: 'com.example.ta3dia2',
   );
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDMFoTQCqgXF5SKdnLcPw4KSkV-eperTXc',
-    appId: '1:308482841964:ios:d06c3de79b237ead6b6749',
-    messagingSenderId: '308482841964',
-    projectId: 'ta3dia',
-    storageBucket: 'ta3dia.firebasestorage.app',
-    iosBundleId: 'ta3dia.web.app',
+    apiKey: 'AIzaSyAFiB2XWbBiE0lA3mRWC0d1dANIUcoOs6k',
+    appId: '1:943981493524:macos:placeholder',
+    messagingSenderId: '943981493524',
+    projectId: 'ta3dia2',
+    storageBucket: 'ta3dia2.firebasestorage.app',
+    iosBundleId: 'com.example.ta3dia2',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyAQCATdcyf15lQBwrrdSuD417zM6rMhmBg',
-    appId: '1:308482841964:web:048f8ac6b3678ef66b6749',
-    messagingSenderId: '308482841964',
-    projectId: 'ta3dia',
-    authDomain: 'ta3dia.firebaseapp.com',
-    storageBucket: 'ta3dia.firebasestorage.app',
-    measurementId: 'G-BMT930FJY2',
+    apiKey: 'AIzaSyAFiB2XWbBiE0lA3mRWC0d1dANIUcoOs6k',
+    appId: '1:943981493524:web:placeholder',
+    messagingSenderId: '943981493524',
+    projectId: 'ta3dia2',
+    authDomain: 'ta3dia2.firebaseapp.com',
+    storageBucket: 'ta3dia2.firebasestorage.app',
   );
 }

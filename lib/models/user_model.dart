@@ -20,6 +20,7 @@ class AppUser {
   });
 
   bool get isAdmin => role == 'admin';
+  bool get isSuperAdmin => role == 'super_admin';
 
   factory AppUser.fromFirestore(Map<String, dynamic> data) {
     return AppUser(

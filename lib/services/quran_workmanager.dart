@@ -114,24 +114,6 @@ Future<void> _processOfflineQueue() async {
               .doc(data['groupId'] as String)
               .update({'members.${data['userId']}': FieldValue.delete()});
           break;
-        case 'submitFeedback':
-          await firestore.collection('feedback').add(data);
-          break;
-        case 'addFeedbackReply':
-          await firestore
-              .collection('feedback')
-              .doc(data['feedbackId'] as String)
-              .collection('replies')
-              .add(Map<String, dynamic>.from(data['reply'] as Map));
-          break;
-        case 'deleteFeedbackReply':
-          await firestore
-              .collection('feedback')
-              .doc(data['feedbackId'] as String)
-              .collection('replies')
-              .doc(data['replyId'] as String)
-              .delete();
-          break;
         default:
           remaining.add(op);
       }

@@ -1,24 +1,24 @@
 /**
- * One-time bulk copy: export all Firestore data from ta3dia to ta3dia-backup.
+ * One-time bulk copy: export all Firestore data from ta3dia2 to ta3dia2-backup.
  *
  * Prerequisites:
- *   1. Create the ta3dia-backup Firebase project and enable Firestore
+ *   1. Create the ta3dia2-backup Firebase project and enable Firestore
  *   2. Generate service account keys for BOTH projects:
  *        Firebase Console > Project Settings > Service accounts > "Generate new private key"
  *   3. Save the keys in this folder as:
- *        - ta3dia-service-account.json   (for the source)
- *        - ta3dia-backup-service-account.json   (for the backup)
+ *        - ta3dia2-service-account.json   (for the source)
+ *        - ta3dia2-backup-service-account.json   (for the backup)
  *   4. Run: node backup-initial.js
  */
 const admin = require('firebase-admin');
 const { getFirestore } = require('firebase-admin/firestore');
 const path = require('path');
 
-const SOURCE_PROJECT_ID = 'ta3dia';
-const BACKUP_PROJECT_ID = 'ta3dia-backup';
+const SOURCE_PROJECT_ID = 'ta3dia2';
+const BACKUP_PROJECT_ID = 'ta3dia2-backup';
 
-// ---------- Source (ta3dia) ----------
-const sourceKeyPath = path.join(__dirname, 'ta3dia-service-account.json');
+// ---------- Source (ta3dia2) ----------
+const sourceKeyPath = path.join(__dirname, 'ta3dia2-service-account.json');
 const sourceServiceAccount = require(sourceKeyPath);
 const sourceApp = admin.initializeApp({
   credential: admin.cert(sourceServiceAccount),
@@ -26,8 +26,8 @@ const sourceApp = admin.initializeApp({
 });
 const sourceDb = getFirestore(sourceApp);
 
-// ---------- Destination (ta3dia-backup) ----------
-const backupKeyPath = path.join(__dirname, 'ta3dia-backup-service-account.json');
+// ---------- Destination (ta3dia2-backup) ----------
+const backupKeyPath = path.join(__dirname, 'ta3dia2-backup-service-account.json');
 const backupServiceAccount = require(backupKeyPath);
 const backupApp = admin.initializeApp({
   credential: admin.cert(backupServiceAccount),
@@ -63,7 +63,7 @@ async function copyCollection(sourceCol, targetCol) {
 }
 
 async function main() {
-  console.log('Starting backup from ta3dia → ta3dia-backup...\n');
+  console.log('Starting backup from ta3dia2 → ta3dia2-backup...\n');
 
   const collections = await sourceDb.listCollections();
   let totalCopied = 0;

@@ -1,10 +1,10 @@
 /**
- * Periodic Firestore backup: ta3dia → ta3dia-backup.
+ * Periodic Firestore backup: ta3dia2 → ta3dia2-backup.
  * Designed to run on a schedule (e.g. GitHub Actions, cron).
  *
  * Reads keys from environment variables (for GitHub Secrets):
- *   - TA3DIA_SERVICE_ACCOUNT      base64-encoded JSON
- *   - TA3DIA_BACKUP_SERVICE_ACCOUNT base64-encoded JSON
+ *   - TA3DIA2_SERVICE_ACCOUNT      base64-encoded JSON
+ *   - TA3DIA2_BACKUP_SERVICE_ACCOUNT base64-encoded JSON
  *
  * Also supports local key files (same as backup-initial.js) as fallback.
  */
@@ -28,21 +28,21 @@ function loadKey(name, envVar) {
   }
 }
 
-const srcKey = loadKey('ta3dia-service-account.json', 'TA3DIA_SERVICE_ACCOUNT');
+const srcKey = loadKey('ta3dia2-service-account.json', 'TA3DIA2_SERVICE_ACCOUNT');
 const bkpKey = loadKey(
-  'ta3dia-backup-service-account.json',
-  'TA3DIA_BACKUP_SERVICE_ACCOUNT'
+  'ta3dia2-backup-service-account.json',
+  'TA3DIA2_BACKUP_SERVICE_ACCOUNT'
 );
 
 const srcApp = admin.initializeApp({
   credential: admin.cert(srcKey),
-  projectId: 'ta3dia',
+  projectId: 'ta3dia2',
 });
 const srcDb = getFirestore(srcApp);
 
 const bkpApp = admin.initializeApp({
   credential: admin.cert(bkpKey),
-  projectId: 'ta3dia-backup',
+  projectId: 'ta3dia2-backup',
 }, 'backup');
 const bkpDb = getFirestore(bkpApp);
 

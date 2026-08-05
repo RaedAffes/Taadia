@@ -1,12 +1,9 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:ta3dia/models/taadia_model.dart';
-import 'package:ta3dia/services/code_lookup_service.dart';
 import 'package:ta3dia/services/connectivity_service.dart';
-
 import 'package:ta3dia/services/offline_queue_service.dart';
 
 class TaadiaService extends ChangeNotifier {
@@ -14,19 +11,35 @@ class TaadiaService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ConnectivityService _connectivityService;
   final OfflineQueueService _offlineQueue;
-  final CodeLookupService? _codeLookup;
   StreamSubscription<QuerySnapshot>? _taadiaSub;
   StreamSubscription<User?>? _authSub;
 
-  TaadiaService(this._connectivityService, this._offlineQueue, [this._codeLookup]) {
+  String? _currentOrgId;
+  String? get currentOrgId => _currentOrgId;
+
+  TaadiaService(this._connectivityService, this._offlineQueue) {
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user == null) clear();
     });
   }
 
+  CollectionReference<Map<String, dynamic>> _col(String name) {
+    if (_currentOrgId != null) {
+      return _firestore
+          .collection('organizations')
+          .doc(_currentOrgId)
+          .collection(name);
+    }
+    return _firestore.collection(name);
+  }
+
+  void setCurrentOrg(String? orgId) {
+    _currentOrgId = orgId;
+    notifyListeners();
+  }
+
   List<Taadia> _taadias = [];
   List<Taadia> _userPrivateTaadias = [];
-  List<Taadia> _myTaadias = [];
   bool _isLoading = false;
   String? _errorMessage;
   List<Taadia> get taadias => _taadias;
@@ -42,7 +55,7 @@ class TaadiaService extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    _taadiaSub = _firestore.collection('taadia').snapshots(includeMetadataChanges: true).listen(
+    _taadiaSub = _col('taadia').snapshots(includeMetadataChanges: true).listen(
           (snapshot) {
             try {
               _taadias = snapshot.docs
@@ -65,8 +78,7 @@ class TaadiaService extends ChangeNotifier {
     final user = _auth.currentUser;
     if (user == null) return;
     try {
-      final snapshot = await _firestore
-          .collection('taadia')
+      final snapshot = await _col('taadia')
           .where('visibility', isEqualTo: 'private')
           .where('createdBy', isEqualTo: user.uid)
           .get();
@@ -85,16 +97,17 @@ class TaadiaService extends ChangeNotifier {
     String description = '',
     String formula = 'mahalia',
     String visibility = 'public',
-    Map<String, bool> accessGroups = const {},
-    Map<String, bool> accessUsers = const {},
-    String? accessCode,
     List<String> categories = const [],
     List<ClassificationConfig> classifications = const [],
+    List<String> accessUsers = const [],
   }) async {
     if (_auth.currentUser == null) return null;
-    final code = accessCode ?? generateAccessCode();
     final offlineId = 'offline_${DateTime.now().millisecondsSinceEpoch}';
     final now = DateTime.now();
+    final accessUsersMap = <String, dynamic>{};
+    for (final uid in accessUsers) {
+      accessUsersMap[uid] = true;
+    }
     final data = <String, dynamic>{
       'title': title,
       'description': description,
@@ -103,11 +116,9 @@ class TaadiaService extends ChangeNotifier {
       'status': 'active',
       'formula': formula,
       'visibility': visibility,
-      'accessGroups': accessGroups,
-      'accessUsers': accessUsers,
-      'accessCode': code,
       'categories': categories,
       'classifications': classifications.map((c) => c.toMap()).toList(),
+      'accessUsers': accessUsersMap,
     };
 
     final localTaadia = Taadia(
@@ -119,11 +130,9 @@ class TaadiaService extends ChangeNotifier {
       status: 'active',
       formula: formula,
       visibility: visibility,
-      accessGroups: accessGroups,
-      accessUsers: accessUsers,
-      accessCode: code,
       categories: categories,
       classifications: classifications,
+      accessUsers: accessUsersMap.cast<String, bool>(),
     );
     _taadias.insert(0, localTaadia);
     notifyListeners();
@@ -139,7 +148,7 @@ class TaadiaService extends ChangeNotifier {
 
     try {
       _errorMessage = null;
-      final docRef = await _firestore.collection('taadia').add(data);
+      final docRef = await _col('taadia').add(data);
       _taadias = _taadias.map((t) {
         if (t.id == offlineId) {
           return Taadia(
@@ -151,9 +160,6 @@ class TaadiaService extends ChangeNotifier {
             status: t.status,
             formula: t.formula,
             visibility: t.visibility,
-            accessGroups: t.accessGroups,
-            accessUsers: t.accessUsers,
-            accessCode: t.accessCode,
             categories: t.categories,
             classifications: t.classifications,
           );
@@ -220,7 +226,7 @@ class TaadiaService extends ChangeNotifier {
 
     try {
       _errorMessage = null;
-      final docRef = await _firestore.collection('taadia').add(data);
+      final docRef = await _col('taadia').add(data);
       _userPrivateTaadias = _userPrivateTaadias.map((t) {
         if (t.id == offlineId) {
           return Taadia(
@@ -256,7 +262,7 @@ class TaadiaService extends ChangeNotifier {
       return true;
     }
     try {
-      await _firestore.collection('taadia').doc(taadiaId).update(updates);
+      await _col('taadia').doc(taadiaId).update(updates);
       await loadTaadias();
       return true;
     } catch (e) {
@@ -281,9 +287,6 @@ class TaadiaService extends ChangeNotifier {
           status: updates['status'] ?? t.status,
           formula: updates['formula'] ?? t.formula,
           visibility: t.visibility,
-          accessGroups: t.accessGroups,
-          accessUsers: t.accessUsers,
-          accessCode: t.accessCode,
           categories: t.categories,
           classifications: t.classifications,
         );
@@ -306,70 +309,29 @@ class TaadiaService extends ChangeNotifier {
       await _offlineQueue.enqueue('deleteTaadia', {'taadiaId': taadiaId});
       _taadias.removeWhere((t) => t.id == taadiaId);
       _userPrivateTaadias.removeWhere((t) => t.id == taadiaId);
-      _myTaadias.removeWhere((t) => t.id == taadiaId);
       notifyListeners();
       return true;
     }
     try {
-      await _firestore.collection('taadia').doc(taadiaId).delete();
+      await _col('taadia').doc(taadiaId).delete();
       try {
-        final evalSnapshot = await _firestore
-            .collection('evaluations')
+        final evalSnapshot = await _col('evaluations')
             .where('taadiaId', isEqualTo: taadiaId)
             .get();
         for (var doc in evalSnapshot.docs) {
           try {
             await doc.reference.delete();
-          } catch (_) {
-          }
+          } catch (_) {}
         }
-      } catch (_) {
-      }
+      } catch (_) {}
       _taadias.removeWhere((t) => t.id == taadiaId);
       _userPrivateTaadias.removeWhere((t) => t.id == taadiaId);
-      _myTaadias.removeWhere((t) => t.id == taadiaId);
       notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = 'Error: ${e.toString()}';
       notifyListeners();
       return false;
-    }
-  }
-
-  Future<bool> revokeAccess(String taadiaId, String userId) async {
-    if (_connectivityService.isOffline) {
-      await _offlineQueue.enqueue('revokeAccess', {'taadiaId': taadiaId, 'userId': userId});
-      _taadias.removeWhere((t) => t.id == taadiaId);
-      notifyListeners();
-      return true;
-    }
-    try {
-      await _firestore.collection('taadia').doc(taadiaId).update({
-        'accessUsers.$userId': FieldValue.delete(),
-      });
-      _taadias.removeWhere((t) => t.id == taadiaId);
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _errorMessage = 'Error: ${e.toString()}';
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<List<Taadia>> getAvailableTaadias() async {
-    try {
-      final snapshot = await _firestore
-          .collection('taadia')
-          .where('status', isEqualTo: 'active')
-          .get();
-
-      return snapshot.docs.map((doc) {
-        return Taadia.fromFirestore(doc.id, Map<String, dynamic>.from(doc.data()));
-      }).toList();
-    } catch (e) {
-      return [];
     }
   }
 
@@ -399,7 +361,7 @@ class TaadiaService extends ChangeNotifier {
     }
 
     try {
-      await _firestore.collection('taadia').doc(taadiaId).update(data);
+      await _col('taadia').doc(taadiaId).update(data);
       await loadTaadias();
       return true;
     } catch (e) {
@@ -415,194 +377,15 @@ class TaadiaService extends ChangeNotifier {
   Future<bool> isTaadiaActive(String taadiaId) async {
     if (taadiaId.startsWith('offline_')) return true;
     try {
-      final doc = await _firestore.collection('taadia').doc(taadiaId).get();
+      final doc = await _col('taadia').doc(taadiaId).get();
       return doc.data()?['status'] == 'active';
     } catch (_) {
       return true;
     }
   }
 
-  Future<void> cacheTaadiaByCode(Taadia taadia) async {
-    if (_codeLookup == null || taadia.accessCode.isEmpty) return;
-    await _codeLookup!.storeCodeMapping(
-      taadia.accessCode,
-      CachedTaadia(
-        id: taadia.id,
-        title: taadia.title,
-        description: taadia.description,
-        categories: taadia.categories,
-        classifications: taadia.classifications.map((c) => c.toMap()).toList(),
-        active: taadia.status == 'active',
-      ),
-    );
-  }
-
-  String generateAccessCode() {
-    final random = Random();
-    final code = (random.nextInt(9000) + 1000).toString();
-    return code;
-  }
-
-  Future<bool> _updateTaadiaAccessLocal(
-    String taadiaId, {
-    Map<String, bool>? accessGroups,
-    Map<String, bool>? accessUsers,
-    String? accessCode,
-  }) async {
-    final data = <String, dynamic>{};
-    if (accessGroups != null) data['accessGroups'] = accessGroups;
-    if (accessUsers != null) data['accessUsers'] = accessUsers;
-    if (accessCode != null) data['accessCode'] = accessCode;
-    if (data.isEmpty) return true;
-
-    if (_connectivityService.isOffline) {
-      await _offlineQueue.enqueue('updateTaadia', {
-        'taadiaId': taadiaId,
-        'updates': data,
-      });
-      return true;
-    }
-
-    try {
-      await _firestore.collection('taadia').doc(taadiaId).update(data);
-      return true;
-    } catch (e) {
-      await _offlineQueue.enqueue('updateTaadia', {
-        'taadiaId': taadiaId,
-        'updates': data,
-      });
-      return true;
-    }
-  }
-
-  Future<bool> updateTaadiaAccess(
-    String taadiaId, {
-    Map<String, bool>? accessGroups,
-    Map<String, bool>? accessUsers,
-    String? accessCode,
-  }) async {
-    return _updateTaadiaAccessLocal(taadiaId,
-        accessGroups: accessGroups,
-        accessUsers: accessUsers,
-        accessCode: accessCode);
-  }
-
-  Future<bool> grantUserAccess(String taadiaId, String userId) async {
-    _taadias = _taadias.map((t) {
-      if (t.id == taadiaId) {
-        return Taadia(
-          id: t.id,
-          title: t.title,
-          description: t.description,
-          createdBy: t.createdBy,
-          createdAt: t.createdAt,
-          status: t.status,
-          formula: t.formula,
-          visibility: t.visibility,
-          accessGroups: t.accessGroups,
-          accessUsers: Map<String, bool>.from(t.accessUsers)..[userId] = true,
-          accessCode: t.accessCode,
-          categories: t.categories,
-          classifications: t.classifications,
-        );
-      }
-      return t;
-    }).toList();
-    notifyListeners();
-
-    if (_connectivityService.isOffline) {
-      await _offlineQueue.enqueue('updateTaadia', {
-        'taadiaId': taadiaId,
-        'updates': {'accessUsers.$userId': true},
-      });
-      return true;
-    }
-
-    try {
-      await _firestore
-          .collection('taadia')
-          .doc(taadiaId)
-          .update({'accessUsers.$userId': true});
-      return true;
-    } catch (_) {
-      await _offlineQueue.enqueue('updateTaadia', {
-        'taadiaId': taadiaId,
-        'updates': {'accessUsers.$userId': true},
-      });
-      return true;
-    }
-  }
-
-  Taadia? validateAccessCode(String code) {
-    for (final t in _taadias) {
-      if (t.accessCode == code && t.status == 'active') {
-        return t;
-      }
-    }
-    if (_connectivityService.isOffline && _codeLookup != null) {
-      final cached = _codeLookup!.lookup(code);
-      if (cached != null && cached.active) {
-        return Taadia(
-          id: cached.id,
-          title: cached.title,
-          description: cached.description,
-          createdBy: '',
-          createdAt: DateTime.now(),
-          status: 'active',
-          accessCode: code,
-          categories: cached.categories,
-          classifications: cached.classifications
-              .map((m) => ClassificationConfig.fromMap(m))
-              .toList(),
-        );
-      }
-    }
-    return null;
-  }
-
-  Future<Taadia?> resolveCodeToTaadia(String code) async {
-    if (_connectivityService.isOnline) {
-      try {
-        final snapshot = await _firestore
-            .collection('taadia')
-            .where('accessCode', isEqualTo: code)
-            .where('status', isEqualTo: 'active')
-            .limit(1)
-            .get();
-        if (snapshot.docs.isNotEmpty) {
-          final doc = snapshot.docs.first;
-          return Taadia.fromFirestore(
-              doc.id, Map<String, dynamic>.from(doc.data() as Map));
-        }
-      } catch (_) {}
-    }
-    if (_codeLookup != null) {
-      final cached = _codeLookup!.lookup(code);
-      if (cached != null && cached.active) {
-        return Taadia(
-          id: cached.id,
-          title: cached.title,
-          description: cached.description,
-          createdBy: '',
-          createdAt: DateTime.now(),
-          status: 'active',
-          accessCode: code,
-          categories: cached.categories,
-          classifications: cached.classifications
-              .map((m) => ClassificationConfig.fromMap(m))
-              .toList(),
-        );
-      }
-    }
-    return null;
-  }
-
   List<Taadia> getAccessibleTaadias(String userId, List<String> userGroupIds) {
-    return _taadias.where((t) {
-      if (t.isPrivate) return false;
-      if (t.createdBy == userId) return true;
-      return t.userHasAccess(userId, userGroupIds);
-    }).toList();
+    return _taadias.where((t) => t.visibility != 'private').toList();
   }
 
   void _mergePendingLocalTaadias() {
@@ -633,11 +416,6 @@ class TaadiaService extends ChangeNotifier {
         status: data['status'] ?? 'active',
         formula: data['formula'] ?? 'mahalia',
         visibility: data['visibility'] ?? 'public',
-        accessGroups: Map<String, bool>.from(
-            (data['accessGroups'] as Map?)?.map((k, v) => MapEntry(k as String, v == true)) ?? {}),
-        accessUsers: Map<String, bool>.from(
-            (data['accessUsers'] as Map?)?.map((k, v) => MapEntry(k as String, v == true)) ?? {}),
-        accessCode: data['accessCode'] ?? '',
         categories: (data['categories'] as List<dynamic>?)?.cast<String>() ?? [],
         classifications: classifications,
       ));
@@ -649,7 +427,6 @@ class TaadiaService extends ChangeNotifier {
     _taadiaSub = null;
     _taadias = [];
     _userPrivateTaadias = [];
-    _myTaadias = [];
     _isLoading = false;
     _errorMessage = null;
     notifyListeners();

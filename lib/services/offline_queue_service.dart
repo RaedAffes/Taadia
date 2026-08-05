@@ -251,36 +251,6 @@ class OfflineQueueService extends ChangeNotifier {
           op.data['taadiaId'] as String,
         ).update({'accessUsers.${op.data['userId']}': FieldValue.delete()});
         break;
-      case 'submitFeedback':
-        await _firestore.collection('feedback').add(
-          Map<String, dynamic>.from(op.data),
-        );
-        break;
-      case 'deleteFeedback':
-        final replies = await _firestore.collection('feedback').doc(
-          op.data['feedbackId'] as String,
-        ).collection('replies').get();
-        for (var r in replies.docs) {
-          await r.reference.delete();
-        }
-        await _firestore.collection('feedback').doc(
-          op.data['feedbackId'] as String,
-        ).delete();
-        break;
-      case 'addFeedbackReply':
-        await _firestore.collection('feedback').doc(
-          op.data['feedbackId'] as String,
-        ).collection('replies').add(
-          Map<String, dynamic>.from(op.data['reply'] as Map),
-        );
-        break;
-      case 'deleteFeedbackReply':
-        await _firestore.collection('feedback').doc(
-          op.data['feedbackId'] as String,
-        ).collection('replies').doc(
-          op.data['replyId'] as String,
-        ).delete();
-        break;
     }
   }
 

@@ -656,7 +656,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get myPrivateTaadias => 'تعدياتي الخاصة';
 
   @override
-  String get taadia => 'Taadia';
+  String get taadia => 'تعدية';
 
   @override
   String get startTaadia => 'بدأ تعدية';
@@ -953,4 +953,291 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get wtSkip => 'تخطي';
+
+  @override
+  String get manageOrganizations => 'إدارة الجمعيات';
+
+  @override
+  String get createOrganization => 'إنشاء جمعية';
+
+  @override
+  String get joinOrganization => 'الانضمام لجمعية';
+
+  @override
+  String get organizationName => 'اسم الجمعية';
+
+  @override
+  String get organizationPassword => 'كلمة مرور الجمعية';
+
+  @override
+  String get confirmOrganizationPassword => 'تأكيد كلمة المرور';
+
+  @override
+  String get pendingApproval => 'بانتظار موافقة المدير العام';
+
+  @override
+  String get organizationApproved => 'تمت الموافقة على الجمعية!';
+
+  @override
+  String get organizationRejected => 'تم رفض الجمعية';
+
+  @override
+  String get alreadyMember => 'عضو بالفعل';
+
+  @override
+  String get incorrectPassword => 'كلمة مرور خاطئة';
+
+  @override
+  String get noOrganizations => 'لا توجد جمعيات متاحة';
+
+  @override
+  String membersCount(Object count) {
+    return '$count أعضاء';
+  }
+
+  @override
+  String get approving => 'جارٍ الموافقة...';
+
+  @override
+  String get rejecting => 'جارٍ الرفض...';
+
+  @override
+  String get joinOrCreateOrg => 'انضم أو أنشئ جمعية';
+
+  @override
+  String get orgGateSubtitle =>
+      'يجب عليك الانضمام إلى جمعية أو إنشاء واحدة للبدء';
+
+  @override
+  String get joinOrgCardTitle => 'الانضمام لجمعية';
+
+  @override
+  String get joinOrgCardDesc => 'انضم إلى جمعية موجودة باستخدام كلمة المرور';
+
+  @override
+  String get createOrgCardTitle => 'إنشاء جمعية';
+
+  @override
+  String get createOrgCardDesc => 'أنشئ جمعية جديدة وادع الأعضاء';
+
+  @override
+  String get manageOrganization => 'إدارة الجمعية';
+
+  @override
+  String get manageOrgDesc => 'عرض وإدارة تفاصيل الجمعية والأعضاء والإعدادات';
+
+  @override
+  String get orgDetails => 'تفاصيل الجمعية';
+
+  @override
+  String get orgMembers => 'الأعضاء';
+
+  @override
+  String get removeMember => 'إزالة عضو';
+
+  @override
+  String removeMemberConfirm(Object name) {
+    return 'إزالة $name من هذه الجمعية؟';
+  }
+
+  @override
+  String get memberRemoved => 'تمت إزالة العضو';
+
+  @override
+  String get editOrgName => 'تعديل اسم الجمعية';
+
+  @override
+  String get editOrgPassword => 'تعديل كلمة مرور الجمعية';
+
+  @override
+  String get orgNameUpdated => 'تم تحديث اسم الجمعية';
+
+  @override
+  String get orgPasswordUpdated => 'تم تحديث كلمة مرور الجمعية';
+
+  @override
+  String get noMembers => 'لا توجد أعضاء بعد';
+
+  @override
+  String get adminRole => 'مشرف';
+
+  @override
+  String get userRole => 'عضو';
+
+  @override
+  String get tapToReveal => 'اضغط لإظهار كلمة المرور';
+
+  @override
+  String get dangerZone => 'منطقة الخطر';
+
+  @override
+  String get dangerZoneDesc => 'حذف هذه الجمعية وجميع بياناتها بشكل دائم';
+
+  @override
+  String get createdOn => 'أنشئت في';
+
+  @override
+  String get joinCode => 'رمز الانضمام';
+
+  @override
+  String get orgSettings => 'الإعدادات';
+
+  @override
+  String get rename => 'إعادة تسمية';
+
+  @override
+  String get changePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get adminBadge => 'مشرف';
+
+  @override
+  String get youBadge => 'أنت';
+
+  @override
+  String get noMembersYet => 'لم ينضم أي عضو بعد';
+
+  @override
+  String get ownerLabel => 'المالك';
+
+  @override
+  String get confirmPasswordLabel => 'تأكيد كلمة المرور الجديدة';
+
+  @override
+  String get passwordMismatch => 'كلمتا المرور غير متطابقتين';
+
+  @override
+  String get passwordUpdated => 'تم تحديث كلمة المرور بنجاح';
+
+  @override
+  String get myOrganizations => 'جمعياتي';
+
+  @override
+  String get switchOrganization => 'تبديل الجمعية';
+
+  @override
+  String get leaveOrganization => 'مغادرة الجمعية';
+
+  @override
+  String get leave => 'مغادرة';
+
+  @override
+  String leaveOrgConfirm(Object name) {
+    return 'مغادرة \"$name\"؟';
+  }
+
+  @override
+  String get leaveOrgConsequence =>
+      'ستفقد الوصول إلى تعديات ومجموعات هذه الجمعية. يمكنك الانضمام مجدداً في أي وقت باستخدام كلمة المرور.';
+
+  @override
+  String get ownerLeaveWarning =>
+      'أنت مالك هذه الجمعية. للمغادرة، أضف مشرفاً آخر أولاً أو احذف الجمعية.';
+
+  @override
+  String get switchToOrg => 'تبديل';
+
+  @override
+  String get manage => 'إدارة';
+
+  @override
+  String get currentOrg => 'الحالية';
+
+  @override
+  String get currentOrganization => 'الجمعية الحالية';
+
+  @override
+  String get noOrganizationsYet => 'لا توجد جمعيات بعد';
+
+  @override
+  String get joinAnotherOrg => 'الانضمام لجمعية أخرى';
+
+  @override
+  String get pendingOrgs => 'بانتظار الموافقة';
+
+  @override
+  String get approvedOrgs => 'الجمعيات المعتمدة';
+
+  @override
+  String get rejectedOrgs => 'المرفوضة';
+
+  @override
+  String get approve => 'موافقة';
+
+  @override
+  String get reject => 'رفض';
+
+  @override
+  String get pending => 'قيد المراجعة';
+
+  @override
+  String get approved => 'معتمدة';
+
+  @override
+  String get rejected => 'مرفوضة';
+
+  @override
+  String get membersTab => 'الأعضاء';
+
+  @override
+  String get resetPasswordTab => 'كلمة المرور';
+
+  @override
+  String get promoteToAdmin => 'ترقية لمشرف';
+
+  @override
+  String get demoteFromAdmin => 'إلغاء الإشراف';
+
+  @override
+  String get removeFromOrg => 'إزالة من الجمعية';
+
+  @override
+  String get confirm => 'تأكيد';
+
+  @override
+  String get deleteOrganization => 'حذف الجمعية';
+
+  @override
+  String deleteOrgConfirm(Object name) {
+    return 'حذف \"$name\" وجميع بياناتها نهائياً؟';
+  }
+
+  @override
+  String get typeNameToConfirm => 'اكتب اسم الجمعية للتأكيد';
+
+  @override
+  String taadiaCount(Object count) {
+    return '$count تعديات';
+  }
+
+  @override
+  String get member => 'عضو';
+
+  @override
+  String get createdBy => 'أنشأها';
+
+  @override
+  String get you => 'أنت';
+
+  @override
+  String get currentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get newPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get updatedSuccess => 'تم التحديث بنجاح';
+
+  @override
+  String get organizationDeleted => 'تم حذف الجمعية';
+
+  @override
+  String get searchMembers => 'بحث عن عضو...';
+
+  @override
+  String get info => 'معلومات';
+
+  @override
+  String get joinPasswordHint =>
+      'تُستخدم كلمة المرور للانضمام إلى الجمعية. شاركها مع الأعضاء الجدد.';
 }

@@ -963,4 +963,293 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wtSkip => 'Skip';
+
+  @override
+  String get manageOrganizations => 'Manage Organizations';
+
+  @override
+  String get createOrganization => 'Create Organization';
+
+  @override
+  String get joinOrganization => 'Join Organization';
+
+  @override
+  String get organizationName => 'Organization Name';
+
+  @override
+  String get organizationPassword => 'Organization Password';
+
+  @override
+  String get confirmOrganizationPassword => 'Confirm Password';
+
+  @override
+  String get pendingApproval => 'Pending super admin approval';
+
+  @override
+  String get organizationApproved => 'Organization approved!';
+
+  @override
+  String get organizationRejected => 'Organization rejected';
+
+  @override
+  String get alreadyMember => 'Already a member';
+
+  @override
+  String get incorrectPassword => 'Incorrect password';
+
+  @override
+  String get noOrganizations => 'No organizations available';
+
+  @override
+  String membersCount(Object count) {
+    return '$count members';
+  }
+
+  @override
+  String get approving => 'Approving...';
+
+  @override
+  String get rejecting => 'Rejecting...';
+
+  @override
+  String get joinOrCreateOrg => 'Join or Create an Organization';
+
+  @override
+  String get orgGateSubtitle =>
+      'You need to join or create a جمعية to get started';
+
+  @override
+  String get joinOrgCardTitle => 'Join جمعية';
+
+  @override
+  String get joinOrgCardDesc => 'Join an existing جمعية using a password';
+
+  @override
+  String get createOrgCardTitle => 'Create جمعية';
+
+  @override
+  String get createOrgCardDesc => 'Create a new جمعية and invite members';
+
+  @override
+  String get manageOrganization => 'Manage جمعية';
+
+  @override
+  String get manageOrgDesc =>
+      'View and manage your جمعية details, members, and settings';
+
+  @override
+  String get orgDetails => 'Organization Details';
+
+  @override
+  String get orgMembers => 'Members';
+
+  @override
+  String get removeMember => 'Remove Member';
+
+  @override
+  String removeMemberConfirm(Object name) {
+    return 'Remove $name from this جمعية?';
+  }
+
+  @override
+  String get memberRemoved => 'Member removed';
+
+  @override
+  String get editOrgName => 'Edit Organization Name';
+
+  @override
+  String get editOrgPassword => 'Edit Organization Password';
+
+  @override
+  String get orgNameUpdated => 'Organization name updated';
+
+  @override
+  String get orgPasswordUpdated => 'Organization password updated';
+
+  @override
+  String get noMembers => 'No members yet';
+
+  @override
+  String get adminRole => 'Admin';
+
+  @override
+  String get userRole => 'Member';
+
+  @override
+  String get tapToReveal => 'Tap to reveal password';
+
+  @override
+  String get dangerZone => 'Danger Zone';
+
+  @override
+  String get dangerZoneDesc =>
+      'Permanently delete this organization and all its data';
+
+  @override
+  String get createdOn => 'Created on';
+
+  @override
+  String get joinCode => 'Join Code';
+
+  @override
+  String get orgSettings => 'Settings';
+
+  @override
+  String get rename => 'Rename';
+
+  @override
+  String get changePassword => 'Change Password';
+
+  @override
+  String get adminBadge => 'Admin';
+
+  @override
+  String get youBadge => 'You';
+
+  @override
+  String get noMembersYet => 'No members have joined yet';
+
+  @override
+  String get ownerLabel => 'Owner';
+
+  @override
+  String get confirmPasswordLabel => 'Confirm new password';
+
+  @override
+  String get passwordMismatch => 'Passwords do not match';
+
+  @override
+  String get passwordUpdated => 'Password updated successfully';
+
+  @override
+  String get myOrganizations => 'My Organizations';
+
+  @override
+  String get switchOrganization => 'Switch Organization';
+
+  @override
+  String get leaveOrganization => 'Leave Organization';
+
+  @override
+  String get leave => 'Leave';
+
+  @override
+  String leaveOrgConfirm(Object name) {
+    return 'Leave \"$name\"?';
+  }
+
+  @override
+  String get leaveOrgConsequence =>
+      'You will lose access to this organization\'s taadias and groups. You can rejoin anytime with the password.';
+
+  @override
+  String get ownerLeaveWarning =>
+      'You are the owner of this organization. To leave, add another admin first or delete the organization.';
+
+  @override
+  String get switchToOrg => 'Switch';
+
+  @override
+  String get manage => 'Manage';
+
+  @override
+  String get currentOrg => 'Current';
+
+  @override
+  String get currentOrganization => 'Current Organization';
+
+  @override
+  String get noOrganizationsYet => 'No organizations yet';
+
+  @override
+  String get joinAnotherOrg => 'Join Another Organization';
+
+  @override
+  String get pendingOrgs => 'Pending Approval';
+
+  @override
+  String get approvedOrgs => 'Approved Organizations';
+
+  @override
+  String get rejectedOrgs => 'Rejected';
+
+  @override
+  String get approve => 'Approve';
+
+  @override
+  String get reject => 'Reject';
+
+  @override
+  String get pending => 'Pending';
+
+  @override
+  String get approved => 'Approved';
+
+  @override
+  String get rejected => 'Rejected';
+
+  @override
+  String get membersTab => 'Members';
+
+  @override
+  String get resetPasswordTab => 'Reset Password';
+
+  @override
+  String get promoteToAdmin => 'Promote to Admin';
+
+  @override
+  String get demoteFromAdmin => 'Demote from Admin';
+
+  @override
+  String get removeFromOrg => 'Remove from Organization';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get deleteOrganization => 'Delete Organization';
+
+  @override
+  String deleteOrgConfirm(Object name) {
+    return 'Delete \"$name\" and all its data permanently?';
+  }
+
+  @override
+  String get typeNameToConfirm => 'Type the organization name to confirm';
+
+  @override
+  String taadiaCount(Object count) {
+    return '$count taadias';
+  }
+
+  @override
+  String get member => 'Member';
+
+  @override
+  String get createdBy => 'Created by';
+
+  @override
+  String get you => 'You';
+
+  @override
+  String get currentPassword => 'Current Password';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
+  String get updatedSuccess => 'Updated successfully';
+
+  @override
+  String get organizationDeleted => 'Organization deleted';
+
+  @override
+  String get searchMembers => 'Search members...';
+
+  @override
+  String get info => 'Info';
+
+  @override
+  String get joinPasswordHint =>
+      'The join password is used to join this organization. Share it with new members.';
 }

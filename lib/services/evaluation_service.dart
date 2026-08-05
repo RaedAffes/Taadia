@@ -15,7 +15,25 @@ class EvaluationService extends ChangeNotifier {
   final CodeLookupService? _codeLookup;
   StreamSubscription<QuerySnapshot>? _evalSub;
 
+  String? _currentOrgId;
+  String? get currentOrgId => _currentOrgId;
+
   EvaluationService(this._connectivityService, this._offlineQueue, [this._codeLookup]);
+
+  CollectionReference<Map<String, dynamic>> _col(String name) {
+    if (_currentOrgId != null) {
+      return _firestore
+          .collection('organizations')
+          .doc(_currentOrgId)
+          .collection(name);
+    }
+    return _firestore.collection(name);
+  }
+
+  void setCurrentOrg(String? orgId) {
+    _currentOrgId = orgId;
+    notifyListeners();
+  }
 
   List<Evaluation> _evaluations = [];
   bool _isLoading = false;
@@ -79,8 +97,7 @@ class EvaluationService extends ChangeNotifier {
       return;
     }
 
-    Query query = _firestore
-        .collection('evaluations')
+    Query query = _col('evaluations')
         .where('taadiaId', isEqualTo: taadiaId);
 
     final user = _auth.currentUser;
@@ -106,19 +123,6 @@ class EvaluationService extends ChangeNotifier {
           .toList();
       _errorMessage = null;
     } catch (_) {
-    }
-    final accessCode = _findAccessCode(taadiaId);
-    if (accessCode != null) {
-      try {
-        final q = _firestore
-            .collection('evaluations')
-            .where('accessCode', isEqualTo: accessCode);
-        final snap = await q.get();
-        for (final doc in snap.docs) {
-          final eval = Evaluation.fromFirestore(doc.id, Map<String, dynamic>.from(doc.data() as Map));
-          if (seen.add(eval.id)) _evaluations.add(eval);
-        }
-      } catch (_) {}
     }
     try {
       _mergePendingLocalEvaluations(taadiaId: taadiaId);
@@ -209,8 +213,7 @@ class EvaluationService extends ChangeNotifier {
       return;
     }
 
-    final query = _firestore
-        .collection('evaluations')
+    final query = _col('evaluations')
         .where('taadiaId', isEqualTo: taadiaId)
         .where('userId', isEqualTo: _auth.currentUser!.uid);
 
@@ -223,20 +226,6 @@ class EvaluationService extends ChangeNotifier {
           .toList();
       _errorMessage = null;
     } catch (_) {
-    }
-    final accessCode = _findAccessCode(taadiaId);
-    if (accessCode != null) {
-      try {
-        final q = _firestore
-            .collection('evaluations')
-            .where('accessCode', isEqualTo: accessCode)
-            .where('userId', isEqualTo: _auth.currentUser!.uid);
-        final snap = await q.get();
-        for (final doc in snap.docs) {
-          final eval = Evaluation.fromFirestore(doc.id, Map<String, dynamic>.from(doc.data() as Map));
-          if (seen.add(eval.id)) _evaluations.add(eval);
-        }
-      } catch (_) {}
     }
     try {
       _mergePendingLocalEvaluations(taadiaId: taadiaId);
@@ -408,9 +397,9 @@ class EvaluationService extends ChangeNotifier {
 
   Future<void> _firestoreWriteEvaluation(Map<String, dynamic> evalData, String evalId) async {
     if (evalId.isEmpty) {
-      await _firestore.collection('evaluations').add(evalData);
+      await _col('evaluations').add(evalData);
     } else {
-      await _firestore.collection('evaluations').doc(evalId).set(evalData);
+      await _col('evaluations').doc(evalId).set(evalData);
     }
   }
 
@@ -439,7 +428,7 @@ class EvaluationService extends ChangeNotifier {
     }).toList();
     notifyListeners();
     try {
-      await _firestore.collection('evaluations').doc(evalId).set(
+      await _col('evaluations').doc(evalId).set(
         {'formula': formula},
         SetOptions(merge: true),
       );
@@ -455,7 +444,7 @@ class EvaluationService extends ChangeNotifier {
     }
 
     try {
-      await _firestore.collection('evaluations').doc(evalId).delete();
+      await _col('evaluations').doc(evalId).delete();
       _evaluations.removeWhere((e) => e.id == evalId);
       notifyListeners();
       return true;
@@ -473,8 +462,7 @@ class EvaluationService extends ChangeNotifier {
       return _computeStats(localEvals);
     }
 
-    Query query = _firestore
-        .collection('evaluations')
+    Query query = _col('evaluations')
         .where('taadiaId', isEqualTo: taadiaId);
 
     final user = _auth.currentUser;
@@ -550,8 +538,7 @@ class EvaluationService extends ChangeNotifier {
       return localEvals;
     }
 
-    Query query = _firestore
-        .collection('evaluations')
+    Query query = _col('evaluations')
         .where('taadiaId', isEqualTo: taadiaId);
 
     final user = _auth.currentUser;
@@ -584,30 +571,6 @@ class EvaluationService extends ChangeNotifier {
         if (seen.add(eval.id)) result.add(eval);
       }
     } catch (_) {}
-
-    final accessCode = _findAccessCode(taadiaId);
-    if (accessCode != null) {
-      Query acQuery = _firestore
-          .collection('evaluations')
-          .where('accessCode', isEqualTo: accessCode);
-      if (user != null) {
-        try {
-          final userDoc = await _firestore.collection('users').doc(user.uid).get();
-          if (userDoc.data()?['role'] != 'admin') {
-            acQuery = acQuery.where('userId', isEqualTo: user.uid);
-          }
-        } catch (_) {
-          acQuery = acQuery.where('userId', isEqualTo: user.uid);
-        }
-      }
-      try {
-        final acSnap = await acQuery.get();
-        for (final doc in acSnap.docs) {
-          final eval = Evaluation.fromFirestore(doc.id, Map<String, dynamic>.from(doc.data() as Map));
-          if (seen.add(eval.id)) result.add(eval);
-        }
-      } catch (_) {}
-    }
 
     result.sort((a, b) => a.studentName.compareTo(b.studentName));
     return result;

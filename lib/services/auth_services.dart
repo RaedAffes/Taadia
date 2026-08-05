@@ -19,7 +19,7 @@ class AuthService extends ChangeNotifier {
 
   GoogleSignIn get _googleSignInInstance {
     _googleSignIn ??= GoogleSignIn(
-      serverClientId: '308482841964-lc4gs73gb1d3671l489n5k9u6dru88eh.apps.googleusercontent.com',
+      serverClientId: '943981493524-o38s3e5tnveecggrclsp6mvred7bjt41.apps.googleusercontent.com',
     );
     return _googleSignIn!;
   }
@@ -115,6 +115,7 @@ class AuthService extends ChangeNotifier {
         _authReady = true;
         _isLoading = false;
         notifyListeners();
+
         _firestore.collection('users').doc(user.uid).get().then((fresh) {
           if (!fresh.exists || fresh.data()?['accountStatus'] == 'deleted') return;
           final freshData = Map<String, dynamic>.from(fresh.data()!);
@@ -169,6 +170,7 @@ class AuthService extends ChangeNotifier {
   }
 
   bool get isAdmin => _appUser?.isAdmin ?? false;
+  bool get isSuperAdmin => _appUser?.isSuperAdmin ?? false;
 
   Future<bool> signUp({
     required String email,
