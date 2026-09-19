@@ -423,6 +423,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
                   taalakin: q.taalakin,
                   note: q.note,
                   questionText: q.questionText,
+                  isComplete: q.isComplete,
                   topCubes: List.from(q.topCubes),
                   bottomCubes: List.from(q.bottomCubes),
                 ))
@@ -481,6 +482,9 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       'editingEvaluationId': _editingEvaluationId,
       'formError': _formError,
       'oldAhzabText': _oldAhzabText,
+      'pageIndex': _pageController.hasClients ? _pageController.page?.round() ?? 0 : 0,
+      'questionVerseIndices': List<int>.from(_questionVerseIndices),
+      'expandedCriteria': _expandedCriteria.toList(),
       'rangeCriteria': _rangeCriteria.map((c) => <String, dynamic>{
         'type': c.type.index,
         'hizbFrom': c.hizbFrom,
@@ -515,11 +519,21 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           taalakin: map['taalakin'] as int? ?? 0,
           note: map['note'] as String? ?? '',
           questionText: map['questionText'] as String? ?? '',
+          isComplete: map['isComplete'] == true,
           topCubes: map['topCubes'] != null ? List<bool>.from(map['topCubes'] as List) : [false, false, false],
           bottomCubes: map['bottomCubes'] != null ? List<bool>.from(map['bottomCubes'] as List) : [false],
         );
       }).toList();
       _resetVerseIndices();
+      final savedVerseIdx = draft['questionVerseIndices'];
+      if (savedVerseIdx is List) {
+        final idxList = savedVerseIdx.map((e) => (e as num).toInt()).toList();
+        for (int i = 0;
+            i < _questionVerseIndices.length && i < idxList.length;
+            i++) {
+          _questionVerseIndices[i] = idxList[i];
+        }
+      }
     }
     _category = (draft['category'] as List<dynamic>?)?.cast<String>() ?? [];
     _classificationValues =
@@ -583,8 +597,25 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           return c;
         }));
       _expandedCriteria
-        ..clear()
-        ..add(0);
+        ..clear();
+      final savedExpanded = draft['expandedCriteria'];
+      if (savedExpanded is List) {
+        _expandedCriteria.addAll(savedExpanded
+            .map((e) => (e as num).toInt())
+            .where((i) => i >= 0 && i < _rangeCriteria.length));
+      }
+      if (_expandedCriteria.isEmpty) {
+        _expandedCriteria.add(0);
+      }
+    }
+    final savedPage = draft['pageIndex'];
+    if (savedPage is num && savedPage > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients && _questions.isNotEmpty) {
+          _pageController.jumpToPage(
+              savedPage.toInt().clamp(0, _questions.length - 1));
+        }
+      });
     }
   }
 

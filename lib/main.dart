@@ -12,7 +12,6 @@ import 'package:ta3dia/screens/home_screen.dart';
 import 'package:ta3dia/screens/login_screen.dart';
 
 import 'package:ta3dia/services/auth_services.dart';
-import 'package:ta3dia/services/background_download_service.dart';
 import 'package:ta3dia/services/code_lookup_service.dart';
 import 'package:ta3dia/services/taadia_service.dart';
 import 'package:ta3dia/services/evaluation_service.dart';
@@ -51,7 +50,6 @@ void main() async {
   await quranService.init();
   quranService.startBackgroundDownload();
   if (!kIsWeb) {
-    BackgroundDownloadService.instance.init();
     initQuranWorkManager();
   }
   PexelsBackgroundService.instance.init();
