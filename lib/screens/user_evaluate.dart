@@ -213,9 +213,16 @@ class _RangeCriterion {
 
   static int? _asInt(dynamic v) => v != null ? (v as num).toInt() : null;
 
+  static QuestionRangeType _safeRangeType(dynamic v) {
+    if (v is int && v >= 0 && v < QuestionRangeType.values.length) {
+      return QuestionRangeType.values[v];
+    }
+    return QuestionRangeType.allQuran;
+  }
+
   static _RangeCriterion fromMap(Map<String, dynamic> map) {
     final c = _RangeCriterion();
-    c.type = QuestionRangeType.values[map['type'] as int];
+    c.type = _safeRangeType(map['type']);
     c.hizbFrom = _asInt(map['hizbFrom']);
     c.hizbTo = _asInt(map['hizbTo']);
     c.surahFrom = _asInt(map['surahFrom']);
@@ -587,7 +594,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
         ..addAll((draft['rangeCriteria'] as List).map((m) {
           final map = Map<String, dynamic>.from(m as Map);
           final c = _RangeCriterion();
-          c.type = QuestionRangeType.values[map['type'] as int];
+          c.type = _RangeCriterion._safeRangeType(map['type']);
           c.hizbFrom = map['hizbFrom'] as int?;
           c.hizbTo = map['hizbTo'] as int?;
           c.surahFrom = map['surahFrom'] as int?;

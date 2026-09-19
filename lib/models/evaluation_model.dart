@@ -10,6 +10,18 @@ class QuestionItem {
 
   int get tSetCount => bottomCubes.length;
 
+  static List<bool> _normalizedCubes(List<bool>? top, List<bool>? bottom) {
+    final t = List<bool>.from(top ?? [false, false]);
+    final b = List<bool>.from(bottom ?? [false]);
+    final needed = b.length * 2;
+    if (t.length < needed) {
+      t.addAll(List<bool>.filled(needed - t.length, false));
+    } else if (t.length > needed) {
+      t.removeRange(needed, t.length);
+    }
+    return t;
+  }
+
   QuestionItem({
     required this.number,
     this.ichaarat = 0,
@@ -19,8 +31,8 @@ class QuestionItem {
     this.isComplete = false,
     List<bool>? topCubes,
     List<bool>? bottomCubes,
-  }) : topCubes = topCubes ?? [false, false],
-       bottomCubes = bottomCubes ?? [false];
+  })  : topCubes = _normalizedCubes(topCubes, bottomCubes),
+        bottomCubes = List<bool>.from(bottomCubes ?? [false]);
 
   void syncFromCubes() {
     ichaarat = 0;
