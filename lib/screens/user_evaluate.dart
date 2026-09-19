@@ -1,4 +1,5 @@
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -325,7 +326,7 @@ class EvaluateScreen extends StatefulWidget {
 
 
 
-class _EvaluateScreenState extends State<EvaluateScreen> {
+class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final _evaluatorNameController = TextEditingController();
   final _studentNameController = TextEditingController();
@@ -370,7 +371,11 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _editingEvaluationId = widget.editingEvaluation?.id;
+    final auth = Provider.of<AuthService>(context, listen: false);
+    _userId = auth.currentUser?.uid ?? 'guest';
+    _prefsDraftKey = 'eval_draft_v1::$_userId::$_draftKey';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.analytics.logScreenView(
         screenName: 'evaluate_screen',
@@ -441,6 +446,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
     final cached = _draftCache[_draftKey];
     if (cached == null) {
       loadEval(eval);
+      _loadPersistedDraft();
     } else {
       if (eval == null) {
         _restoreDraft(cached);
@@ -468,7 +474,41 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
 
   static final Map<String, Map<String, dynamic>> _draftCache = {};
 
+  String _userId = 'guest';
+  late final String _prefsDraftKey;
+
   String get _draftKey => '${widget.taadiaId}:${_editingEvaluationId ?? '__new__'}';
+
+  Future<void> _loadPersistedDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_prefsDraftKey);
+    if (raw == null || !mounted) return;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      if (map['editingEvaluationId'] != _editingEvaluationId) return;
+      setState(() => _restoreDraft(map));
+    } catch (_) {}
+  }
+
+  Future<void> _persistDraft() async {
+    if (_submitted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsDraftKey, jsonEncode(_captureDraft()));
+  }
+
+  Future<void> _removePersistedDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefsDraftKey);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      _persistDraft();
+    }
+  }
 
   Map<String, dynamic> _captureDraft() {
     return {
@@ -641,6 +681,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _persistDraft();
     _pageController.dispose();
     _evaluatorNameController.dispose();
     _studentNameController.dispose();
@@ -775,6 +817,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
       if (ok) {
         _submitted = true;
         _draftCache.remove(_draftKey);
+        _removePersistedDraft();
         final msg = _isEditing
             ? l.updated(_studentNameController.text.trim())
             : l.evaluated(_studentNameController.text.trim());
@@ -2413,6 +2456,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> {
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop || _submitted) return;
             _draftCache[_draftKey] = _captureDraft();
+            _persistDraft();
           },
           child: AppScaffold(
           title: widget.taadiaTitle,
