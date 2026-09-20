@@ -951,13 +951,16 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
           });
         } else {
           setState(() {
-            _questions = List.generate(
-              count,
-              (i) => QuestionItem(
-                number: i + 1,
-                questionText: i < questions.length ? questions[i] : '',
-              ),
-            );
+            while (_questions.length < count) {
+              _questions.add(QuestionItem(number: _questions.length + 1));
+            }
+            if (_questions.length > count) {
+              _questions = _questions.sublist(0, count);
+            }
+            for (int i = 0; i < _questions.length; i++) {
+              _questions[i].questionText =
+                  i < questions.length ? questions[i] : _questions[i].questionText;
+            }
             _numQuestions = count;
             _resetVerseIndices();
             for (int i = 0; i < indices.length && i < _questionVerseIndices.length; i++) {

@@ -383,7 +383,7 @@ class _PageHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              'الحزب ${_arabicNumeral(hizb)}',
+              'الحزب $hizb',
               style: const TextStyle(
                 fontFamily: 'Amiri', fontSize: 14, color: Color(0xFFD3BF90),
               ),
@@ -595,7 +595,7 @@ class _BottomBar extends StatelessWidget {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: _NavButton(icon: Icons.arrow_back, label: 'عودة', onTap: onBack, textColor: const Color(0xFFF0E9DA)),
+              child: _NavButton(icon: Icons.arrow_back, onTap: onBack, textColor: const Color(0xFFF0E9DA)),
             ),
             Center(
               child: _NavButton(icon: Icons.search, label: 'بحث', onTap: onSearch, textColor: const Color(0xFFF0E9DA)),
@@ -612,7 +612,7 @@ class _NavButton extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? textColor;
 
-  const _NavButton({required this.icon, required this.label, this.onTap, this.textColor});
+  const _NavButton({required this.icon, this.label = '', this.onTap, this.textColor});
 
   @override
   Widget build(BuildContext context) {
@@ -631,11 +631,13 @@ class _NavButton extends StatelessWidget {
               Icon(icon, size: 22,
                 color: enabled ? const Color(0xFFD3BF90) : const Color(0xFFD3BF90).withAlpha(80),
               ),
-              const SizedBox(width: 4),
-              Text(label, style: TextStyle(
-                fontFamily: 'Amiri', fontSize: 14,
-                color: effectiveTextColor,
-              )),
+              if (label.isNotEmpty) ...[
+                const SizedBox(width: 4),
+                Text(label, style: TextStyle(
+                  fontFamily: 'Amiri', fontSize: 14,
+                  color: effectiveTextColor,
+                )),
+              ],
             ],
           ),
         ),

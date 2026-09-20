@@ -31,11 +31,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.ta3dia"
+        applicationId = "com.taadia.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
 

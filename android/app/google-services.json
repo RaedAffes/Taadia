@@ -1,4 +1,4 @@
-{
+﻿{
   "project_info": {
     "project_number": "308482841964",
     "firebase_url": "https://ta3dia-default-rtdb.europe-west1.firebasedatabase.app",
@@ -8,17 +8,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:308482841964:android:0b662f4ca36121506b6749",
+        "mobilesdk_app_id": "1:308482841964:android:567f4849bfde06596b6749",
         "android_client_info": {
-          "package_name": "com.example.ta3dia"
+          "package_name": "com.taadia.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "308482841964-ca8np92dmnoj86fh03k4q247berh8i96.apps.googleusercontent.com",
+          "client_id": "308482841964-l6mbc1tjamvmca4qkjm0ul93kq46bf66.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.ta3dia",
+            "package_name": "com.taadia.app",
+            "certificate_hash": "8fefea95996e522b030b933e7978fbf4bd1e7466"
+          }
+        },
+        {
+          "client_id": "308482841964-lfnk00u9hjncrn4s2v1hs6icbgpst55t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.taadia.app",
             "certificate_hash": "43d763330343ce2d51d0a7f5ee292684d2447bc6"
           }
         },
@@ -40,10 +48,10 @@
               "client_type": 3
             },
             {
-              "client_id": "308482841964-j6svl9c4tdan53noh65eahvg9fodhmvs.apps.googleusercontent.com",
+              "client_id": "308482841964-e0kuem0199vg10nh69ccs7vsuf0dbnos.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.ta3dia"
+                "bundle_id": "com.example.taskManagementApp"
               }
             }
           ]

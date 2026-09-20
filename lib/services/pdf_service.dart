@@ -259,22 +259,26 @@ class PdfService {
         border: pw.Border.all(color: _bdr),
       ),
       child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
           pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
               _tx(e.studentName, 28, _pri, true, r),
-              pw.Spacer(),
-              if (sc != null)
+              if (sc != null) ...[
+                pw.SizedBox(width: 12),
                 _bl(
                   sc % 1 == 0 ? '${sc.toInt()}' : sc.toStringAsFixed(1),
                   _pri,
                   r,
                 ),
+              ],
             ],
           ),
           pw.SizedBox(height: 8),
             pw.Wrap(
+              alignment: pw.WrapAlignment.center,
+              runAlignment: pw.WrapAlignment.center,
               spacing: 16,
               runSpacing: 6,
               children: [

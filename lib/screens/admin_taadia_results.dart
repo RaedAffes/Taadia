@@ -434,7 +434,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                                         ),
                                       ),
                                     ),
-                                  if (_searchQuery.isEmpty)
+if (_searchQuery.isEmpty)
                                     Center(
                                       child: Container(
                                         width: double.infinity,
@@ -517,7 +517,7 @@ class _AdminTaadiaResultsState extends State<AdminTaadiaResults> {
                                         ),
                                       ),
                                     ),
-                                  if (_searchQuery.isEmpty) ...[
+                                  if (_searchQuery.isEmpty && _taadiaClassifications.isNotEmpty) ...[
                                     SizedBox(height: 10),
                                     Container(
                                       padding: EdgeInsets.all(16),
