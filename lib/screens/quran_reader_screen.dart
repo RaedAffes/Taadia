@@ -253,7 +253,6 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
     }
 
     final meta = _pageMeta[_currentPage];
-    final pageArabic = _arabicNumeral(_currentPage);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFFEFC),
@@ -270,10 +269,9 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
           SafeArea(
             child: Column(
           children: [
-            _PageHeader(
-              pageNumber: pageArabic,
-              surahName: meta?.surahNameAr ?? '',
-              hizb: meta?.hizb ?? 1,
+            _BottomBar(
+              onBack: () => Navigator.pop(context),
+              onSearch: _showSearchPanel,
             ),
             Expanded(
               child: Directionality(
@@ -307,9 +305,10 @@ class _QuranReaderScreenState extends State<QuranReaderScreen> {
               totalPages: _totalPages,
               onChanged: (p) => _goToPage(p),
             ),
-            _BottomBar(
-              onBack: () => Navigator.pop(context),
-              onSearch: _showSearchPanel,
+            _PageHeader(
+              pageNumber: '$_currentPage',
+              surahName: meta?.surahNameAr ?? '',
+              hizb: meta?.hizb ?? 1,
             ),
           ],
         ),
@@ -592,13 +591,14 @@ class _BottomBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: Row(
+        child: Stack(
           children: [
-            _NavButton(icon: Icons.arrow_back, label: 'عودة', onTap: onBack, textColor: const Color(0xFFF0E9DA)),
-            Expanded(
-              child: Center(
-                child: _NavButton(icon: Icons.search, label: 'بحث', onTap: onSearch, textColor: const Color(0xFFF0E9DA)),
-              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _NavButton(icon: Icons.arrow_back, label: 'عودة', onTap: onBack, textColor: const Color(0xFFF0E9DA)),
+            ),
+            Center(
+              child: _NavButton(icon: Icons.search, label: 'بحث', onTap: onSearch, textColor: const Color(0xFFF0E9DA)),
             ),
           ],
         ),

@@ -1,7 +1,6 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -338,6 +337,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
   final _evaluatorNameController = TextEditingController();
   final _studentNameController = TextEditingController();
   final _noteController = TextEditingController();
+  final _scrollController = ScrollController();
 
   final _addRangeKey = GlobalKey();
   final _rangeTypeKey = GlobalKey();
@@ -530,6 +530,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
       'formError': _formError,
       'oldAhzabText': _oldAhzabText,
       'pageIndex': _pageController.hasClients ? _pageController.page?.round() ?? 0 : 0,
+      'scrollOffset': _scrollController.hasClients ? _scrollController.offset : 0.0,
       'questionVerseIndices': List<int>.from(_questionVerseIndices),
       'expandedCriteria': _expandedCriteria.toList(),
       'rangeCriteria': _rangeCriteria.map((c) => <String, dynamic>{
@@ -656,12 +657,20 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
       }
     }
     final savedPage = draft['pageIndex'];
-    if (savedPage is num && savedPage > 0) {
+    final savedScroll = (draft['scrollOffset'] as num?)?.toDouble() ?? 0;
+    if ((savedPage is num && savedPage > 0) || savedScroll > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _pageController.hasClients && _questions.isNotEmpty) {
+        if (!mounted) return;
+        if (savedPage is num && savedPage > 0 && _pageController.hasClients && _questions.isNotEmpty) {
           _pageController.jumpToPage(
               savedPage.toInt().clamp(0, _questions.length - 1));
         }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients && savedScroll > 0) {
+            _scrollController.jumpTo(savedScroll.clamp(
+                0.0, _scrollController.position.maxScrollExtent));
+          }
+        });
       });
     }
   }
@@ -691,6 +700,7 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
     WidgetsBinding.instance.removeObserver(this);
     _persistDraft();
     _pageController.dispose();
+    _scrollController.dispose();
     _evaluatorNameController.dispose();
     _studentNameController.dispose();
     _noteController.dispose();
@@ -2488,6 +2498,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
                 }
               },
               child: SingleChildScrollView(
+              controller: _scrollController,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
@@ -2506,7 +2518,8 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
                     Builder(builder: (ctx) {
                       final ts = Provider.of<TaadiaService>(ctx, listen: true);
                       final t = ts.taadias.where((t) => t.id == widget.taadiaId).firstOrNull;
-                      if (t == null || t.accessCode.isEmpty) return SizedBox.shrink();
+                      final description = t?.description ?? '';
+                      if (description.trim().isEmpty) return SizedBox.shrink();
                       return Padding(
                         padding: EdgeInsets.only(bottom: 12),
                         child: Container(
@@ -2517,42 +2530,15 @@ class _EvaluateScreenState extends State<EvaluateScreen> with WidgetsBindingObse
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: cs.primary.withValues(alpha: 0.2)),
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.vpn_key, size: 20, color: cs.primary),
-                              SizedBox(width: 8),
-                              Text(
-                                '${l.accessCode}: ',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.onSurface,
-                                ),
-                              ),
-                              Text(
-                                t.accessCode,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: cs.primary,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                              Spacer(),
-                              InkWell(
-                                borderRadius: BorderRadius.circular(8),
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(text: t.accessCode));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(l.copied), duration: Duration(seconds: 1)),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.all(4),
-                                  child: Icon(Icons.copy, size: 18, color: cs.primary),
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: cs.onSurface,
+                            ),
+                            textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+                            textAlign: isRtl ? TextAlign.right : TextAlign.left,
                           ),
                         ),
                       );
