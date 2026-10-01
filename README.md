@@ -9,7 +9,7 @@ A Quran memorization tracking app for teachers and students. Built with Flutter 
 - Teachers create assessments (called "Taadia") and grade students on recitation
 - Visual cube-based scoring for errors
 - AI picks random Quran verses for each assessment
-- Generate PDF reports
+- Generate PDF reports 
 - Works offline — data syncs when you're back online
 - Arabic + English support
 
