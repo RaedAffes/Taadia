@@ -6,7 +6,7 @@
           "projectId": "ta3dia",
           "appId": "1:308482841964:android:0b662f4ca36121506b6749",
           "fileOutput": "android/app/google-services.json"
-        }
+        } 
       },
       "dart": {
         "lib/firebase_options.dart": {
