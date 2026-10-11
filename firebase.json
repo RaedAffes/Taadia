@@ -8,7 +8,7 @@
           "fileOutput": "android/app/google-services.json"
         } 
       },
-      "dart": {
+      "dart": { 
         "lib/firebase_options.dart": {
           "projectId": "ta3dia",
           "configurations": {
